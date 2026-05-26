@@ -1,0 +1,18 @@
+const C = {
+  bg: "#08090b",
+  panel: "#0e0f12",
+  panel2: "#131418",
+  border: "#1c1d22",
+  borderHi: "#2a2b31",
+  text: "#e6e7ea",
+  textDim: "#8a8c93",
+  textMute: "#5a5c63",
+  accent: "#f59e0b",
+  accentDim: "#b45309",
+  bull: "#10b981",
+  bullDim: "#065f46",
+  bear: "#ef4444",
+  bearDim: "#7f1d1d",
+  info: "#38bdf8",
+  warn: "#f59e0b",
+};

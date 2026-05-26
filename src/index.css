@@ -1,0 +1,51 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    @apply bg-[#08090b] text-zinc-100 antialiased;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Inter",
+      system-ui, sans-serif;
+    font-feature-settings: "tnum" 1, "cv11" 1;
+  }
+}
+
+/* Custom scrollbar — thin, on-brand */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #0a0b0e;
+}
+::-webkit-scrollbar-thumb {
+  background: #1c1d22;
+  border-radius: 0;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #2a2b31;
+}
+
+/* Selection */
+::selection {
+  background: rgba(245, 158, 11, 0.25);
+  color: #fff;
+}
+
+@layer components {
+  .panel {
+    @apply bg-[#0e0f12] border border-[#1c1d22];
+  }
+  .label-eyebrow {
+    @apply text-[11px] font-semibold tracking-[0.12em] text-zinc-300 uppercase;
+  }
+  .data-cell {
+    @apply font-mono tabular-nums;
+  }
+}
