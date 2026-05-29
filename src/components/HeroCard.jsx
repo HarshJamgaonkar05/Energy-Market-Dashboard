@@ -21,7 +21,10 @@ export const HeroCard = ({ d }) => {
             <Circle size={5} fill="#ef4444" className="text-red-500 animate-pulse" />
           )}
         </div>
-        <span className="text-[9px] text-zinc-600 uppercase tracking-wider">{d.unit}</span>
+        <span className="text-[9px] text-zinc-600 uppercase tracking-wider flex items-center gap-1">
+          {d.modeled && <span className="text-amber-500/70" title="Modeled proxy — no free live feed">~</span>}
+          {d.unit}
+        </span>
       </div>
       <div className="text-[10px] text-zinc-500 mb-2 truncate">{d.name}</div>
       <div className="flex items-end justify-between gap-2">

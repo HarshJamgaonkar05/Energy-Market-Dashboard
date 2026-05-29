@@ -4,7 +4,9 @@ import {
 } from "recharts";
 import { ChevronDown, Check } from "lucide-react";
 import { Card } from "../primitives/Card";
+import { SourceTag } from "../primitives/SourceTag";
 import { MULTI_SERIES } from "../../data/mock";
+import { useLive } from "../../lib/useLive";
 import { chartProps, ChartTooltip } from "../../lib/chart-theme";
 
 const SERIES = [
@@ -27,6 +29,8 @@ export const MultiChart = () => {
   const [range, setRange] = useState("3M");
   const [open, setOpen] = useState(false);
   const menuRef = useRef(null);
+  // Live normalized price action (Yahoo daily closes, indexed to 100).
+  const { data: series, live } = useLive("/api/series", MULTI_SERIES, useLive.REFRESH.slow);
 
   // Close the dropdown when clicking outside of it.
   useEffect(() => {
@@ -46,8 +50,9 @@ export const MultiChart = () => {
       <div className="p-4 pb-2">
         <div className="flex items-center justify-between mb-1">
           <div>
-            <h3 className="text-[11px] font-semibold tracking-[0.12em] text-zinc-300 uppercase">
+            <h3 className="text-[11px] font-semibold tracking-[0.12em] text-zinc-300 uppercase inline-flex items-center gap-2">
               Price Action — Normalized
+              <SourceTag live={live} />
             </h3>
             <p className="text-[10px] text-zinc-600 mt-0.5">Indexed to 100 at start of window</p>
           </div>
@@ -122,7 +127,7 @@ export const MultiChart = () => {
       </div>
       <div className="h-64 px-2 pb-2">
         <ResponsiveContainer>
-          <LineChart data={MULTI_SERIES} margin={{ top: 8, right: 20, bottom: 6, left: 0 }}>
+          <LineChart data={series} margin={{ top: 8, right: 20, bottom: 6, left: 0 }}>
             <CartesianGrid {...chartProps.grid} />
             <XAxis dataKey="date" {...chartProps.axis} interval={10} />
             <YAxis {...chartProps.axis} domain={["auto", "auto"]} width={40} />

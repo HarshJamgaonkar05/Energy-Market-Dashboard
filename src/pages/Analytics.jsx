@@ -5,26 +5,43 @@ import {
 import { GitBranch, Layers, Grid3x3 } from "lucide-react";
 import { Card } from "../components/primitives/Card";
 import { Band } from "../components/primitives/Band";
+import { SourceTag } from "../components/primitives/SourceTag";
 import { Heatmap } from "../components/panels/Heatmap";
 import { chartProps, ChartTooltip } from "../lib/chart-theme";
 import { fmt, fmtSigned } from "../lib/format";
+import { useLive } from "../lib/useLive";
 import {
-  INSTRUMENTS, byId, CRACKS, crackValue, crackVs, FWD_CURVES, genAround,
+  byId, CRACKS, crackValue, crackVs, FWD_CURVES, genAround,
   CORR_LABELS, CORR_MATRIX,
 } from "../data/mock";
+
+// Fallbacks shaped exactly like the live endpoints, derived from the seeded mock.
+const CRACKS_FALLBACK = CRACKS.map((c) => ({
+  id: c.id, group: c.group, label: c.label, vs: crackVs(c), value: +crackValue(c).toFixed(2),
+  legsLabel: c.legs.map((l) => `${l.c}×${byId(l.p).sym}`).join(" + ") + ` − ${c.crudeC ?? 1}×${crackVs(c)}`,
+}));
+const INTER_FALLBACK = [
+  { lbl: "Brent – WTI",           v: byId("brent").val - byId("wti").val,  unit: "$/bbl", note: "Crude arb" },
+  { lbl: "RBOB – Heating Oil",    v: byId("rbob").val - byId("ho").val,    unit: "$/gal", note: "Gas–Heat" },
+  { lbl: "Heating Oil – Gas Oil", v: byId("ho").bbl - byId("gasoil").bbl,  unit: "$/bbl", note: "Distillate" },
+  { lbl: "RBOB – Gas Oil",        v: byId("rbob").bbl - byId("gasoil").bbl, unit: "$/bbl", note: "Light prod" },
+];
+const CURVES_FALLBACK = { ...FWD_CURVES, inter: INTER_FALLBACK, modeled: false };
 
 // ----------------------------------------------------------------------------
 // Crack spreads — pick any of the cracks available across the five instruments
 // ----------------------------------------------------------------------------
 const CrackSpreads = () => {
   const [id, setId] = useState("321-wti");
-  const crack = CRACKS.find((c) => c.id === id);
-  const idx = CRACKS.findIndex((c) => c.id === id);
-  const value = crackValue(crack);
+  const { data: cracks, live } = useLive("/api/cracks", CRACKS_FALLBACK);
+
+  const crack = cracks.find((c) => c.id === id) || cracks[0];
+  const idx = cracks.findIndex((c) => c.id === id);
+  const value = crack.value;
 
   const hist = useMemo(
     () => genAround(900 + idx, 60, value, Math.max(1, Math.abs(value) * 0.07)),
-    [id] // value is fully determined by id
+    [id, value]
   );
 
   const first = hist[0].v;
@@ -44,11 +61,12 @@ const CrackSpreads = () => {
         <div className="col-span-12 md:col-span-4 border-b md:border-b-0 md:border-r border-[#1c1d22] max-h-[360px] overflow-y-auto">
           {groups.map((g) => (
             <div key={g}>
-              <div className="px-3 py-1.5 text-[9px] uppercase tracking-[0.16em] text-zinc-600 bg-[#0a0b0e] sticky top-0">
+              <div className="px-3 py-1.5 text-[9px] uppercase tracking-[0.16em] text-zinc-600 bg-[#0a0b0e] sticky top-0 flex items-center justify-between">
                 {g}
+                {g === groups[0] && <SourceTag live={live} />}
               </div>
-              {CRACKS.filter((c) => c.group === g).map((c) => {
-                const v = crackValue(c);
+              {cracks.filter((c) => c.group === g).map((c) => {
+                const v = c.value;
                 const sel = c.id === id;
                 return (
                   <button
@@ -62,7 +80,7 @@ const CrackSpreads = () => {
                   >
                     <span className="flex items-center gap-1.5 truncate">
                       <span className="truncate">{c.label}</span>
-                      <span className="text-[9px] font-mono text-zinc-600">vs {crackVs(c)}</span>
+                      <span className="text-[9px] font-mono text-zinc-600">vs {c.vs}</span>
                     </span>
                     <span className="font-mono text-[11px] text-zinc-300">{fmt(v)}</span>
                   </button>
@@ -77,7 +95,7 @@ const CrackSpreads = () => {
           <div className="flex items-start justify-between mb-3">
             <div>
               <div className="text-[10px] uppercase tracking-wider text-zinc-500">
-                {crack.label} · vs {crackVs(crack)}
+                {crack.label} · vs {crack.vs}
               </div>
               <div className="flex items-baseline gap-2 mt-0.5">
                 <span className="font-mono text-2xl text-zinc-100">${fmt(value)}</span>
@@ -88,7 +106,7 @@ const CrackSpreads = () => {
               </div>
             </div>
             <span className="text-[9px] font-mono text-zinc-600 hidden sm:block">
-              {crack.legs.map((l) => `${l.c}×${byId(l.p).sym}`).join(" + ")} − {crack.crudeC ?? 1}×{crackVs(crack)}
+              {crack.legsLabel}
             </span>
           </div>
 
@@ -134,8 +152,11 @@ const CrackSpreads = () => {
 // ----------------------------------------------------------------------------
 const FuturesSpreads = () => {
   const [id, setId] = useState("brent");
-  const curve = FWD_CURVES[id];
+  const { data: curves } = useLive("/api/curves", CURVES_FALLBACK, useLive.REFRESH.slow);
+  const curveMap = { brent: curves.brent, wti: curves.wti, ho: curves.ho, rbob: curves.rbob, gasoil: curves.gasoil };
+  const curve = curveMap[id] || CURVES_FALLBACK[id];
   const d = curve.data;
+  const inter = curves.inter || INTER_FALLBACK;
 
   const cal = [
     { lbl: "M1–M2", v: d[0].v - d[1].v },
@@ -145,25 +166,19 @@ const FuturesSpreads = () => {
   ];
   const structure = d[0].v >= d[11].v ? "Backwardation" : "Contango";
 
-  const ix = (x) => byId(x);
-  const inter = [
-    { lbl: "Brent – WTI",        v: ix("brent").val - ix("wti").val,  unit: "$/bbl", note: "Crude arb" },
-    { lbl: "RBOB – Heating Oil", v: ix("rbob").val - ix("ho").val,    unit: "$/gal", note: "Gas–Heat" },
-    { lbl: "Heating Oil – Gas Oil", v: ix("ho").bbl - ix("gasoil").bbl, unit: "$/bbl", note: "Distillate" },
-    { lbl: "RBOB – Gas Oil",     v: ix("rbob").bbl - ix("gasoil").bbl, unit: "$/bbl", note: "Light prod" },
-  ];
-
   return (
     <div className="grid grid-cols-12 gap-3">
       {/* Forward curve */}
       <Card padding={false} className="col-span-12 lg:col-span-7">
         <div className="p-4 pb-2 flex items-center justify-between flex-wrap gap-2">
           <div>
-            <div className="text-[11px] font-semibold tracking-[0.12em] text-zinc-300 uppercase">Forward Curve</div>
+            <div className="text-[11px] font-semibold tracking-[0.12em] text-zinc-300 uppercase inline-flex items-center gap-2">
+              Forward Curve <SourceTag modeled label="Modeled curve" />
+            </div>
             <div className="text-[10px] text-zinc-600 mt-0.5">{curve.label} · M1–M12 · {curve.unit}</div>
           </div>
           <div className="flex items-center gap-1">
-            {Object.values(FWD_CURVES).map((c) => (
+            {Object.values(curveMap).filter(Boolean).map((c) => (
               <button
                 key={c.id}
                 onClick={() => setId(c.id)}
@@ -237,10 +252,13 @@ const FuturesSpreads = () => {
 // Correlation insight — strongest / weakest pair pulled from the matrix
 // ----------------------------------------------------------------------------
 const CorrelationInsight = () => {
+  const { data } = useLive("/api/correlation", { labels: CORR_LABELS, matrix: CORR_MATRIX }, useLive.REFRESH.slow);
+  const labels = data.labels || CORR_LABELS;
+  const matrix = data.matrix || CORR_MATRIX;
   const pairs = [];
-  for (let i = 0; i < CORR_LABELS.length; i++) {
-    for (let j = i + 1; j < CORR_LABELS.length; j++) {
-      pairs.push({ a: CORR_LABELS[i], b: CORR_LABELS[j], v: CORR_MATRIX[i][j] });
+  for (let i = 0; i < labels.length; i++) {
+    for (let j = i + 1; j < labels.length; j++) {
+      pairs.push({ a: labels[i], b: labels[j], v: matrix[i][j] });
     }
   }
   const sorted = [...pairs].sort((x, y) => y.v - x.v);

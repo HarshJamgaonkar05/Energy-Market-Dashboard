@@ -1,30 +1,23 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
-} from "recharts";
-import { Filter, ExternalLink, AlertTriangle, Circle } from "lucide-react";
+import { ExternalLink, AlertTriangle, Circle } from "lucide-react";
 import { Card } from "../components/primitives/Card";
 import { SectionTitle } from "../components/primitives/SectionTitle";
 import { Badge } from "../components/primitives/Badge";
-import { chartProps, ChartTooltip } from "../lib/chart-theme";
 import { NEWS } from "../data/mock";
 import { EconCalendar } from "../components/panels/EconCalendar";
 import { SentimentPanel } from "../components/panels/SentimentPanel";
+import { useLive } from "../lib/useLive";
+
+const SENT_FALLBACK = { distribution: { bullish: 38, neutral: 42, bearish: 20 } };
 
 export const PageNews = () => {
   const [filter, setFilter] = useState("ALL");
-  const extended = [
-    ...NEWS,
-    { t: "Yesterday 23:48", sev: "med", src: "S&P GLOBAL", txt: "European ULSD cargoes tighten as refinery turnarounds cluster into spring", tag: "PRODUCTS" },
-    { t: "Yesterday 22:12", sev: "low", src: "REFINITIV", txt: "Brazil's Petrobras boosts offshore production 4.2% MoM", tag: "CRUDE" },
-    { t: "Yesterday 20:08", sev: "high", src: "FT", txt: "EU floats wider sanctions package targeting Russian shadow fleet operations", tag: "GEOPOLITICS" },
-    { t: "Yesterday 19:50", sev: "med", src: "REUTERS", txt: "Saudi Arabia holds Asia OSPs steady, signaling confidence in demand pull", tag: "OPEC" },
-    { t: "Yesterday 18:34", sev: "med", src: "ENERGY INTEL", txt: "Iraq's Basra exports rise to 3.4M b/d, highest in eleven months", tag: "CRUDE" },
-    { t: "Yesterday 17:21", sev: "low", src: "ARGUS", txt: "Mexican Maya differential narrows by $1.20 amid USGC refinery turnaround", tag: "PRODUCTS" },
-    { t: "Yesterday 16:14", sev: "high", src: "REUTERS", txt: "Hurricane forecast models converge on USGC track late next week", tag: "WEATHER" },
-  ];
-  const filtered = filter === "ALL" ? extended : extended.filter((n) => n.tag === filter);
+  // Live energy newswire (GDELT) + computed sentiment distribution.
+  const { data: news, live } = useLive("/api/news", NEWS, useLive.REFRESH.hourly);
+  const { data: sent } = useLive("/api/sentiment", SENT_FALLBACK, useLive.REFRESH.slow);
+  const dist = sent.distribution || SENT_FALLBACK.distribution;
+  const filtered = filter === "ALL" ? news : news.filter((n) => n.tag === filter);
 
   return (
     <div className="space-y-3">
@@ -34,8 +27,8 @@ export const PageNews = () => {
             <div className="p-4 border-b border-[#1c1d22] flex items-center justify-between flex-wrap gap-2">
               <div className="flex items-center gap-2">
                 <h2 className="text-[13px] font-semibold text-zinc-100">Newswire</h2>
-                <Circle size={6} fill="#ef4444" className="animate-pulse" />
-                <span className="text-[10px] text-zinc-500 uppercase tracking-wider">Live · {filtered.length} stories</span>
+                <Circle size={6} fill={live ? "#10b981" : "#ef4444"} className="animate-pulse" />
+                <span className="text-[10px] text-zinc-500 uppercase tracking-wider">{live ? "Live · GDELT" : "Cached"} · {filtered.length} stories</span>
               </div>
               <div className="flex items-center flex-wrap gap-1">
                 {["ALL", "OPEC", "GEOPOLITICS", "CRUDE", "PRODUCTS", "FREIGHT", "STOCKS", "MACRO", "WEATHER"].map((t) => (
@@ -53,12 +46,15 @@ export const PageNews = () => {
             </div>
             <div>
               {filtered.map((n, i) => (
-                <motion.div
+                <motion.a
                   key={i}
+                  href={n.url || undefined}
+                  target={n.url ? "_blank" : undefined}
+                  rel="noreferrer"
                   initial={{ opacity: 0, y: 4 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.02 }}
-                  className="px-4 py-3 border-b border-[#15161a] hover:bg-white/[0.02] cursor-pointer group last:border-0"
+                  transition={{ delay: Math.min(i * 0.02, 0.5) }}
+                  className="block px-4 py-3 border-b border-[#15161a] hover:bg-white/[0.02] cursor-pointer group last:border-0"
                 >
                   <div className="flex items-center gap-2 mb-1.5">
                     <span className="font-mono text-[10px] text-zinc-600">{n.t}</span>
@@ -68,7 +64,7 @@ export const PageNews = () => {
                     <ExternalLink size={10} className="text-zinc-700 opacity-0 group-hover:opacity-100 ml-auto" />
                   </div>
                   <p className="text-[12px] text-zinc-200 leading-snug group-hover:text-zinc-100">{n.txt}</p>
-                </motion.div>
+                </motion.a>
               ))}
             </div>
           </Card>
@@ -77,12 +73,12 @@ export const PageNews = () => {
         <div className="col-span-12 lg:col-span-3 space-y-3">
           <SentimentPanel />
           <Card>
-            <SectionTitle sub="Aggregate">Sentiment Distribution</SectionTitle>
+            <SectionTitle sub="From newswire">Sentiment Distribution</SectionTitle>
             <div className="space-y-2">
               {[
-                { l: "Bullish", v: 38, c: "#10b981" },
-                { l: "Neutral", v: 42, c: "#71717a" },
-                { l: "Bearish", v: 20, c: "#ef4444" },
+                { l: "Bullish", v: dist.bullish, c: "#10b981" },
+                { l: "Neutral", v: dist.neutral, c: "#71717a" },
+                { l: "Bearish", v: dist.bearish, c: "#ef4444" },
               ].map((s) => (
                 <div key={s.l}>
                   <div className="flex justify-between text-[10px] mb-1">

@@ -1,19 +1,28 @@
 import { Card } from "../primitives/Card";
 import { SectionTitle } from "../primitives/SectionTitle";
+import { SourceTag } from "../primitives/SourceTag";
 import { motion } from "framer-motion";
+import { useLive } from "../../lib/useLive";
 
-export const SentimentPanel = () => {
-  const sentiments = [
+// Composite sentiment computed on the backend from live price momentum + the
+// bull/bear balance of recent news (server/compute/derive.js → sentiment()).
+const FALLBACK = {
+  groups: [
     { name: "Crude", value: 64, lbl: "Bullish" },
     { name: "Distillates", value: 58, lbl: "Bullish" },
     { name: "Gasoline", value: 71, lbl: "V. Bullish" },
     { name: "Gas Oil", value: 46, lbl: "Neutral" },
-  ];
+  ],
+};
+
+export const SentimentPanel = () => {
+  const { data, live } = useLive("/api/sentiment", FALLBACK, useLive.REFRESH.slow);
+  const groups = data.groups || FALLBACK.groups;
   return (
     <Card>
-      <SectionTitle sub="Composite index">Sentiment</SectionTitle>
+      <SectionTitle sub="Momentum + news" action={<SourceTag live={live} />}>Sentiment</SectionTitle>
       <div className="space-y-2.5">
-        {sentiments.map((s) => {
+        {groups.map((s) => {
           const bull = s.value >= 50;
           return (
             <div key={s.name}>

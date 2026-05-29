@@ -10,40 +10,46 @@ import { InventorySnap } from "../components/panels/InventorySnap";
 import { ShippingPanel } from "../components/panels/ShippingPanel";
 import { WeatherRisk } from "../components/panels/WeatherRisk";
 import { HERO } from "../data/mock";
+import { useLive } from "../lib/useLive";
 
-export const PageDashboard = () => (
-  <div className="space-y-3">
-    {/* Five instruments */}
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-px bg-[#1c1d22]">
-      {HERO.map((d) => (
-        <HeroCard key={d.sym} d={d} />
-      ))}
-    </div>
+export const PageDashboard = () => {
+  // Live front-month quotes (Yahoo Finance); seeded HERO is the fallback.
+  const { data: heroes } = useLive("/api/instruments", HERO);
 
-    {/* Main grid */}
-    <div className="grid grid-cols-12 gap-3">
-      <div className="col-span-12 lg:col-span-8 space-y-3">
-        <MultiChart />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <CurveChart />
-          <Heatmap />
+  return (
+    <div className="space-y-3">
+      {/* Five instruments */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-px bg-[#1c1d22]">
+        {heroes.map((d) => (
+          <HeroCard key={d.sym} d={d} />
+        ))}
+      </div>
+
+      {/* Main grid */}
+      <div className="grid grid-cols-12 gap-3">
+        <div className="col-span-12 lg:col-span-8 space-y-3">
+          <MultiChart />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <CurveChart />
+            <Heatmap />
+          </div>
+          <MoversPanel />
         </div>
-        <MoversPanel />
+
+        {/* Right rail */}
+        <div className="col-span-12 lg:col-span-4 space-y-3">
+          <NewsPanel compact />
+          <SentimentPanel />
+          <EconCalendar />
+        </div>
       </div>
 
-      {/* Right rail */}
-      <div className="col-span-12 lg:col-span-4 space-y-3">
-        <NewsPanel compact />
-        <SentimentPanel />
-        <EconCalendar />
+      {/* Fundamentals snapshot */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <InventorySnap />
+        <ShippingPanel />
+        <WeatherRisk />
       </div>
     </div>
-
-    {/* Fundamentals snapshot */}
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-      <InventorySnap />
-      <ShippingPanel />
-      <WeatherRisk />
-    </div>
-  </div>
-);
+  );
+};

@@ -1,8 +1,22 @@
+import { Fragment } from "react";
 import { Card } from "../primitives/Card";
 import { SectionTitle } from "../primitives/SectionTitle";
+import { SourceTag } from "../primitives/SourceTag";
 import { CORR_LABELS, CORR_MATRIX } from "../../data/mock";
+import { useLive } from "../../lib/useLive";
 
+// 30D rolling correlation computed from live Yahoo daily returns
+// (server/compute/markets.js). Gas Oil is proxied from ULSD, so its row tracks
+// Heating Oil closely — see the modeled note on the instruments.
 export const Heatmap = ({ title = "Correlation Matrix", sub = "30D rolling" }) => {
+  const { data, live } = useLive(
+    "/api/correlation",
+    { labels: CORR_LABELS, matrix: CORR_MATRIX },
+    useLive.REFRESH.slow
+  );
+  const labels = data.labels || CORR_LABELS;
+  const matrix = data.matrix || CORR_MATRIX;
+
   const colorFor = (v) => {
     if (v === 1) return "#1c1d22";
     const intensity = Math.abs(v);
@@ -11,18 +25,18 @@ export const Heatmap = ({ title = "Correlation Matrix", sub = "30D rolling" }) =
   };
   return (
     <Card>
-      {title && <SectionTitle sub={sub}>{title}</SectionTitle>}
-      <div className="grid gap-px" style={{ gridTemplateColumns: `52px repeat(${CORR_LABELS.length}, 1fr)` }}>
+      {title && <SectionTitle sub={sub} action={<SourceTag live={live} />}>{title}</SectionTitle>}
+      <div className="grid gap-px" style={{ gridTemplateColumns: `52px repeat(${labels.length}, 1fr)` }}>
         <div />
-        {CORR_LABELS.map((l) => (
+        {labels.map((l) => (
           <div key={l} className="text-[9px] text-zinc-500 uppercase tracking-wider text-center pb-1">
             {l}
           </div>
         ))}
-        {CORR_MATRIX.map((row, i) => (
-          <>
-            <div key={`l-${i}`} className="text-[9px] text-zinc-500 uppercase tracking-wider flex items-center pr-1.5 justify-end">
-              {CORR_LABELS[i]}
+        {matrix.map((row, i) => (
+          <Fragment key={`row-${i}`}>
+            <div className="text-[9px] text-zinc-500 uppercase tracking-wider flex items-center pr-1.5 justify-end">
+              {labels[i]}
             </div>
             {row.map((v, j) => (
               <div
@@ -33,7 +47,7 @@ export const Heatmap = ({ title = "Correlation Matrix", sub = "30D rolling" }) =
                 {v.toFixed(2)}
               </div>
             ))}
-          </>
+          </Fragment>
         ))}
       </div>
     </Card>

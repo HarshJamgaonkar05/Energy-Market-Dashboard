@@ -1,6 +1,6 @@
 # VOLTAIRE Terminal
 
-Institutional-grade Energy Markets Intelligence Dashboard. Frontend-only, mock-data-driven.
+Institutional-grade Energy Markets Intelligence Dashboard, wired to **live, free, open data sources** through a lightweight Node backend.
 
 Inspired by Bloomberg Terminal, Kpler, TradingView, Vortexa, and Refinitiv. Dark institutional aesthetic, dense information layout, monospaced data cells, market-tone color signaling (bull green / bear red / amber accent).
 
@@ -12,19 +12,61 @@ Inspired by Bloomberg Terminal, Kpler, TradingView, Vortexa, and Refinitiv. Dark
 ## Quick start
 
 ```bash
-npm install
-npm run dev
+npm install                       # use --legacy-peer-deps if npm complains about the vite peer range
+cp server/.env.example server/.env   # then paste your free EIA key (optional, see below)
+npm run dev:all                   # starts Vite (5173) + the data backend (3001) together
 ```
 
-The dev server opens automatically at **http://localhost:5173**.
+Open **http://localhost:5173**. The Vite dev server proxies `/api/*` to the backend, so there's one origin and no CORS setup.
+
+Everything works **without any API key** (live prices, macro, weather, news, etc.). One free key unlocks the US fundamentals panels — see [Live data & sources](#live-data--sources).
 
 ## Available scripts
 
-| Command           | What it does                                  |
-| ----------------- | --------------------------------------------- |
-| `npm run dev`     | Start Vite dev server with hot reload         |
-| `npm run build`   | Production build into `dist/`                 |
-| `npm run preview` | Serve the production build locally to verify  |
+| Command           | What it does                                          |
+| ----------------- | ----------------------------------------------------- |
+| `npm run dev`     | Vite dev server (frontend only) with hot reload       |
+| `npm run server`  | Node/Express data backend on port 3001                |
+| `npm run dev:all` | Run frontend **and** backend together (recommended)   |
+| `npm run build`   | Production build into `dist/`                         |
+| `npm run preview` | Serve the production build locally to verify          |
+
+## Live data & sources
+
+The backend (`server/`) fetches from free/open sources, caches them with sensible TTLs, computes the derived datasets (cracks, correlation, normalized series, sentiment), and serves everything under `/api/*`. The frontend polls via a small `useLive()` hook (`src/lib/useLive.js`) and **falls back to the seeded mock data** in `src/data/mock.js` whenever a source is unavailable — so the UI never blanks out.
+
+| Data | Source | Key? |
+| --- | --- | --- |
+| WTI · Brent · Heating Oil · RBOB live prices, sparklines, movers, ticker | **Yahoo Finance** chart API (`CL=F, BZ=F, HO=F, RB=F`) | none |
+| Normalized 90D price action + 30D correlation matrix | Yahoo daily history → computed | none |
+| Crack spreads, inter-commodity spreads | Computed from live product/crude prices | none |
+| Macro: S&P 500, VIX, 10Y yield, Dollar Index | Yahoo (`^GSPC, ^VIX, ^TNX, DX-Y.NYB`) | none |
+| Temperature forecast, heating/cooling degree-days, regional anomaly | **Open-Meteo** | none |
+| Energy newswire (tagged + severity-classified) | **GDELT 2.0 DOC API** | none |
+| Economic calendar | Derived from the real US release cadence (EIA/API/Baker Hughes) | none |
+| Sentiment | Computed from price momentum + news bull/bear balance | none |
+| US inventories (crude/Cushing/SPR/gasoline/distillate), PADD, 52W history, refinery utilization, weekly builds/draws | **EIA Open Data API v2** | **free key** |
+| OPEC production (aggregate) | EIA STEO (quotas are curated policy targets) | free key |
+
+### EIA key (optional but recommended)
+
+Register a free key (instant) at **https://www.eia.gov/opendata/register.php**, then put it in `server/.env`:
+
+```
+EIA_API_KEY=your_key_here
+```
+
+Without it, the inventory / refinery / stock-flow / OPEC panels show seeded fallback data and the status bar reads *"Fundamentals: add EIA key"*. With it, they go live automatically.
+
+### Modeled / indicative data (no free source exists)
+
+These are paywalled in the real world, so they're **modeled and clearly tagged** in the UI (amber "Modeled" / "Indicative" labels):
+
+- **Forward curves M1–M12** — front month anchored to the live quote; term-structure slope is curated.
+- **Tanker rates (VLCC/Suezmax/Aframax), Baltic Dry, port congestion** — Baltic Exchange & AIS feeds are paid.
+- **Weekly rig count** — Baker Hughes publishes spreadsheets only (no API).
+- **Gas Oil** — no free ICE Gas Oil feed, so it's proxied from NYMEX ULSD (both middle distillates) and marked with a `~`. As a consequence its correlation/normalized line tracks Heating Oil closely.
+- **Storm tracker, global storage utilization, ENSO index** — illustrative.
 
 ## Project structure
 
@@ -98,7 +140,22 @@ voltaire-terminal/
 - **Framer Motion** for transitions (page transitions, ticker animation, sidebar collapse)
 - **Lucide React** for icons
 
-No backend, no auth, no database. All data is generated client-side from seeded PRNGs in `src/data/mock.js` so the layout is reproducible on every reload.
+The Node backend lives in `server/` (Express, ESM, zero build step):
+
+```
+server/
+├── index.js              # Express app + /api/* routes
+├── .env.example          # EIA_API_KEY + PORT
+├── lib/cache.js          # TTL cache + resilient fetch helpers
+├── sources/
+│   ├── yahoo.js          # live quotes + history
+│   ├── eia.js            # US fundamentals (key)
+│   ├── openmeteo.js      # weather / degree-days
+│   └── gdelt.js          # energy newswire
+└── compute/
+    ├── markets.js        # instruments, ticker, series, correlation, cracks, curves, macro
+    └── derive.js         # calendar, OPEC, freight (modeled), rigs (modeled), sentiment
+```
 
 ## How navigation works
 
@@ -125,9 +182,9 @@ The aesthetic deliberately avoids "rounded-2xl, soft pastels, shadow-md" AI-gene
 - Animated ticker strip with `framer-motion` (60s loop)
 - Single amber accent (`#f59e0b`) reserved for highlights and active states
 
-## Mock data
+## Mock data (now the fallback)
 
-All datasets are derived from a small set of seeded random helpers (`seededRand`, `genSeries`, `genSpark`) in `src/data/mock.js`. To wire real data later, replace the imports in each page/panel with API calls (React Query or SWR recommended). The shape of each dataset is documented inline.
+`src/data/mock.js` is still here, but its role flipped: the seeded datasets are now the **graceful-degradation fallback**. Every panel calls `useLive("/api/…", <mock fallback>)`; if the backend or an upstream source is down, the panel quietly renders the mock instead of erroring. The shapes returned by `/api/*` mirror the mock exports exactly.
 
 ## License
 
