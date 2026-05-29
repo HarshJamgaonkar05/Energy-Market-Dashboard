@@ -6,6 +6,7 @@ import { fmt } from "../lib/format";
 
 export const HeroCard = ({ d }) => {
   const up = d.chg >= 0;
+  const gid = `g-${d.sym.replace(/[^a-zA-Z0-9]/g, "")}`;
   return (
     <motion.div
       whileHover={{ y: -1 }}
@@ -36,7 +37,7 @@ export const HeroCard = ({ d }) => {
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={d.spark}>
               <defs>
-                <linearGradient id={`g-${d.sym}`} x1="0" y1="0" x2="0" y2="1">
+                <linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor={up ? "#10b981" : "#ef4444"} stopOpacity={0.5} />
                   <stop offset="100%" stopColor={up ? "#10b981" : "#ef4444"} stopOpacity={0} />
                 </linearGradient>
@@ -46,7 +47,7 @@ export const HeroCard = ({ d }) => {
                 dataKey="y"
                 stroke={up ? "#10b981" : "#ef4444"}
                 strokeWidth={1.2}
-                fill={`url(#g-${d.sym})`}
+                fill={`url(#${gid})`}
                 dot={false}
                 isAnimationActive={false}
               />

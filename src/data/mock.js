@@ -1,3 +1,6 @@
+// ============================================================================
+// Deterministic helpers
+// ============================================================================
 export const seededRand = (seed) => {
   let s = seed;
   return () => {
@@ -26,99 +29,176 @@ export const genSpark = (seed, n = 24, dir = 1) => {
   });
 };
 
-// Hero ticker data
-export const HERO = [
-  { sym: "BRENT", name: "Brent Crude", val: 82.47, chg: +1.23, pct: +1.51, spark: genSpark(1, 30, 1), unit: "$/bbl" },
-  { sym: "WTI", name: "WTI Crude", val: 78.92, chg: +0.86, pct: +1.10, spark: genSpark(2, 30, 1), unit: "$/bbl" },
-  { sym: "HENRY", name: "Henry Hub", val: 3.142, chg: -0.087, pct: -2.69, spark: genSpark(3, 30, -1), unit: "$/MMBtu" },
-  { sym: "TTF", name: "Dutch TTF", val: 38.65, chg: +0.42, pct: +1.10, spark: genSpark(4, 30, 1), unit: "€/MWh" },
-  { sym: "JKM", name: "LNG JKM", val: 12.84, chg: -0.31, pct: -2.36, spark: genSpark(5, 30, -1), unit: "$/MMBtu" },
-  { sym: "VIX", name: "VIX Index", val: 14.32, chg: +0.18, pct: +1.27, spark: genSpark(6, 30, 1), unit: "" },
-  { sym: "DXY", name: "Dollar Index", val: 104.21, chg: -0.34, pct: -0.33, spark: genSpark(7, 30, -1), unit: "" },
+// Mean-reverting series pinned to `center` at the latest point.
+// Used for crack / spread history so the chart's last value matches the live print.
+export const genAround = (seed, n, center, amp) => {
+  const r = seededRand(seed);
+  let v = center;
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    v += (r() - 0.5) * amp - (v - center) * 0.12;
+    out.push({ t: i, v: +v.toFixed(2) });
+  }
+  out[out.length - 1].v = +center.toFixed(2);
+  return out;
+};
+
+// ============================================================================
+// The five instruments this terminal covers
+// Brent · WTI · Heating Oil (ULSD) · RBOB Gasoline · ICE Gas Oil
+// `bbl` normalises every quote to $/bbl so cracks & spreads are comparable.
+// ============================================================================
+const GAL_PER_BBL = 42;        // RBOB & Heating Oil quoted in $/gal
+const BBL_PER_MT_GASOIL = 7.45; // ICE Gas Oil quoted in $/metric tonne
+
+export const INSTRUMENTS = [
+  { id: "brent",  sym: "BRENT",  name: "Brent Crude",        kind: "crude",   color: "#f59e0b", unit: "$/bbl", val: 82.47, chg: +1.23,  pct: +1.51, bbl: 82.47,                            spark: genSpark(1, 30, 1) },
+  { id: "wti",    sym: "WTI",    name: "WTI Crude",          kind: "crude",   color: "#38bdf8", unit: "$/bbl", val: 78.92, chg: +0.86,  pct: +1.10, bbl: 78.92,                            spark: genSpark(2, 30, 1) },
+  { id: "ho",     sym: "HO",     name: "Heating Oil · ULSD", kind: "product", color: "#10b981", unit: "$/gal", val: 2.512, chg: -0.031, pct: -1.22, bbl: +(2.512 * GAL_PER_BBL).toFixed(2), spark: genSpark(3, 30, -1) },
+  { id: "rbob",   sym: "RBOB",   name: "RBOB Gasoline",      kind: "product", color: "#a78bfa", unit: "$/gal", val: 2.342, chg: +0.066, pct: +2.90, bbl: +(2.342 * GAL_PER_BBL).toFixed(2), spark: genSpark(4, 30, 1) },
+  { id: "gasoil", sym: "GASOIL", name: "ICE Gas Oil",        kind: "product", color: "#f472b6", unit: "$/mt",  val: 742.5, chg: +23.10, pct: +3.21, bbl: +(742.5 / BBL_PER_MT_GASOIL).toFixed(2), spark: genSpark(5, 30, 1) },
 ];
 
-// Multi-commodity comparison
+export const byId = (id) => INSTRUMENTS.find((i) => i.id === id);
+
+// Hero cards (dashboard) use the instruments directly.
+export const HERO = INSTRUMENTS;
+
+// Scrolling ticker strip = instruments + the headline derived spreads/cracks.
+export const TICKER = [
+  ...INSTRUMENTS.map((i) => ({ sym: i.sym, val: i.val, chg: i.chg, pct: i.pct })),
+  { sym: "BRENT-WTI",   val: 3.55,  chg: +0.37, pct: +11.6 },
+  { sym: "3:2:1 CRACK", val: 21.82, chg: -0.42, pct: -1.89 },
+  { sym: "GASOIL CRK",  val: 17.19, chg: +0.61, pct: +3.68 },
+  { sym: "RBOB CRK",    val: 19.44, chg: +0.88, pct: +4.74 },
+];
+
+// ============================================================================
+// Normalized price action — all five indexed to 100 at window start
+// ============================================================================
 export const MULTI_SERIES = (() => {
   const days = 90;
-  const r1 = seededRand(11), r2 = seededRand(22), r3 = seededRand(33);
-  let b = 100, w = 100, h = 100;
+  const cfg = [
+    { k: "Brent",  seed: 11, vol: 1.7, drift: +0.05 },
+    { k: "WTI",    seed: 22, vol: 1.9, drift: +0.04 },
+    { k: "HO",     seed: 33, vol: 2.1, drift: -0.03 },
+    { k: "RBOB",   seed: 44, vol: 2.4, drift: +0.10 },
+    { k: "Gasoil", seed: 55, vol: 2.0, drift: +0.02 },
+  ].map((c) => ({ ...c, r: seededRand(c.seed), v: 100 }));
   const out = [];
   for (let i = 0; i < days; i++) {
-    b += (r1() - 0.48) * 1.8;
-    w += (r2() - 0.49) * 2.1;
-    h += (r3() - 0.52) * 2.4;
     const d = new Date(2026, 1, 1 + i);
-    out.push({
-      date: `${d.getMonth() + 1}/${d.getDate()}`,
-      Brent: +b.toFixed(2),
-      WTI: +w.toFixed(2),
-      HenryHub: +h.toFixed(2),
+    const row = { date: `${d.getMonth() + 1}/${d.getDate()}` };
+    cfg.forEach((c) => {
+      c.v += (c.r() - 0.5) * c.vol + c.drift;
+      row[c.k] = +c.v.toFixed(2);
     });
+    out.push(row);
   }
   return out;
 })();
 
-// Forward curve
-export const FWD_CURVE = [
-  { m: "M1", brent: 82.47, wti: 78.92 },
-  { m: "M2", brent: 82.12, wti: 78.61 },
-  { m: "M3", brent: 81.78, wti: 78.24 },
-  { m: "M4", brent: 81.36, wti: 77.81 },
-  { m: "M5", brent: 80.92, wti: 77.42 },
-  { m: "M6", brent: 80.51, wti: 77.05 },
-  { m: "M7", brent: 80.18, wti: 76.72 },
-  { m: "M8", brent: 79.85, wti: 76.41 },
-  { m: "M9", brent: 79.52, wti: 76.13 },
-  { m: "M10", brent: 79.21, wti: 75.86 },
-  { m: "M11", brent: 78.93, wti: 75.62 },
-  { m: "M12", brent: 78.67, wti: 75.40 },
+// ============================================================================
+// Forward curves (M1..M12) for all five instruments
+// ============================================================================
+const genCurve = (front, monthlySlope, seed, jitter) => {
+  const r = seededRand(seed);
+  return Array.from({ length: 12 }, (_, i) => ({
+    m: `M${i + 1}`,
+    v: +(front + monthlySlope * i + (r() - 0.5) * jitter).toFixed(3),
+  }));
+};
+
+export const FWD_CURVES = {
+  brent:  { id: "brent",  label: "Brent",       color: "#f59e0b", unit: "$/bbl", data: genCurve(82.47, -0.34, 201, 0.18) },
+  wti:    { id: "wti",    label: "WTI",         color: "#38bdf8", unit: "$/bbl", data: genCurve(78.92, -0.30, 202, 0.18) },
+  ho:     { id: "ho",     label: "Heating Oil", color: "#10b981", unit: "$/gal", data: genCurve(2.512, -0.012, 203, 0.012) },
+  rbob:   { id: "rbob",   label: "RBOB",        color: "#a78bfa", unit: "$/gal", data: genCurve(2.342, +0.009, 204, 0.012) },
+  gasoil: { id: "gasoil", label: "Gas Oil",     color: "#f472b6", unit: "$/mt",  data: genCurve(742.5, -2.80, 205, 1.6) },
+};
+
+// ============================================================================
+// Crack-spread definitions for the five instruments.
+// value = ( Σ leg.c · product$/bbl − crudeC · crude$/bbl ) / div   →  $/bbl
+// ============================================================================
+export const CRACKS = [
+  // ---- Single-product cracks ----
+  { id: "rbob-wti",    group: "Product Cracks",   label: "RBOB Crack",        legs: [{ p: "rbob", c: 1 }],               crude: "wti",   div: 1 },
+  { id: "rbob-brent",  group: "Product Cracks",   label: "RBOB Crack",        legs: [{ p: "rbob", c: 1 }],               crude: "brent", div: 1 },
+  { id: "ho-wti",      group: "Product Cracks",   label: "Heating Oil Crack", legs: [{ p: "ho", c: 1 }],                 crude: "wti",   div: 1 },
+  { id: "ho-brent",    group: "Product Cracks",   label: "Heating Oil Crack", legs: [{ p: "ho", c: 1 }],                 crude: "brent", div: 1 },
+  { id: "gasoil-brent",group: "Product Cracks",   label: "Gas Oil Crack",     legs: [{ p: "gasoil", c: 1 }],             crude: "brent", div: 1 },
+  { id: "gasoil-wti",  group: "Product Cracks",   label: "Gas Oil Crack",     legs: [{ p: "gasoil", c: 1 }],             crude: "wti",   div: 1 },
+  // ---- Blended refining margins ----
+  { id: "321-wti",     group: "Refining Margins", label: "3:2:1 Crack",       legs: [{ p: "rbob", c: 2 }, { p: "ho", c: 1 }], crude: "wti",   crudeC: 3, div: 3 },
+  { id: "321-brent",   group: "Refining Margins", label: "3:2:1 Crack",       legs: [{ p: "rbob", c: 2 }, { p: "ho", c: 1 }], crude: "brent", crudeC: 3, div: 3 },
+  { id: "211-wti",     group: "Refining Margins", label: "2:1:1 Crack",       legs: [{ p: "rbob", c: 1 }, { p: "ho", c: 1 }], crude: "wti",   crudeC: 2, div: 2 },
+  { id: "532-wti",     group: "Refining Margins", label: "5:3:2 Crack",       legs: [{ p: "rbob", c: 3 }, { p: "ho", c: 2 }], crude: "wti",   crudeC: 5, div: 5 },
 ];
 
-// Correlation matrix
-export const CORR_LABELS = ["Brent", "WTI", "HH", "TTF", "JKM", "DXY", "SPX", "VIX"];
+export const crackValue = (c) => {
+  const prod = c.legs.reduce((s, l) => s + l.c * byId(l.p).bbl, 0);
+  const crudeC = c.crudeC ?? 1;
+  return (prod - crudeC * byId(c.crude).bbl) / c.div;
+};
+
+// Suffix used in the UI to show which crude the crack is struck against.
+export const crackVs = (c) => byId(c.crude).sym;
+
+// ============================================================================
+// Correlation matrix — 30D rolling, the five instruments
+// (crudes track tightly; middle distillates HO/Gas Oil are the strongest pair;
+//  RBOB is the loosest fit as a light/seasonal product)
+// ============================================================================
+export const CORR_LABELS = ["Brent", "WTI", "HO", "RBOB", "Gasoil"];
 export const CORR_MATRIX = [
-  [1.00, 0.94, 0.31, 0.62, 0.58, -0.42, 0.51, -0.38],
-  [0.94, 1.00, 0.34, 0.58, 0.55, -0.39, 0.49, -0.36],
-  [0.31, 0.34, 1.00, 0.71, 0.68, -0.18, 0.22, -0.15],
-  [0.62, 0.58, 0.71, 1.00, 0.86, -0.28, 0.31, -0.24],
-  [0.58, 0.55, 0.68, 0.86, 1.00, -0.31, 0.34, -0.21],
-  [-0.42, -0.39, -0.18, -0.28, -0.31, 1.00, -0.32, 0.18],
-  [0.51, 0.49, 0.22, 0.31, 0.34, -0.32, 1.00, -0.78],
-  [-0.38, -0.36, -0.15, -0.24, -0.21, 0.18, -0.78, 1.00],
+  [1.00, 0.97, 0.88, 0.82, 0.93],
+  [0.97, 1.00, 0.86, 0.84, 0.89],
+  [0.88, 0.86, 1.00, 0.79, 0.95],
+  [0.82, 0.84, 0.79, 1.00, 0.76],
+  [0.93, 0.89, 0.95, 0.76, 1.00],
 ];
 
-// Movers
+// ============================================================================
+// Market movers — the five plus their headline spreads/cracks
+// ============================================================================
 export const MOVERS = [
-  { sym: "GASOIL", val: 742.50, pct: +3.21, vol: "184K" },
-  { sym: "RBOB", val: 2.342, pct: +2.86, vol: "92K" },
-  { sym: "WTI-BRENT", val: -3.55, pct: -2.14, vol: "—" },
-  { sym: "TTF-NBP", val: 1.82, pct: +1.92, vol: "—" },
-  { sym: "JKM-TTF", val: -0.34, pct: -1.43, vol: "—" },
-  { sym: "CRACK 321", val: 24.86, pct: -0.92, vol: "—" },
-  { sym: "DIESEL", val: 2.512, pct: -1.21, vol: "78K" },
-  { sym: "FUEL OIL", val: 489.20, pct: +0.84, vol: "31K" },
+  { sym: "GASOIL",       val: 742.50, pct: +3.21,  vol: "184K" },
+  { sym: "RBOB",         val: 2.342,  pct: +2.90,  vol: "92K" },
+  { sym: "BRENT",        val: 82.47,  pct: +1.51,  vol: "312K" },
+  { sym: "WTI",          val: 78.92,  pct: +1.10,  vol: "284K" },
+  { sym: "HEATING OIL",  val: 2.512,  pct: -1.22,  vol: "78K" },
+  { sym: "BRENT-WTI",    val: 3.55,   pct: +11.60, vol: "—" },
+  { sym: "3:2:1 CRACK",  val: 21.82,  pct: -1.89,  vol: "—" },
+  { sym: "GASOIL CRACK", val: 17.19,  pct: +3.68,  vol: "—" },
 ];
 
+// ============================================================================
 // News feed
+// ============================================================================
 export const NEWS = [
-  { t: "02:14", sev: "high", src: "REUTERS", txt: "OPEC+ signals possible production cut extension into Q3 2026 amid demand uncertainty", tag: "CRUDE" },
-  { t: "01:58", sev: "med", src: "BLOOMBERG", txt: "European gas storage at 64% capacity, above 5-year average ahead of summer injection", tag: "GAS" },
-  { t: "01:42", sev: "high", src: "PLATTS", txt: "Red Sea transit volumes drop 38% YoY; tanker rates surge to multi-month highs", tag: "FREIGHT" },
-  { t: "01:23", sev: "low", src: "EIA", txt: "Weekly crude inventories drew 4.2 MMbbl vs +1.1 expected; gasoline +2.4 MMbbl", tag: "STOCKS" },
-  { t: "00:51", sev: "med", src: "ARGUS", txt: "Asian LNG buyers ramp up term contracting; JKM curve steepens through winter strip", tag: "LNG" },
-  { t: "00:34", sev: "low", src: "ICIS", txt: "US Gulf refinery utilization rises to 91.2%, highest since November", tag: "PRODUCTS" },
-  { t: "00:12", sev: "high", src: "WSJ", txt: "Fed minutes signal extended hold; dollar strengthens against major commodity currencies", tag: "MACRO" },
+  { t: "02:14", sev: "high", src: "REUTERS",   txt: "OPEC+ signals possible production cut extension into Q3 2026 amid demand uncertainty", tag: "CRUDE" },
+  { t: "01:42", sev: "high", src: "PLATTS",    txt: "Red Sea transit volumes drop 38% YoY; tanker rates surge to multi-month highs", tag: "FREIGHT" },
+  { t: "01:23", sev: "low",  src: "EIA",       txt: "Weekly crude inventories drew 4.2 MMbbl vs +1.1 expected; gasoline +2.4 MMbbl", tag: "STOCKS" },
+  { t: "01:05", sev: "med",  src: "ARGUS",     txt: "ICE gas oil crack widens to 6-week high as European diesel demand firms", tag: "PRODUCTS" },
+  { t: "00:34", sev: "low",  src: "ICIS",      txt: "US Gulf refinery utilization rises to 91.2%, highest since November", tag: "PRODUCTS" },
+  { t: "00:21", sev: "med",  src: "OPIS",      txt: "RBOB crack rallies into driving-season restocking; 3:2:1 margin tests $22/bbl", tag: "PRODUCTS" },
+  { t: "00:12", sev: "high", src: "WSJ",       txt: "Fed minutes signal extended hold; dollar strengthens against major commodity currencies", tag: "MACRO" },
 ];
 
+// ============================================================================
 // Economic calendar
+// ============================================================================
 export const ECON = [
   { t: "14:30", evt: "US Crude Stocks", imp: "high", fc: "-2.1M", prev: "-4.2M" },
-  { t: "15:00", evt: "EIA Gas Storage", imp: "high", fc: "+82B", prev: "+76B" },
-  { t: "16:30", evt: "FOMC Minutes", imp: "high", fc: "—", prev: "—" },
-  { t: "21:00", evt: "API Stocks", imp: "med", fc: "—", prev: "+1.8M" },
+  { t: "15:00", evt: "EIA Distillate",  imp: "high", fc: "+1.4M", prev: "-0.8M" },
+  { t: "16:30", evt: "FOMC Minutes",    imp: "high", fc: "—",     prev: "—" },
+  { t: "21:00", evt: "API Stocks",      imp: "med",  fc: "—",     prev: "+1.8M" },
 ];
 
-// Inventory data
+// ============================================================================
+// Inventories (US crude / products)
+// ============================================================================
 export const INV = [
   { reg: "PADD 1", val: 8.4, chg: -0.3 },
   { reg: "PADD 2", val: 102.7, chg: +1.2 },
@@ -136,7 +216,9 @@ export const INV_HIST = (() => {
   });
 })();
 
-// Shipping congestion
+// ============================================================================
+// Freight (combined into Market Drivers)
+// ============================================================================
 export const SHIPPING = [
   { port: "Singapore", congestion: 78, vessels: 142, delay: "3.2d" },
   { port: "Rotterdam", congestion: 54, vessels: 89, delay: "1.8d" },
@@ -146,7 +228,9 @@ export const SHIPPING = [
   { port: "Shanghai", congestion: 61, vessels: 124, delay: "2.1d" },
 ];
 
-// Weather regions
+// ============================================================================
+// Weather (combined into Market Drivers)
+// ============================================================================
 export const WEATHER = [
   { reg: "US Northeast", temp: -4, anom: -3.2, hdd: 142, severity: "high" },
   { reg: "US Midwest", temp: -8, anom: -5.1, hdd: 168, severity: "high" },
@@ -154,13 +238,4 @@ export const WEATHER = [
   { reg: "NW Europe", temp: 3, anom: -1.4, hdd: 124, severity: "med" },
   { reg: "Northeast Asia", temp: -2, anom: -2.8, hdd: 134, severity: "high" },
   { reg: "S. Europe", temp: 11, anom: +2.1, hdd: 68, severity: "low" },
-];
-
-// Alerts
-export const ALERTS = [
-  { id: 1, sev: "high", t: "02:14", sym: "BRENT", msg: "Crossed above 82.00 resistance", act: true },
-  { id: 2, sev: "med", t: "01:48", sym: "TTF", msg: "Volatility 30D > 45%", act: true },
-  { id: 3, sev: "high", t: "01:23", sym: "WTI-BRENT", msg: "Spread widened beyond -$4.00", act: true },
-  { id: 4, sev: "low", t: "00:54", sym: "JKM", msg: "Backwardation steepening detected", act: false },
-  { id: 5, sev: "med", t: "00:31", sym: "DXY", msg: "Below 200D MA", act: false },
 ];

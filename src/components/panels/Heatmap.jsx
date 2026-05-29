@@ -2,21 +2,17 @@ import { Card } from "../primitives/Card";
 import { SectionTitle } from "../primitives/SectionTitle";
 import { CORR_LABELS, CORR_MATRIX } from "../../data/mock";
 
-export const Heatmap = () => {
+export const Heatmap = ({ title = "Correlation Matrix", sub = "30D rolling" }) => {
   const colorFor = (v) => {
     if (v === 1) return "#1c1d22";
     const intensity = Math.abs(v);
-    if (v >= 0) {
-      const a = Math.round(intensity * 200);
-      return `rgba(16, 185, 129, ${(a / 255).toFixed(2)})`;
-    }
-    const a = Math.round(intensity * 200);
-    return `rgba(239, 68, 68, ${(a / 255).toFixed(2)})`;
+    const a = (Math.round(intensity * 200) / 255).toFixed(2);
+    return v >= 0 ? `rgba(16, 185, 129, ${a})` : `rgba(239, 68, 68, ${a})`;
   };
   return (
     <Card>
-      <SectionTitle sub="30D rolling">Correlation Matrix</SectionTitle>
-      <div className="grid gap-px" style={{ gridTemplateColumns: `40px repeat(${CORR_LABELS.length}, 1fr)` }}>
+      {title && <SectionTitle sub={sub}>{title}</SectionTitle>}
+      <div className="grid gap-px" style={{ gridTemplateColumns: `52px repeat(${CORR_LABELS.length}, 1fr)` }}>
         <div />
         {CORR_LABELS.map((l) => (
           <div key={l} className="text-[9px] text-zinc-500 uppercase tracking-wider text-center pb-1">

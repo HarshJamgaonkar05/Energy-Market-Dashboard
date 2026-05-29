@@ -1,14 +1,21 @@
 import { useState } from "react";
 import {
-  AreaChart, Area, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
 import { Card } from "../primitives/Card";
-import { SectionTitle } from "../primitives/SectionTitle";
 import { MULTI_SERIES } from "../../data/mock";
 import { chartProps, ChartTooltip } from "../../lib/chart-theme";
 
+const SERIES = [
+  { k: "Brent", c: "#f59e0b" },
+  { k: "WTI", c: "#38bdf8" },
+  { k: "HO", c: "#10b981" },
+  { k: "RBOB", c: "#a78bfa" },
+  { k: "Gasoil", c: "#f472b6" },
+];
+
 export const MultiChart = () => {
-  const [series, setSeries] = useState({ Brent: true, WTI: true, HenryHub: true });
+  const [on, setOn] = useState({ Brent: true, WTI: true, HO: true, RBOB: true, Gasoil: true });
   const [range, setRange] = useState("3M");
 
   return (
@@ -22,7 +29,7 @@ export const MultiChart = () => {
             <p className="text-[10px] text-zinc-600 mt-0.5">Indexed to 100 at start of window</p>
           </div>
           <div className="flex items-center gap-1">
-            {["1D", "1W", "1M", "3M", "6M", "1Y", "5Y"].map((r) => (
+            {["1W", "1M", "3M", "6M", "1Y"].map((r) => (
               <button
                 key={r}
                 onClick={() => setRange(r)}
@@ -37,27 +44,17 @@ export const MultiChart = () => {
             ))}
           </div>
         </div>
-        <div className="flex items-center gap-3 mt-3">
-          {Object.keys(series).map((k) => {
-            const colors = { Brent: "#f59e0b", WTI: "#38bdf8", HenryHub: "#10b981" };
-            const on = series[k];
-            return (
-              <button
-                key={k}
-                onClick={() => setSeries({ ...series, [k]: !series[k] })}
-                className="flex items-center gap-1.5 text-[10px] tracking-wider uppercase"
-              >
-                <div
-                  className="w-2.5 h-2.5 border"
-                  style={{
-                    background: on ? colors[k] : "transparent",
-                    borderColor: colors[k],
-                  }}
-                />
-                <span className={on ? "text-zinc-200" : "text-zinc-600"}>{k}</span>
-              </button>
-            );
-          })}
+        <div className="flex items-center flex-wrap gap-x-3 gap-y-1 mt-3">
+          {SERIES.map(({ k, c }) => (
+            <button
+              key={k}
+              onClick={() => setOn({ ...on, [k]: !on[k] })}
+              className="flex items-center gap-1.5 text-[10px] tracking-wider uppercase"
+            >
+              <div className="w-2.5 h-2.5 border" style={{ background: on[k] ? c : "transparent", borderColor: c }} />
+              <span className={on[k] ? "text-zinc-200" : "text-zinc-600"}>{k}</span>
+            </button>
+          ))}
         </div>
       </div>
       <div className="h-64 px-2 pb-2">
@@ -67,14 +64,10 @@ export const MultiChart = () => {
             <XAxis dataKey="date" {...chartProps.axis} interval={10} />
             <YAxis {...chartProps.axis} domain={["auto", "auto"]} width={40} />
             <Tooltip content={<ChartTooltip />} />
-            {series.Brent && (
-              <Line type="monotone" dataKey="Brent" stroke="#f59e0b" strokeWidth={1.4} dot={false} isAnimationActive={false} />
-            )}
-            {series.WTI && (
-              <Line type="monotone" dataKey="WTI" stroke="#38bdf8" strokeWidth={1.4} dot={false} isAnimationActive={false} />
-            )}
-            {series.HenryHub && (
-              <Line type="monotone" dataKey="HenryHub" stroke="#10b981" strokeWidth={1.4} dot={false} isAnimationActive={false} />
+            {SERIES.map(({ k, c }) =>
+              on[k] ? (
+                <Line key={k} type="monotone" dataKey={k} stroke={c} strokeWidth={1.4} dot={false} isAnimationActive={false} />
+              ) : null
             )}
           </LineChart>
         </ResponsiveContainer>

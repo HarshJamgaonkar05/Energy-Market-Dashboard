@@ -1,136 +1,299 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
-  LineChart, Line, AreaChart, Area, BarChart, Bar, ScatterChart, Scatter, XAxis, YAxis, ZAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+  AreaChart, Area, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine,
 } from "recharts";
-import { Layers, GitBranch, Plus, Maximize2, MoreHorizontal } from "lucide-react";
-import { Heatmap } from "../components/panels/Heatmap";
+import { GitBranch, Layers, Grid3x3 } from "lucide-react";
 import { Card } from "../components/primitives/Card";
-import { SectionTitle } from "../components/primitives/SectionTitle";
-import { Badge } from "../components/primitives/Badge";
+import { Band } from "../components/primitives/Band";
+import { Heatmap } from "../components/panels/Heatmap";
 import { chartProps, ChartTooltip } from "../lib/chart-theme";
-import { genSeries, seededRand } from "../data/mock";
+import { fmt, fmtSigned } from "../lib/format";
+import {
+  INSTRUMENTS, byId, CRACKS, crackValue, crackVs, FWD_CURVES, genAround,
+  CORR_LABELS, CORR_MATRIX,
+} from "../data/mock";
 
-export const PageAnalytics = () => {
-  const [layout, setLayout] = useState("quad");
+// ----------------------------------------------------------------------------
+// Crack spreads — pick any of the cracks available across the five instruments
+// ----------------------------------------------------------------------------
+const CrackSpreads = () => {
+  const [id, setId] = useState("321-wti");
+  const crack = CRACKS.find((c) => c.id === id);
+  const idx = CRACKS.findIndex((c) => c.id === id);
+  const value = crackValue(crack);
+
+  const hist = useMemo(
+    () => genAround(900 + idx, 60, value, Math.max(1, Math.abs(value) * 0.07)),
+    [id] // value is fully determined by id
+  );
+
+  const first = hist[0].v;
+  const chg = value - first;
+  const pct = (chg / Math.abs(first)) * 100;
+  const lo = Math.min(...hist.map((p) => p.v));
+  const hi = Math.max(...hist.map((p) => p.v));
+  const avg = hist.reduce((s, p) => s + p.v, 0) / hist.length;
+  const up = chg >= 0;
+
+  const groups = ["Product Cracks", "Refining Margins"];
+
   return (
-    <div className="space-y-3">
-      <Card>
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-[13px] font-semibold text-zinc-100">Quant Workspace</h2>
-            <p className="text-[10px] text-zinc-500 mt-0.5">Drag, resize, save layouts · Default workspace: Crude / Gas / Spreads</p>
-          </div>
-          <div className="flex items-center gap-2">
-            {["single", "dual", "quad", "grid"].map((l) => (
-              <button
-                key={l}
-                onClick={() => setLayout(l)}
-                className={`px-2 h-7 text-[10px] font-mono uppercase ${
-                  layout === l ? "bg-amber-500/10 text-amber-400 border border-amber-500/30" : "text-zinc-500 border border-transparent hover:text-zinc-200"
-                }`}
-              >
-                {l}
-              </button>
-            ))}
-            <button className="h-7 px-3 text-[10px] uppercase tracking-wider bg-amber-500 text-zinc-950 font-semibold hover:bg-amber-400">
-              <Plus size={11} className="inline mr-1" /> Add Panel
-            </button>
-          </div>
+    <Card padding={false}>
+      <div className="grid grid-cols-12">
+        {/* Selector — every possible crack for the five instruments */}
+        <div className="col-span-12 md:col-span-4 border-b md:border-b-0 md:border-r border-[#1c1d22] max-h-[360px] overflow-y-auto">
+          {groups.map((g) => (
+            <div key={g}>
+              <div className="px-3 py-1.5 text-[9px] uppercase tracking-[0.16em] text-zinc-600 bg-[#0a0b0e] sticky top-0">
+                {g}
+              </div>
+              {CRACKS.filter((c) => c.group === g).map((c) => {
+                const v = crackValue(c);
+                const sel = c.id === id;
+                return (
+                  <button
+                    key={c.id}
+                    onClick={() => setId(c.id)}
+                    className={`w-full flex items-center justify-between px-3 h-9 text-[11px] border-l-2 transition-colors ${
+                      sel
+                        ? "border-amber-500 bg-amber-500/[0.06] text-zinc-100"
+                        : "border-transparent text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.02]"
+                    }`}
+                  >
+                    <span className="flex items-center gap-1.5 truncate">
+                      <span className="truncate">{c.label}</span>
+                      <span className="text-[9px] font-mono text-zinc-600">vs {crackVs(c)}</span>
+                    </span>
+                    <span className="font-mono text-[11px] text-zinc-300">{fmt(v)}</span>
+                  </button>
+                );
+              })}
+            </div>
+          ))}
         </div>
-      </Card>
 
-      <div className={`grid gap-3 ${layout === "single" ? "grid-cols-1" : layout === "dual" ? "grid-cols-2" : "grid-cols-2 lg:grid-cols-2"}`}>
-        <Card padding={false}>
-          <div className="p-3 flex items-center justify-between border-b border-[#1c1d22]">
-            <span className="text-[10px] font-mono tracking-wider text-zinc-300">BRENT · M1</span>
-            <div className="flex gap-1 text-zinc-600">
-              <button className="hover:text-zinc-200"><Maximize2 size={11} /></button>
-              <button className="hover:text-zinc-200"><MoreHorizontal size={12} /></button>
+        {/* Selected crack chart + stats */}
+        <div className="col-span-12 md:col-span-8 p-4">
+          <div className="flex items-start justify-between mb-3">
+            <div>
+              <div className="text-[10px] uppercase tracking-wider text-zinc-500">
+                {crack.label} · vs {crackVs(crack)}
+              </div>
+              <div className="flex items-baseline gap-2 mt-0.5">
+                <span className="font-mono text-2xl text-zinc-100">${fmt(value)}</span>
+                <span className="text-[10px] text-zinc-600">/bbl</span>
+                <span className={`font-mono text-[11px] ${up ? "text-emerald-400" : "text-red-400"}`}>
+                  {fmtSigned(chg)} ({fmtSigned(pct)}%) · 60d
+                </span>
+              </div>
             </div>
+            <span className="text-[9px] font-mono text-zinc-600 hidden sm:block">
+              {crack.legs.map((l) => `${l.c}×${byId(l.p).sym}`).join(" + ")} − {crack.crudeC ?? 1}×{crackVs(crack)}
+            </span>
           </div>
-          <div className="h-60 p-2">
-            <ResponsiveContainer>
-              <LineChart data={genSeries(101, 60, 82, 2)}>
-                <CartesianGrid {...chartProps.grid} />
-                <XAxis dataKey="t" {...chartProps.axis} />
-                <YAxis {...chartProps.axis} width={40} />
-                <Tooltip content={<ChartTooltip />} />
-                <Line type="monotone" dataKey="v" stroke="#f59e0b" strokeWidth={1.4} dot={false} isAnimationActive={false} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </Card>
 
-        <Card padding={false}>
-          <div className="p-3 flex items-center justify-between border-b border-[#1c1d22]">
-            <span className="text-[10px] font-mono tracking-wider text-zinc-300">BRENT-WTI SPREAD</span>
-            <div className="flex gap-1 text-zinc-600">
-              <button className="hover:text-zinc-200"><Maximize2 size={11} /></button>
-              <button className="hover:text-zinc-200"><MoreHorizontal size={12} /></button>
-            </div>
-          </div>
-          <div className="h-60 p-2">
+          <div className="h-52">
             <ResponsiveContainer>
-              <AreaChart data={Array.from({ length: 60 }, (_, i) => ({ t: i, v: 3 + Math.sin(i / 7) * 1.2 + Math.random() * 0.6 }))}>
+              <AreaChart data={hist} margin={{ top: 6, right: 12, bottom: 4, left: 0 }}>
                 <defs>
-                  <linearGradient id="ws" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#38bdf8" stopOpacity={0.35} />
-                    <stop offset="100%" stopColor="#38bdf8" stopOpacity={0} />
+                  <linearGradient id="crackFill" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#f59e0b" stopOpacity={0.3} />
+                    <stop offset="100%" stopColor="#f59e0b" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid {...chartProps.grid} />
                 <XAxis dataKey="t" {...chartProps.axis} />
-                <YAxis {...chartProps.axis} width={36} />
-                <Tooltip content={<ChartTooltip />} />
-                <Area type="monotone" dataKey="v" stroke="#38bdf8" fill="url(#ws)" strokeWidth={1.4} isAnimationActive={false} />
+                <YAxis {...chartProps.axis} width={40} domain={["auto", "auto"]} />
+                <Tooltip content={<ChartTooltip unit=" $/bbl" />} />
+                <ReferenceLine y={avg} stroke="#3a3b41" strokeDasharray="3 3" label={{ value: "avg", fill: "#71717a", fontSize: 9, position: "right" }} />
+                <Area type="monotone" dataKey="v" name={crack.label} stroke="#f59e0b" strokeWidth={1.5} fill="url(#crackFill)" isAnimationActive={false} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
+
+          <div className="grid grid-cols-3 gap-3 mt-3 pt-3 border-t border-[#1c1d22]">
+            {[
+              { l: "60d Low", v: `$${fmt(lo)}` },
+              { l: "60d Avg", v: `$${fmt(avg)}` },
+              { l: "60d High", v: `$${fmt(hi)}` },
+            ].map((s) => (
+              <div key={s.l}>
+                <div className="text-[9px] text-zinc-600 uppercase tracking-wider">{s.l}</div>
+                <div className="font-mono text-[13px] text-zinc-200">{s.v}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </Card>
+  );
+};
+
+// ----------------------------------------------------------------------------
+// Futures spreads — forward curves, calendar spreads, inter-commodity spreads
+// ----------------------------------------------------------------------------
+const FuturesSpreads = () => {
+  const [id, setId] = useState("brent");
+  const curve = FWD_CURVES[id];
+  const d = curve.data;
+
+  const cal = [
+    { lbl: "M1–M2", v: d[0].v - d[1].v },
+    { lbl: "M2–M3", v: d[1].v - d[2].v },
+    { lbl: "M1–M6", v: d[0].v - d[5].v },
+    { lbl: "M1–M12", v: d[0].v - d[11].v },
+  ];
+  const structure = d[0].v >= d[11].v ? "Backwardation" : "Contango";
+
+  const ix = (x) => byId(x);
+  const inter = [
+    { lbl: "Brent – WTI",        v: ix("brent").val - ix("wti").val,  unit: "$/bbl", note: "Crude arb" },
+    { lbl: "RBOB – Heating Oil", v: ix("rbob").val - ix("ho").val,    unit: "$/gal", note: "Gas–Heat" },
+    { lbl: "Heating Oil – Gas Oil", v: ix("ho").bbl - ix("gasoil").bbl, unit: "$/bbl", note: "Distillate" },
+    { lbl: "RBOB – Gas Oil",     v: ix("rbob").bbl - ix("gasoil").bbl, unit: "$/bbl", note: "Light prod" },
+  ];
+
+  return (
+    <div className="grid grid-cols-12 gap-3">
+      {/* Forward curve */}
+      <Card padding={false} className="col-span-12 lg:col-span-7">
+        <div className="p-4 pb-2 flex items-center justify-between flex-wrap gap-2">
+          <div>
+            <div className="text-[11px] font-semibold tracking-[0.12em] text-zinc-300 uppercase">Forward Curve</div>
+            <div className="text-[10px] text-zinc-600 mt-0.5">{curve.label} · M1–M12 · {curve.unit}</div>
+          </div>
+          <div className="flex items-center gap-1">
+            {Object.values(FWD_CURVES).map((c) => (
+              <button
+                key={c.id}
+                onClick={() => setId(c.id)}
+                className={`px-2 h-6 text-[10px] font-mono tracking-wider transition-colors ${
+                  id === c.id
+                    ? "bg-amber-500/10 text-amber-400 border border-amber-500/30"
+                    : "text-zinc-500 hover:text-zinc-200 border border-transparent"
+                }`}
+              >
+                {c.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="h-60 px-2 pb-2">
+          <ResponsiveContainer>
+            <LineChart data={d} margin={{ top: 8, right: 18, bottom: 4, left: 0 }}>
+              <CartesianGrid {...chartProps.grid} />
+              <XAxis dataKey="m" {...chartProps.axis} />
+              <YAxis {...chartProps.axis} width={48} domain={["auto", "auto"]} />
+              <Tooltip content={<ChartTooltip />} />
+              <Line type="monotone" dataKey="v" name={curve.label} stroke={curve.color} strokeWidth={1.6} dot={{ r: 2.5, fill: curve.color }} isAnimationActive={false} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+        <div className="px-4 py-2.5 border-t border-[#1c1d22] flex items-center gap-2 text-[10px]">
+          <span className="text-zinc-600 uppercase tracking-wider">Term structure</span>
+          <span className={`font-mono ${structure === "Backwardation" ? "text-emerald-400" : "text-sky-400"}`}>{structure}</span>
+        </div>
+      </Card>
+
+      {/* Spread tables */}
+      <div className="col-span-12 lg:col-span-5 space-y-3">
+        <Card padding={false}>
+          <div className="px-4 py-2.5 border-b border-[#1c1d22] text-[11px] font-semibold tracking-[0.12em] text-zinc-300 uppercase">
+            Calendar Spreads · {curve.label}
+          </div>
+          {cal.map((s) => (
+            <div key={s.lbl} className="flex items-center justify-between px-4 py-2 border-b border-[#15161a] last:border-0">
+              <span className="text-[11px] text-zinc-300 font-mono">{s.lbl}</span>
+              <div className="flex items-center gap-2">
+                <span className={`font-mono text-[11px] ${s.v >= 0 ? "text-emerald-400" : "text-sky-400"}`}>{fmtSigned(s.v, curve.unit === "$/gal" ? 4 : 3)}</span>
+                <span className="text-[9px] uppercase tracking-wider text-zinc-600 w-16 text-right">{s.v >= 0 ? "Backwrd" : "Contango"}</span>
+              </div>
+            </div>
+          ))}
         </Card>
 
         <Card padding={false}>
-          <div className="p-3 flex items-center justify-between border-b border-[#1c1d22]">
-            <span className="text-[10px] font-mono tracking-wider text-zinc-300">REALIZED VOL · 30D</span>
-            <div className="flex gap-1 text-zinc-600">
-              <button className="hover:text-zinc-200"><Maximize2 size={11} /></button>
-              <button className="hover:text-zinc-200"><MoreHorizontal size={12} /></button>
+          <div className="px-4 py-2.5 border-b border-[#1c1d22] text-[11px] font-semibold tracking-[0.12em] text-zinc-300 uppercase">
+            Inter-Commodity Spreads
+          </div>
+          {inter.map((s) => (
+            <div key={s.lbl} className="flex items-center justify-between px-4 py-2 border-b border-[#15161a] last:border-0">
+              <div className="min-w-0">
+                <div className="text-[11px] text-zinc-300 truncate">{s.lbl}</div>
+                <div className="text-[9px] text-zinc-600 uppercase tracking-wider">{s.note}</div>
+              </div>
+              <span className="font-mono text-[12px] text-zinc-100 whitespace-nowrap">
+                {fmtSigned(s.v, s.unit === "$/gal" ? 4 : 2)} <span className="text-[9px] text-zinc-600">{s.unit}</span>
+              </span>
             </div>
-          </div>
-          <div className="h-60 p-2">
-            <ResponsiveContainer>
-              <BarChart data={Array.from({ length: 30 }, (_, i) => ({ t: i, v: 18 + Math.sin(i / 4) * 6 + Math.random() * 3 }))}>
-                <CartesianGrid {...chartProps.grid} />
-                <XAxis dataKey="t" {...chartProps.axis} />
-                <YAxis {...chartProps.axis} width={36} />
-                <Tooltip content={<ChartTooltip unit="%" />} />
-                <Bar dataKey="v" fill="#10b981" fillOpacity={0.7} isAnimationActive={false} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </Card>
-
-        <Card padding={false}>
-          <div className="p-3 flex items-center justify-between border-b border-[#1c1d22]">
-            <span className="text-[10px] font-mono tracking-wider text-zinc-300">CORR EXPLORER</span>
-            <div className="flex gap-1 text-zinc-600">
-              <button className="hover:text-zinc-200"><Maximize2 size={11} /></button>
-              <button className="hover:text-zinc-200"><MoreHorizontal size={12} /></button>
-            </div>
-          </div>
-          <div className="p-4">
-            <Heatmap />
-          </div>
+          ))}
         </Card>
       </div>
-
-      <Card>
-        <SectionTitle>Strategy Notes</SectionTitle>
-        <textarea
-          defaultValue={"WTI-Brent at -$3.55. Watch for narrowing into USGC SPR refilling.\nLNG JKM-TTF arbitrage closed — flows redirecting Atlantic basin.\nFreight (TD3C) elevated, possible drag on Asian crude differentials."}
-          className="w-full bg-[#0a0b0e] border border-[#1c1d22] focus:border-[#2a2b31] outline-none p-3 text-[11px] text-zinc-300 font-mono leading-relaxed resize-none"
-          rows={5}
-        />
-      </Card>
     </div>
   );
 };
+
+// ----------------------------------------------------------------------------
+// Correlation insight — strongest / weakest pair pulled from the matrix
+// ----------------------------------------------------------------------------
+const CorrelationInsight = () => {
+  const pairs = [];
+  for (let i = 0; i < CORR_LABELS.length; i++) {
+    for (let j = i + 1; j < CORR_LABELS.length; j++) {
+      pairs.push({ a: CORR_LABELS[i], b: CORR_LABELS[j], v: CORR_MATRIX[i][j] });
+    }
+  }
+  const sorted = [...pairs].sort((x, y) => y.v - x.v);
+  const strongest = sorted[0];
+  const weakest = sorted[sorted.length - 1];
+
+  return (
+    <Card className="col-span-12 lg:col-span-4">
+      <div className="text-[11px] font-semibold tracking-[0.12em] text-zinc-300 uppercase mb-3">Read</div>
+      <div className="space-y-3">
+        <div>
+          <div className="text-[9px] text-zinc-600 uppercase tracking-wider">Tightest pair</div>
+          <div className="flex items-baseline justify-between">
+            <span className="text-[12px] text-zinc-200">{strongest.a} · {strongest.b}</span>
+            <span className="font-mono text-[13px] text-emerald-400">{strongest.v.toFixed(2)}</span>
+          </div>
+        </div>
+        <div>
+          <div className="text-[9px] text-zinc-600 uppercase tracking-wider">Loosest pair</div>
+          <div className="flex items-baseline justify-between">
+            <span className="text-[12px] text-zinc-200">{weakest.a} · {weakest.b}</span>
+            <span className="font-mono text-[13px] text-amber-400">{weakest.v.toFixed(2)}</span>
+          </div>
+        </div>
+        <p className="text-[10px] text-zinc-500 leading-relaxed pt-2 border-t border-[#1c1d22]">
+          Crudes move near-lockstep; the two middle distillates (Heating Oil &amp; Gas Oil)
+          are the most correlated product pair. RBOB is the loosest fit — a light,
+          seasonally-driven product whose crack swings independently.
+        </p>
+        <div className="flex items-center gap-3 pt-1 text-[9px] uppercase tracking-wider">
+          <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 bg-emerald-500/70" /> <span className="text-zinc-400">Positive</span></span>
+          <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 bg-red-500/70" /> <span className="text-zinc-400">Negative</span></span>
+        </div>
+      </div>
+    </Card>
+  );
+};
+
+// ----------------------------------------------------------------------------
+export const PageAnalytics = () => (
+  <div className="space-y-3">
+    <Band icon={Layers} title="Crack Spreads" sub="Refining margins across the five instruments" />
+    <CrackSpreads />
+
+    <Band icon={GitBranch} title="Futures Spreads" sub="Forward curves · calendar & inter-commodity" />
+    <FuturesSpreads />
+
+    <Band icon={Grid3x3} title="Correlation Matrix" sub="30D rolling · Brent · WTI · HO · RBOB · Gas Oil" />
+    <div className="grid grid-cols-12 gap-3">
+      <div className="col-span-12 lg:col-span-8">
+        <Heatmap title={null} />
+      </div>
+      <CorrelationInsight />
+    </div>
+  </div>
+);

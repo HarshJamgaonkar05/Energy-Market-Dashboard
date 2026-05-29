@@ -1,10 +1,19 @@
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
 import { Card } from "../primitives/Card";
 import { SectionTitle } from "../primitives/SectionTitle";
-import { FWD_CURVE } from "../../data/mock";
+import { FWD_CURVES } from "../../data/mock";
 import { chartProps, ChartTooltip } from "../../lib/chart-theme";
+import { fmt, fmtSigned } from "../../lib/format";
+
+const brent = FWD_CURVES.brent.data;
+const wti = FWD_CURVES.wti.data;
+const data = brent.map((p, i) => ({ m: p.m, brent: p.v, wti: wti[i].v }));
+
+const bSlope = brent[0].v - brent[11].v;
+const wSlope = wti[0].v - wti[11].v;
+const m1 = brent[0].v - wti[0].v;
 
 export const CurveChart = () => (
   <Card padding={false}>
@@ -13,7 +22,7 @@ export const CurveChart = () => (
     </div>
     <div className="h-48 px-2 pb-2">
       <ResponsiveContainer>
-        <LineChart data={FWD_CURVE} margin={{ top: 8, right: 20, bottom: 6, left: 0 }}>
+        <LineChart data={data} margin={{ top: 8, right: 20, bottom: 6, left: 0 }}>
           <CartesianGrid {...chartProps.grid} />
           <XAxis dataKey="m" {...chartProps.axis} />
           <YAxis {...chartProps.axis} domain={["auto", "auto"]} width={40} />
@@ -26,17 +35,17 @@ export const CurveChart = () => (
     <div className="px-4 pb-3 grid grid-cols-3 gap-3 border-t border-[#1c1d22] pt-3">
       <div>
         <div className="text-[9px] text-zinc-600 uppercase tracking-wider">Brent C1-C12</div>
-        <div className="font-mono text-[13px] text-amber-400">-$3.80</div>
-        <div className="text-[9px] text-zinc-500">Backwardation</div>
+        <div className="font-mono text-[13px] text-amber-400">{fmtSigned(-bSlope)}</div>
+        <div className="text-[9px] text-zinc-500">{bSlope >= 0 ? "Backwardation" : "Contango"}</div>
       </div>
       <div>
         <div className="text-[9px] text-zinc-600 uppercase tracking-wider">WTI C1-C12</div>
-        <div className="font-mono text-[13px] text-sky-400">-$3.52</div>
-        <div className="text-[9px] text-zinc-500">Backwardation</div>
+        <div className="font-mono text-[13px] text-sky-400">{fmtSigned(-wSlope)}</div>
+        <div className="text-[9px] text-zinc-500">{wSlope >= 0 ? "Backwardation" : "Contango"}</div>
       </div>
       <div>
-        <div className="text-[9px] text-zinc-600 uppercase tracking-wider">Spread M1</div>
-        <div className="font-mono text-[13px] text-zinc-100">$3.55</div>
+        <div className="text-[9px] text-zinc-600 uppercase tracking-wider">Brent-WTI M1</div>
+        <div className="font-mono text-[13px] text-zinc-100">${fmt(m1)}</div>
         <div className="text-[9px] text-emerald-400">+0.12</div>
       </div>
     </div>

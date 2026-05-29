@@ -1,24 +1,15 @@
 import { motion } from "framer-motion";
 import {
-  LayoutDashboard, Droplet, FlaskConical, Flame, Ship, Anchor, TrendingUp,
-  CloudSnow, Warehouse, Newspaper, LineChart as LineIcon, BellRing, Settings,
-  ChevronLeft, ChevronRight, Activity, Circle, Zap,
+  LayoutDashboard, LineChart as LineIcon, Globe2, Warehouse, Newspaper,
+  ChevronLeft, ChevronRight, Circle, Zap,
 } from "lucide-react";
 
 export const NAV = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { id: "crude", label: "Crude", icon: Droplet },
-  { id: "products", label: "Products", icon: FlaskConical },
-  { id: "gas", label: "Natural Gas", icon: Flame },
-  { id: "lng", label: "LNG", icon: Ship },
-  { id: "freight", label: "Freight", icon: Anchor },
-  { id: "macro", label: "Macro", icon: TrendingUp },
-  { id: "weather", label: "Weather", icon: CloudSnow },
+  { id: "analytics", label: "Analytics", icon: LineIcon },
+  { id: "drivers", label: "Market Drivers", icon: Globe2 },
   { id: "inventories", label: "Inventories", icon: Warehouse },
   { id: "news", label: "News", icon: Newspaper },
-  { id: "analytics", label: "Analytics", icon: LineIcon },
-  { id: "alerts", label: "Alerts", icon: BellRing },
-  { id: "settings", label: "Settings", icon: Settings },
 ];
 
 export const Sidebar = ({ active, setActive, collapsed, setCollapsed }) => (

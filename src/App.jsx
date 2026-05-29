@@ -4,35 +4,19 @@ import { Wifi } from "lucide-react";
 import { Sidebar } from "./components/layout/Sidebar";
 import { TopBar } from "./components/layout/TopBar";
 import { PageDashboard } from "./pages/Dashboard";
-import { PageCrude } from "./pages/Crude";
-import { PageProducts } from "./pages/Products";
-import { PageGas } from "./pages/Gas";
-import { PageLng } from "./pages/Lng";
-import { PageFreight } from "./pages/Freight";
-import { PageMacro } from "./pages/Macro";
-import { PageWeather } from "./pages/Weather";
+import { PageAnalytics } from "./pages/Analytics";
+import { PageDrivers } from "./pages/Drivers";
 import { PageInventories } from "./pages/Inventories";
 import { PageNews } from "./pages/News";
-import { PageAnalytics } from "./pages/Analytics";
-import { PageAlerts } from "./pages/Alerts";
-import { PageSettings } from "./pages/Settings";
-import { HERO } from "./data/mock";
+import { TICKER } from "./data/mock";
 import { fmt, fmtSigned } from "./lib/format";
 
 const PAGES = {
   dashboard: { title: "Dashboard", el: PageDashboard },
-  crude: { title: "Crude Oil", el: PageCrude },
-  products: { title: "Refined Products", el: PageProducts },
-  gas: { title: "Natural Gas", el: PageGas },
-  lng: { title: "LNG", el: PageLng },
-  freight: { title: "Freight & Shipping", el: PageFreight },
-  macro: { title: "Macro", el: PageMacro },
-  weather: { title: "Weather", el: PageWeather },
+  analytics: { title: "Analytics", el: PageAnalytics },
+  drivers: { title: "Market Drivers", el: PageDrivers },
   inventories: { title: "Inventories & Storage", el: PageInventories },
   news: { title: "News & Sentiment", el: PageNews },
-  analytics: { title: "Analytics Workspace", el: PageAnalytics },
-  alerts: { title: "Alerts Center", el: PageAlerts },
-  settings: { title: "Settings", el: PageSettings },
 };
 
 // ============================================================================
@@ -57,7 +41,7 @@ export default function App() {
             transition={{ duration: 60, ease: "linear", repeat: Infinity }}
             className="flex items-center gap-6 whitespace-nowrap pl-4"
           >
-            {[...HERO, ...HERO].map((d, i) => (
+            {[...TICKER, ...TICKER].map((d, i) => (
               <span key={i} className="flex items-center gap-1.5">
                 <span className="text-zinc-500">{d.sym}</span>
                 <span className="text-zinc-200">{fmt(d.val, d.val < 10 ? 3 : 2)}</span>

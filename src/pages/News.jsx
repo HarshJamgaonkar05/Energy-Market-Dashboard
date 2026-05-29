@@ -16,7 +16,7 @@ export const PageNews = () => {
   const [filter, setFilter] = useState("ALL");
   const extended = [
     ...NEWS,
-    { t: "Yesterday 23:48", sev: "med", src: "S&P GLOBAL", txt: "Asian buyers seek term LNG amid winter restocking pivot", tag: "LNG" },
+    { t: "Yesterday 23:48", sev: "med", src: "S&P GLOBAL", txt: "European ULSD cargoes tighten as refinery turnarounds cluster into spring", tag: "PRODUCTS" },
     { t: "Yesterday 22:12", sev: "low", src: "REFINITIV", txt: "Brazil's Petrobras boosts offshore production 4.2% MoM", tag: "CRUDE" },
     { t: "Yesterday 20:08", sev: "high", src: "FT", txt: "EU floats wider sanctions package targeting Russian shadow fleet operations", tag: "FREIGHT" },
     { t: "Yesterday 18:34", sev: "med", src: "ENERGY INTEL", txt: "Iraq's Basra exports rise to 3.4M b/d, highest in eleven months", tag: "CRUDE" },
@@ -37,7 +37,7 @@ export const PageNews = () => {
                 <span className="text-[10px] text-zinc-500 uppercase tracking-wider">Live · {filtered.length} stories</span>
               </div>
               <div className="flex items-center gap-1">
-                {["ALL", "CRUDE", "GAS", "LNG", "FREIGHT", "PRODUCTS", "STOCKS", "MACRO", "WEATHER"].map((t) => (
+                {["ALL", "CRUDE", "PRODUCTS", "FREIGHT", "STOCKS", "MACRO", "WEATHER"].map((t) => (
                   <button
                     key={t}
                     onClick={() => setFilter(t)}

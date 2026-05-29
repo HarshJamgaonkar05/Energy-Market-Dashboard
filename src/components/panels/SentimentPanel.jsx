@@ -5,9 +5,9 @@ import { motion } from "framer-motion";
 export const SentimentPanel = () => {
   const sentiments = [
     { name: "Crude", value: 64, lbl: "Bullish" },
-    { name: "Gas", value: 38, lbl: "Bearish" },
-    { name: "LNG", value: 52, lbl: "Neutral" },
-    { name: "Freight", value: 78, lbl: "V. Bullish" },
+    { name: "Distillates", value: 58, lbl: "Bullish" },
+    { name: "Gasoline", value: 71, lbl: "V. Bullish" },
+    { name: "Gas Oil", value: 46, lbl: "Neutral" },
   ];
   return (
     <Card>
