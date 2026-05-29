@@ -1,8 +1,8 @@
 import { useMemo } from "react";
 import {
-  LineChart, Line, AreaChart, Area, ComposedChart, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine,
+  LineChart, Line, AreaChart, Area, Bar, ComposedChart, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine,
 } from "recharts";
-import { TrendingUp, Anchor, CloudSnow, Wind } from "lucide-react";
+import { TrendingUp, Anchor, CloudSnow, Wind, Gauge } from "lucide-react";
 import { Card } from "../components/primitives/Card";
 import { Band } from "../components/primitives/Band";
 import { SectionTitle } from "../components/primitives/SectionTitle";
@@ -13,8 +13,8 @@ import { ShippingPanel } from "../components/panels/ShippingPanel";
 import { WeatherRisk } from "../components/panels/WeatherRisk";
 import { EconCalendar } from "../components/panels/EconCalendar";
 import { chartProps, ChartTooltip } from "../lib/chart-theme";
-import { fmt } from "../lib/format";
-import { genSpark } from "../data/mock";
+import { fmt, fmtSigned } from "../lib/format";
+import { genSpark, OPEC_QUOTAS, OPEC_TOTAL, opecCompliance, RIG_COUNT, STOCK_FLOWS } from "../data/mock";
 
 export const PageDrivers = () => {
   const macro = useMemo(() => Array.from({ length: 90 }, (_, i) => ({
@@ -36,6 +36,10 @@ export const PageDrivers = () => {
     obs: -2 + Math.sin(i / 3) * 4,
     fc: -2 + Math.sin(i / 3) * 4 + (Math.random() - 0.5) * 2,
   })), []);
+
+  // Aggregate OPEC+ adherence — kept in sync with the per-member table below.
+  const opecComp = +((OPEC_TOTAL.quota / OPEC_TOTAL.prod) * 100).toFixed(1);
+  const compTone = (c) => (c >= 99.5 ? "#10b981" : c >= 97 ? "#f59e0b" : "#ef4444");
 
   return (
     <div className="space-y-5">
@@ -93,6 +97,105 @@ export const PageDrivers = () => {
         </div>
 
         <EconCalendar />
+      </section>
+
+      {/* ======================== OIL SUPPLY DRIVERS ======================== */}
+      <section className="space-y-3">
+        <Band icon={Gauge} title="Oil Supply Drivers" sub="OPEC quotas, rig count & inventory flows" />
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-[#1c1d22]">
+          {[
+            { sym: "OPEC+ COMP", name: "Quota Compliance", val: opecComp, chg: +1.4, pct: +1.4, spark: genSpark(81, 30, 1), unit: "%" },
+            { sym: "US OIL RIGS", name: "Baker Hughes", val: 497, chg: -3, pct: -0.60, spark: genSpark(82, 30, -1), unit: "rigs" },
+            { sym: "US CRUDE STK", name: "EIA Commercial", val: 429.1, chg: -4.2, pct: -0.97, spark: genSpark(83, 30, -1), unit: "MMbbl" },
+            { sym: "OPEC+ SPARE", name: "Spare Capacity", val: 4.21, chg: -0.12, pct: -2.77, spark: genSpark(84, 30, -1), unit: "mb/d" },
+          ].map((d) => <HeroCard key={d.sym} d={d} />)}
+        </div>
+
+        <div className="grid grid-cols-12 gap-3">
+          <Card padding={false} className="col-span-12 lg:col-span-8">
+            <div className="p-4 pb-2"><SectionTitle sub="20W · MMbbl · EIA bars / API line · draw bullish">Weekly Crude Builds & Draws</SectionTitle></div>
+            <div className="h-60 px-2 pb-2">
+              <ResponsiveContainer>
+                <ComposedChart data={STOCK_FLOWS}>
+                  <CartesianGrid {...chartProps.grid} />
+                  <XAxis dataKey="w" {...chartProps.axis} interval={2} />
+                  <YAxis {...chartProps.axis} width={40} />
+                  <Tooltip content={<ChartTooltip unit=" MMbbl" />} cursor={{ fill: "rgba(255,255,255,0.03)" }} />
+                  <ReferenceLine y={0} stroke="#3a3b41" />
+                  <Bar dataKey="eia" name="EIA" maxBarSize={16} isAnimationActive={false}>
+                    {STOCK_FLOWS.map((d, i) => (
+                      <Cell key={i} fill={d.eia >= 0 ? "#ef4444" : "#10b981"} fillOpacity={0.7} />
+                    ))}
+                  </Bar>
+                  <Line type="monotone" dataKey="api" name="API" stroke="#f59e0b" strokeWidth={1.4} strokeDasharray="3 3" dot={false} isAnimationActive={false} />
+                </ComposedChart>
+              </ResponsiveContainer>
+            </div>
+          </Card>
+
+          <Card padding={false} className="col-span-12 lg:col-span-4">
+            <div className="p-4 pb-2"><SectionTitle sub="Baker Hughes · 52W">Rig Count</SectionTitle></div>
+            <div className="h-60 px-2 pb-2">
+              <ResponsiveContainer>
+                <ComposedChart data={RIG_COUNT}>
+                  <defs>
+                    <linearGradient id="rigFill" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#f59e0b" stopOpacity={0.32} />
+                      <stop offset="100%" stopColor="#f59e0b" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid {...chartProps.grid} />
+                  <XAxis dataKey="w" {...chartProps.axis} tick={false} />
+                  <YAxis yAxisId="L" {...chartProps.axis} width={34} domain={["auto", "auto"]} />
+                  <YAxis yAxisId="R" {...chartProps.axis} orientation="right" width={30} domain={["auto", "auto"]} />
+                  <Tooltip content={<ChartTooltip />} />
+                  <Area yAxisId="L" type="monotone" dataKey="oil" stroke="#f59e0b" strokeWidth={1.4} fill="url(#rigFill)" name="Oil" isAnimationActive={false} />
+                  <Line yAxisId="R" type="monotone" dataKey="gas" stroke="#38bdf8" strokeWidth={1.2} dot={false} name="Gas" isAnimationActive={false} />
+                </ComposedChart>
+              </ResponsiveContainer>
+            </div>
+          </Card>
+        </div>
+
+        <Card>
+          <SectionTitle sub="mb/d · output vs target">OPEC+ Production & Quota Compliance</SectionTitle>
+          <div className="grid grid-cols-[1.3fr_repeat(3,0.6fr)_1.4fr] items-center gap-x-3 gap-y-0.5">
+            <div className="contents text-[9px] text-zinc-600 uppercase tracking-wider">
+              <span>Member</span>
+              <span className="text-right">Target</span>
+              <span className="text-right">Output</span>
+              <span className="text-right">Δ</span>
+              <span className="text-right">Compliance</span>
+            </div>
+            {OPEC_QUOTAS.map((m) => {
+              const comp = opecCompliance(m);
+              const delta = +(m.prod - m.quota).toFixed(2);
+              const c = compTone(comp);
+              return (
+                <div key={m.member} className="contents">
+                  <span className="text-[11px] text-zinc-300 py-1 border-t border-[#15161a] truncate">{m.member}</span>
+                  <span className="font-mono text-[11px] text-zinc-400 text-right py-1 border-t border-[#15161a]">{fmt(m.quota)}</span>
+                  <span className="font-mono text-[11px] text-zinc-200 text-right py-1 border-t border-[#15161a]">{fmt(m.prod)}</span>
+                  <span className={`font-mono text-[11px] text-right py-1 border-t border-[#15161a] ${delta > 0 ? "text-red-400" : "text-emerald-400"}`}>{fmtSigned(delta)}</span>
+                  <div className="flex items-center gap-2 py-1 border-t border-[#15161a]">
+                    <div className="flex-1 h-1.5 bg-[#15161a]">
+                      <div className="h-full" style={{ width: `${Math.min(comp, 100)}%`, background: c, opacity: 0.7 }} />
+                    </div>
+                    <span className="font-mono text-[10px] w-12 text-right" style={{ color: c }}>{fmt(comp, 1)}%</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <div className="grid grid-cols-[1.3fr_repeat(3,0.6fr)_1.4fr] items-center gap-x-3 mt-2 pt-2 border-t border-[#1c1d22]">
+            <span className="text-[10px] text-zinc-500 uppercase tracking-wider">OPEC+ Total</span>
+            <span className="font-mono text-[11px] text-zinc-300 text-right">{fmt(OPEC_TOTAL.quota)}</span>
+            <span className="font-mono text-[11px] text-zinc-100 text-right">{fmt(OPEC_TOTAL.prod)}</span>
+            <span className={`font-mono text-[11px] text-right ${OPEC_TOTAL.prod > OPEC_TOTAL.quota ? "text-red-400" : "text-emerald-400"}`}>{fmtSigned(+(OPEC_TOTAL.prod - OPEC_TOTAL.quota).toFixed(2))}</span>
+            <span className="font-mono text-[11px] text-right" style={{ color: compTone(opecComp) }}>{fmt(opecComp, 1)}%</span>
+          </div>
+        </Card>
       </section>
 
       {/* ========================= FREIGHT & SHIPPING ========================= */}

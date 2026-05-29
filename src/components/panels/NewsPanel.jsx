@@ -15,8 +15,8 @@ export const NewsPanel = ({ compact = false }) => (
         </span>
       </SectionTitle>
       {!compact && (
-        <div className="flex items-center gap-1 mb-2">
-          {["ALL", "CRUDE", "PRODUCTS", "FREIGHT", "MACRO"].map((t) => (
+        <div className="flex items-center flex-wrap gap-1 mb-2">
+          {["ALL", "OPEC", "GEOPOLITICS", "CRUDE", "PRODUCTS", "FREIGHT", "MACRO"].map((t) => (
             <button
               key={t}
               className={`px-1.5 h-5 text-[9px] font-mono tracking-wider ${

@@ -18,7 +18,8 @@ export const PageNews = () => {
     ...NEWS,
     { t: "Yesterday 23:48", sev: "med", src: "S&P GLOBAL", txt: "European ULSD cargoes tighten as refinery turnarounds cluster into spring", tag: "PRODUCTS" },
     { t: "Yesterday 22:12", sev: "low", src: "REFINITIV", txt: "Brazil's Petrobras boosts offshore production 4.2% MoM", tag: "CRUDE" },
-    { t: "Yesterday 20:08", sev: "high", src: "FT", txt: "EU floats wider sanctions package targeting Russian shadow fleet operations", tag: "FREIGHT" },
+    { t: "Yesterday 20:08", sev: "high", src: "FT", txt: "EU floats wider sanctions package targeting Russian shadow fleet operations", tag: "GEOPOLITICS" },
+    { t: "Yesterday 19:50", sev: "med", src: "REUTERS", txt: "Saudi Arabia holds Asia OSPs steady, signaling confidence in demand pull", tag: "OPEC" },
     { t: "Yesterday 18:34", sev: "med", src: "ENERGY INTEL", txt: "Iraq's Basra exports rise to 3.4M b/d, highest in eleven months", tag: "CRUDE" },
     { t: "Yesterday 17:21", sev: "low", src: "ARGUS", txt: "Mexican Maya differential narrows by $1.20 amid USGC refinery turnaround", tag: "PRODUCTS" },
     { t: "Yesterday 16:14", sev: "high", src: "REUTERS", txt: "Hurricane forecast models converge on USGC track late next week", tag: "WEATHER" },
@@ -36,8 +37,8 @@ export const PageNews = () => {
                 <Circle size={6} fill="#ef4444" className="animate-pulse" />
                 <span className="text-[10px] text-zinc-500 uppercase tracking-wider">Live · {filtered.length} stories</span>
               </div>
-              <div className="flex items-center gap-1">
-                {["ALL", "CRUDE", "PRODUCTS", "FREIGHT", "STOCKS", "MACRO", "WEATHER"].map((t) => (
+              <div className="flex items-center flex-wrap gap-1">
+                {["ALL", "OPEC", "GEOPOLITICS", "CRUDE", "PRODUCTS", "FREIGHT", "STOCKS", "MACRO", "WEATHER"].map((t) => (
                   <button
                     key={t}
                     onClick={() => setFilter(t)}

@@ -177,13 +177,16 @@ export const MOVERS = [
 // News feed
 // ============================================================================
 export const NEWS = [
-  { t: "02:14", sev: "high", src: "REUTERS",   txt: "OPEC+ signals possible production cut extension into Q3 2026 amid demand uncertainty", tag: "CRUDE" },
-  { t: "01:42", sev: "high", src: "PLATTS",    txt: "Red Sea transit volumes drop 38% YoY; tanker rates surge to multi-month highs", tag: "FREIGHT" },
-  { t: "01:23", sev: "low",  src: "EIA",       txt: "Weekly crude inventories drew 4.2 MMbbl vs +1.1 expected; gasoline +2.4 MMbbl", tag: "STOCKS" },
-  { t: "01:05", sev: "med",  src: "ARGUS",     txt: "ICE gas oil crack widens to 6-week high as European diesel demand firms", tag: "PRODUCTS" },
-  { t: "00:34", sev: "low",  src: "ICIS",      txt: "US Gulf refinery utilization rises to 91.2%, highest since November", tag: "PRODUCTS" },
-  { t: "00:21", sev: "med",  src: "OPIS",      txt: "RBOB crack rallies into driving-season restocking; 3:2:1 margin tests $22/bbl", tag: "PRODUCTS" },
-  { t: "00:12", sev: "high", src: "WSJ",       txt: "Fed minutes signal extended hold; dollar strengthens against major commodity currencies", tag: "MACRO" },
+  { t: "02:14", sev: "high", src: "REUTERS",      txt: "OPEC+ signals possible production cut extension into Q3 2026 amid demand uncertainty", tag: "OPEC" },
+  { t: "02:02", sev: "high", src: "BLOOMBERG",    txt: "Strait of Hormuz tensions flare after tanker seizure; crude risk premium rebuilds", tag: "GEOPOLITICS" },
+  { t: "01:42", sev: "high", src: "PLATTS",       txt: "Red Sea transit volumes drop 38% YoY; tanker rates surge to multi-month highs", tag: "FREIGHT" },
+  { t: "01:31", sev: "med",  src: "ENERGY INTEL", txt: "JMMC flags Kazakhstan and Iraq overproduction; compensation cuts demanded", tag: "OPEC" },
+  { t: "01:23", sev: "low",  src: "EIA",          txt: "Weekly crude inventories drew 4.2 MMbbl vs +1.1 expected; gasoline +2.4 MMbbl", tag: "STOCKS" },
+  { t: "01:05", sev: "med",  src: "ARGUS",        txt: "ICE gas oil crack widens to 6-week high as European diesel demand firms", tag: "PRODUCTS" },
+  { t: "00:48", sev: "high", src: "REUTERS",      txt: "Drone strikes hit Black Sea export terminal; Urals loadings disrupted", tag: "GEOPOLITICS" },
+  { t: "00:34", sev: "low",  src: "ICIS",         txt: "US Gulf refinery utilization rises to 91.2%, highest since November", tag: "PRODUCTS" },
+  { t: "00:21", sev: "med",  src: "OPIS",         txt: "RBOB crack rallies into driving-season restocking; 3:2:1 margin tests $22/bbl", tag: "PRODUCTS" },
+  { t: "00:12", sev: "high", src: "WSJ",          txt: "Fed minutes signal extended hold; dollar strengthens against major commodity currencies", tag: "MACRO" },
 ];
 
 // ============================================================================
@@ -239,3 +242,62 @@ export const WEATHER = [
   { reg: "Northeast Asia", temp: -2, anom: -2.8, hdd: 134, severity: "high" },
   { reg: "S. Europe", temp: 11, anom: +2.1, hdd: 68, severity: "low" },
 ];
+
+// ============================================================================
+// Oil-specific supply drivers (Drivers › Oil Supply Drivers)
+// OPEC+ quota compliance · Baker Hughes rig count · EIA/API weekly stock flows
+// ============================================================================
+
+// OPEC+ production vs agreed target (mb/d). compliance = quota / output:
+//  ≥100% → producing at/below target (deeper cut, supportive of price)
+//  <100% → overproducing the quota (bearish, weak adherence)
+export const OPEC_QUOTAS = [
+  { member: "Saudi Arabia", quota: 9.00, prod: 8.97 },
+  { member: "Russia",       quota: 9.00, prod: 9.18 },
+  { member: "Iraq",         quota: 4.00, prod: 4.22 },
+  { member: "UAE",          quota: 2.91, prod: 2.92 },
+  { member: "Kuwait",       quota: 2.41, prod: 2.39 },
+  { member: "Kazakhstan",   quota: 1.47, prod: 1.65 },
+  { member: "Nigeria",      quota: 1.50, prod: 1.38 },
+  { member: "Algeria",      quota: 0.91, prod: 0.90 },
+];
+
+export const opecCompliance = (m) => +((m.quota / m.prod) * 100).toFixed(1);
+
+export const OPEC_TOTAL = OPEC_QUOTAS.reduce(
+  (a, m) => ({ quota: +(a.quota + m.quota).toFixed(2), prod: +(a.prod + m.prod).toFixed(2) }),
+  { quota: 0, prod: 0 }
+);
+
+// Baker Hughes weekly US rig count — drilling activity = future shale supply.
+// Last point pinned to the live print used on the hero cards.
+export const RIG_COUNT = (() => {
+  const r = seededRand(77);
+  let oil = 515, gas = 101;
+  const out = Array.from({ length: 52 }, (_, i) => {
+    oil += (r() - 0.5) * 7 - 0.32;
+    gas += (r() - 0.5) * 3 - 0.04;
+    return { w: i, oil: Math.round(oil), gas: Math.round(gas) };
+  });
+  out[out.length - 1].oil = 497;
+  out[out.length - 1].gas = 98;
+  return out;
+})();
+
+// EIA / API weekly crude inventory change (MMbbl) — the build/draw time series.
+// Negative = draw (bullish), positive = build (bearish). Last EIA bar pinned to
+// the -4.2 MMbbl print shown in NEWS and InventorySnap so the panels agree.
+export const STOCK_FLOWS = (() => {
+  const r = seededRand(88);
+  const out = Array.from({ length: 20 }, (_, i) => {
+    const base = Math.sin(i / 3.2) * 3.4 + (r() - 0.5) * 3.2;
+    const eia = +base.toFixed(1);
+    const api = +(base + (r() - 0.5) * 2.4).toFixed(1);
+    const d = new Date(2026, 0, 8 + i * 7);
+    return { w: `${d.getMonth() + 1}/${d.getDate()}`, eia, api };
+  });
+  const last = out[out.length - 1];
+  last.eia = -4.2;
+  last.api = -3.1;
+  return out;
+})();
