@@ -3,6 +3,7 @@ import { fmtSigned } from "../../lib/format";
 import { Card } from "../primitives/Card";
 import { SectionTitle } from "../primitives/SectionTitle";
 import { SourceTag } from "../primitives/SourceTag";
+import { Sourced } from "../primitives/Sourced";
 import { WEATHER } from "../../data/mock";
 import { useLive } from "../../lib/useLive";
 
@@ -13,7 +14,7 @@ export const WeatherRisk = () => {
   const regions = data.regions || WEATHER;
   return (
     <Card>
-      <SectionTitle sub="vs normal" action={<SourceTag live={live} />}>Weather Risk</SectionTitle>
+      <SectionTitle sub="vs normal" action={<SourceTag live={live} source="openmeteo" note="Open-Meteo forecast model; anomaly is vs the climatological monthly normal." />}>Weather Risk</SectionTitle>
       <div className="space-y-1.5">
         {regions.map((w) => (
           <div key={w.reg} className="flex items-center gap-2 py-1 border-b border-[#15161a] last:border-0">
@@ -28,9 +29,11 @@ export const WeatherRisk = () => {
               }
             />
             <span className="text-[10px] text-zinc-300 flex-1 truncate">{w.reg}</span>
-            <span className="font-mono text-[10px] text-zinc-400 w-10 text-right">{w.temp}°C</span>
+            <span className="font-mono text-[10px] text-zinc-400 w-10 text-right">
+              <Sourced source="openmeteo" note="Daily mean temperature · Open-Meteo" align="end">{w.temp}°C</Sourced>
+            </span>
             <span className={`font-mono text-[10px] w-12 text-right ${w.anom < 0 ? "text-sky-400" : "text-amber-400"}`}>
-              {fmtSigned(w.anom, 1)}°
+              <Sourced source="derived" note="Anomaly = today's mean − climatological normal (Open-Meteo + NOAA-style normals)" align="end">{fmtSigned(w.anom, 1)}°</Sourced>
             </span>
           </div>
         ))}

@@ -12,11 +12,11 @@ const BBL_PER_MT_GASOIL = 7.45;
 // The five instruments. Gas Oil has no free live feed, so it is proxied from
 // NYMEX ULSD (HO=F) — both are middle distillates — and flagged `modeled:true`.
 const SPEC = [
-  { id: "brent",  sym: "BRENT",  name: "Brent Crude",        kind: "crude",   color: "#f59e0b", unit: "$/bbl", yahoo: "BZ=F" },
-  { id: "wti",    sym: "WTI",    name: "WTI Crude",          kind: "crude",   color: "#38bdf8", unit: "$/bbl", yahoo: "CL=F" },
-  { id: "ho",     sym: "HO",     name: "Heating Oil · ULSD", kind: "product", color: "#10b981", unit: "$/gal", yahoo: "HO=F" },
-  { id: "rbob",   sym: "RBOB",   name: "RBOB Gasoline",      kind: "product", color: "#a78bfa", unit: "$/gal", yahoo: "RB=F" },
-  { id: "gasoil", sym: "GASOIL", name: "ICE Gas Oil",        kind: "product", color: "#f472b6", unit: "$/mt",  proxyOf: "ho", modeled: true },
+  { id: "brent",  sym: "BRENT",  name: "Brent Crude",        label: "Brent",       kind: "crude",   color: "#f59e0b", unit: "$/bbl", yahoo: "BZ=F" },
+  { id: "wti",    sym: "WTI",    name: "WTI Crude",          label: "WTI",         kind: "crude",   color: "#38bdf8", unit: "$/bbl", yahoo: "CL=F" },
+  { id: "ho",     sym: "HO",     name: "Heating Oil · ULSD", label: "Heating Oil", kind: "product", color: "#10b981", unit: "$/gal", yahoo: "HO=F" },
+  { id: "rbob",   sym: "RBOB",   name: "RBOB Gasoline",      label: "RBOB",        kind: "product", color: "#a78bfa", unit: "$/gal", yahoo: "RB=F" },
+  { id: "gasoil", sym: "GASOIL", name: "ICE Gas Oil",        label: "Gas Oil",     kind: "product", color: "#f472b6", unit: "$/mt",  proxyOf: "ho", modeled: true, source: "derived", sourceNote: "Proxied from live NYMEX ULSD (HO=F), unit-converted to $/mt." },
 ];
 
 const MACRO_SPEC = [
@@ -74,7 +74,7 @@ export async function instruments() {
     };
   });
 }
-const meta = (s) => ({ id: s.id, sym: s.sym, name: s.name, kind: s.kind, color: s.color, unit: s.unit, modeled: !!s.modeled });
+const meta = (s) => ({ id: s.id, sym: s.sym, name: s.name, kind: s.kind, color: s.color, unit: s.unit, modeled: !!s.modeled, source: s.source, sourceNote: s.sourceNote });
 
 const byId = (instr, id) => instr.find((i) => i.id === id);
 
@@ -225,7 +225,7 @@ export function curves(instr) {
     const front = inst.val;
     const slope = CURVE_SLOPE[s.id] ?? 0;
     out[s.id] = {
-      id: s.id, label: s.sym === "GASOIL" ? "Gas Oil" : (s.id === "ho" ? "Heating Oil" : inst.sym.charAt(0) + inst.sym.slice(1).toLowerCase()),
+      id: s.id, label: s.label,
       color: s.color, unit: s.unit, modeled: !!s.modeled,
       data: Array.from({ length: 12 }, (_, i) => ({
         m: `M${i + 1}`,

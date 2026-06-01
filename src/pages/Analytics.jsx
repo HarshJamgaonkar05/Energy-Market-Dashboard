@@ -6,6 +6,7 @@ import { GitBranch, Layers, Grid3x3 } from "lucide-react";
 import { Card } from "../components/primitives/Card";
 import { Band } from "../components/primitives/Band";
 import { SourceTag } from "../components/primitives/SourceTag";
+import { Sourced } from "../components/primitives/Sourced";
 import { Heatmap } from "../components/panels/Heatmap";
 import { chartProps, ChartTooltip } from "../lib/chart-theme";
 import { fmt, fmtSigned } from "../lib/format";
@@ -63,7 +64,7 @@ const CrackSpreads = () => {
             <div key={g}>
               <div className="px-3 py-1.5 text-[9px] uppercase tracking-[0.16em] text-zinc-600 bg-[#0a0b0e] sticky top-0 flex items-center justify-between">
                 {g}
-                {g === groups[0] && <SourceTag live={live} />}
+                {g === groups[0] && <SourceTag live={live} source="derived" note="Crack value = product − crude, in $/bbl, from live Yahoo quotes." />}
               </div>
               {cracks.filter((c) => c.group === g).map((c) => {
                 const v = c.value;
@@ -82,7 +83,9 @@ const CrackSpreads = () => {
                       <span className="truncate">{c.label}</span>
                       <span className="text-[9px] font-mono text-zinc-600">vs {c.vs}</span>
                     </span>
-                    <span className="font-mono text-[11px] text-zinc-300">{fmt(v)}</span>
+                    <span className="font-mono text-[11px] text-zinc-300">
+                      <Sourced source="derived" note={`${c.legsLabel} · $/bbl, from live Yahoo quotes`} align="end">{fmt(v)}</Sourced>
+                    </span>
                   </button>
                 );
               })}
@@ -98,10 +101,12 @@ const CrackSpreads = () => {
                 {crack.label} · vs {crack.vs}
               </div>
               <div className="flex items-baseline gap-2 mt-0.5">
-                <span className="font-mono text-2xl text-zinc-100">${fmt(value)}</span>
+                <span className="font-mono text-2xl text-zinc-100">
+                  $<Sourced source="derived" note={`${crack.legsLabel} · live crack value ($/bbl) from Yahoo quotes`} align="start">{fmt(value)}</Sourced>
+                </span>
                 <span className="text-[10px] text-zinc-600">/bbl</span>
-                <span className={`font-mono text-[11px] ${up ? "text-emerald-400" : "text-red-400"}`}>
-                  {fmtSigned(chg)} ({fmtSigned(pct)}%) · 60d
+                <span className="font-mono text-[11px] text-zinc-600">
+                  <Sourced source="modeled" note="No free intraday crack-history source for the 60-day change." align="start" /> · 60d
                 </span>
               </div>
             </div>
@@ -137,7 +142,9 @@ const CrackSpreads = () => {
             ].map((s) => (
               <div key={s.l}>
                 <div className="text-[9px] text-zinc-600 uppercase tracking-wider">{s.l}</div>
-                <div className="font-mono text-[13px] text-zinc-200">{s.v}</div>
+                <div className="font-mono text-[13px] text-zinc-200">
+                  <Sourced source="modeled" note="60-day range is modeled around the live crack print" align="start">{s.v}</Sourced>
+                </div>
               </div>
             ))}
           </div>
@@ -173,7 +180,7 @@ const FuturesSpreads = () => {
         <div className="p-4 pb-2 flex items-center justify-between flex-wrap gap-2">
           <div>
             <div className="text-[11px] font-semibold tracking-[0.12em] text-zinc-300 uppercase inline-flex items-center gap-2">
-              Forward Curve <SourceTag modeled label="Modeled curve" />
+              Forward Curve <SourceTag modeled label="Modeled curve" source="modeled" note="Front month anchored to the live Yahoo quote; term structure uses a curated slope (settlement curves are paywalled)." />
             </div>
             <div className="text-[10px] text-zinc-600 mt-0.5">{curve.label} · M1–M12 · {curve.unit}</div>
           </div>
@@ -199,7 +206,7 @@ const FuturesSpreads = () => {
               <CartesianGrid {...chartProps.grid} />
               <XAxis dataKey="m" {...chartProps.axis} />
               <YAxis {...chartProps.axis} width={48} domain={["auto", "auto"]} />
-              <Tooltip content={<ChartTooltip />} />
+              <Tooltip content={<ChartTooltip source="modeled" />} />
               <Line type="monotone" dataKey="v" name={curve.label} stroke={curve.color} strokeWidth={1.6} dot={{ r: 2.5, fill: curve.color }} isAnimationActive={false} />
             </LineChart>
           </ResponsiveContainer>
@@ -220,7 +227,9 @@ const FuturesSpreads = () => {
             <div key={s.lbl} className="flex items-center justify-between px-4 py-2 border-b border-[#15161a] last:border-0">
               <span className="text-[11px] text-zinc-300 font-mono">{s.lbl}</span>
               <div className="flex items-center gap-2">
-                <span className={`font-mono text-[11px] ${s.v >= 0 ? "text-emerald-400" : "text-sky-400"}`}>{fmtSigned(s.v, curve.unit === "$/gal" ? 4 : 3)}</span>
+                <span className={`font-mono text-[11px] ${s.v >= 0 ? "text-emerald-400" : "text-sky-400"}`}>
+                  <Sourced source="modeled" note="Calendar spread off the modeled forward curve" align="end">{fmtSigned(s.v, curve.unit === "$/gal" ? 4 : 3)}</Sourced>
+                </span>
                 <span className="text-[9px] uppercase tracking-wider text-zinc-600 w-16 text-right">{s.v >= 0 ? "Backwrd" : "Contango"}</span>
               </div>
             </div>
@@ -238,7 +247,7 @@ const FuturesSpreads = () => {
                 <div className="text-[9px] text-zinc-600 uppercase tracking-wider">{s.note}</div>
               </div>
               <span className="font-mono text-[12px] text-zinc-100 whitespace-nowrap">
-                {fmtSigned(s.v, s.unit === "$/gal" ? 4 : 2)} <span className="text-[9px] text-zinc-600">{s.unit}</span>
+                <Sourced source="derived" note={`${s.lbl} · live inter-commodity spread from Yahoo quotes`} align="end">{fmtSigned(s.v, s.unit === "$/gal" ? 4 : 2)}</Sourced> <span className="text-[9px] text-zinc-600">{s.unit}</span>
               </span>
             </div>
           ))}
@@ -273,14 +282,18 @@ const CorrelationInsight = () => {
           <div className="text-[9px] text-zinc-600 uppercase tracking-wider">Tightest pair</div>
           <div className="flex items-baseline justify-between">
             <span className="text-[12px] text-zinc-200">{strongest.a} · {strongest.b}</span>
-            <span className="font-mono text-[13px] text-emerald-400">{strongest.v.toFixed(2)}</span>
+            <span className="font-mono text-[13px] text-emerald-400">
+              <Sourced source="derived" note="Highest 30D return correlation in the matrix (Yahoo closes)" align="end">{strongest.v.toFixed(2)}</Sourced>
+            </span>
           </div>
         </div>
         <div>
           <div className="text-[9px] text-zinc-600 uppercase tracking-wider">Loosest pair</div>
           <div className="flex items-baseline justify-between">
             <span className="text-[12px] text-zinc-200">{weakest.a} · {weakest.b}</span>
-            <span className="font-mono text-[13px] text-amber-400">{weakest.v.toFixed(2)}</span>
+            <span className="font-mono text-[13px] text-amber-400">
+              <Sourced source="derived" note="Lowest 30D return correlation in the matrix (Yahoo closes)" align="end">{weakest.v.toFixed(2)}</Sourced>
+            </span>
           </div>
         </div>
         <p className="text-[10px] text-zinc-500 leading-relaxed pt-2 border-t border-[#1c1d22]">

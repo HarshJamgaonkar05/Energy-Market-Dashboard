@@ -4,6 +4,8 @@ Institutional-grade Energy Markets Intelligence Dashboard, wired to **live, free
 
 Inspired by Bloomberg Terminal, Kpler, TradingView, Vortexa, and Refinitiv. Dark institutional aesthetic, dense information layout, monospaced data cells, market-tone color signaling (bull green / bear red / amber accent).
 
+> **Where does every number come from?** See **[Explanation.md](Explanation.md)** — an exhaustive, value-by-value account of how each data source is collected and how every figure is calculated, normalized, or inferred (and why some show "—").
+
 ## Prerequisites
 
 - **Node.js 18+** (check with `node -v`)
@@ -14,22 +16,26 @@ Inspired by Bloomberg Terminal, Kpler, TradingView, Vortexa, and Refinitiv. Dark
 ```bash
 npm install                       # use --legacy-peer-deps if npm complains about the vite peer range
 cp server/.env.example server/.env   # then paste your free EIA key (optional, see below)
-npm run dev:all                   # starts Vite (5173) + the data backend (3001) together
+npm run dev                       # starts Vite (5173) + the data backend (3001) together
 ```
 
 Open **http://localhost:5173**. The Vite dev server proxies `/api/*` to the backend, so there's one origin and no CORS setup.
+
+> **Run both.** `npm run dev` now launches the frontend **and** the data backend together. If you only run the frontend (`npm run dev:web`) without the backend, every panel silently falls back to seeded **sample data** (a banner warns you), so prices look frozen — that just means the API on port 3001 isn't running.
 
 Everything works **without any API key** (live prices, macro, weather, news, etc.). One free key unlocks the US fundamentals panels — see [Live data & sources](#live-data--sources).
 
 ## Available scripts
 
-| Command           | What it does                                          |
-| ----------------- | ----------------------------------------------------- |
-| `npm run dev`     | Vite dev server (frontend only) with hot reload       |
-| `npm run server`  | Node/Express data backend on port 3001                |
-| `npm run dev:all` | Run frontend **and** backend together (recommended)   |
-| `npm run build`   | Production build into `dist/`                         |
-| `npm run preview` | Serve the production build locally to verify          |
+| Command           | What it does                                              |
+| ----------------- | --------------------------------------------------------- |
+| `npm run dev`     | **Frontend + backend together** (recommended) with reload |
+| `npm run dev:web` | Vite dev server only (frontend; API panels show samples)  |
+| `npm run dev:api` | Node/Express data backend only, on port 3001              |
+| `npm run server`  | Alias for the backend (`dev:api`)                         |
+| `npm run dev:all` | Alias for `npm run dev`                                    |
+| `npm run build`   | Production build into `dist/`                             |
+| `npm run preview` | Serve the production build locally to verify              |
 
 ## Live data & sources
 
@@ -42,7 +48,7 @@ The backend (`server/`) fetches from free/open sources, caches them with sensibl
 | Crack spreads, inter-commodity spreads | Computed from live product/crude prices | none |
 | Macro: S&P 500, VIX, 10Y yield, Dollar Index | Yahoo (`^GSPC, ^VIX, ^TNX, DX-Y.NYB`) | none |
 | Temperature forecast, heating/cooling degree-days, regional anomaly | **Open-Meteo** | none |
-| Energy newswire (tagged + severity-classified) | **GDELT 2.0 DOC API** | none |
+| Financial newswire (tagged + severity-classified) | **Financial Juice** RSS | none |
 | Economic calendar | Derived from the real US release cadence (EIA/API/Baker Hughes) | none |
 | Sentiment | Computed from price momentum + news bull/bear balance | none |
 | US inventories (crude/Cushing/SPR/gasoline/distillate), PADD, 52W history, refinery utilization, weekly builds/draws | **EIA Open Data API v2** | **free key** |
@@ -151,7 +157,7 @@ server/
 │   ├── yahoo.js          # live quotes + history
 │   ├── eia.js            # US fundamentals (key)
 │   ├── openmeteo.js      # weather / degree-days
-│   └── gdelt.js          # energy newswire
+│   └── financialjuice.js # financial newswire (RSS)
 └── compute/
     ├── markets.js        # instruments, ticker, series, correlation, cracks, curves, macro
     └── derive.js         # calendar, OPEC, freight (modeled), rigs (modeled), sentiment

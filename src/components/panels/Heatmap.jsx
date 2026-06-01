@@ -2,6 +2,7 @@ import { Fragment } from "react";
 import { Card } from "../primitives/Card";
 import { SectionTitle } from "../primitives/SectionTitle";
 import { SourceTag } from "../primitives/SourceTag";
+import { Sourced } from "../primitives/Sourced";
 import { CORR_LABELS, CORR_MATRIX } from "../../data/mock";
 import { useLive } from "../../lib/useLive";
 
@@ -25,7 +26,7 @@ export const Heatmap = ({ title = "Correlation Matrix", sub = "30D rolling" }) =
   };
   return (
     <Card>
-      {title && <SectionTitle sub={sub} action={<SourceTag live={live} />}>{title}</SectionTitle>}
+      {title && <SectionTitle sub={sub} action={<SourceTag live={live} source="derived" note="30-day rolling correlation of daily returns, computed from live Yahoo closes. Gas Oil tracks Heating Oil (proxy)." />}>{title}</SectionTitle>}
       <div className="grid gap-px" style={{ gridTemplateColumns: `52px repeat(${labels.length}, 1fr)` }}>
         <div />
         {labels.map((l) => (
@@ -44,7 +45,9 @@ export const Heatmap = ({ title = "Correlation Matrix", sub = "30D rolling" }) =
                 className="aspect-square flex items-center justify-center text-[9px] font-mono text-zinc-100 transition-all hover:ring-1 hover:ring-amber-500/60 cursor-pointer"
                 style={{ background: colorFor(v) }}
               >
-                {v.toFixed(2)}
+                <Sourced source="derived" note={`${labels[i]} ↔ ${labels[j]} · 30D return correlation (Yahoo closes)`}>
+                  {v.toFixed(2)}
+                </Sourced>
               </div>
             ))}
           </Fragment>

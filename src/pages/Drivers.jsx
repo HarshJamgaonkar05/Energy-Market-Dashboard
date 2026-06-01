@@ -5,9 +5,8 @@ import { TrendingUp, Anchor, CloudSnow, Wind, Gauge } from "lucide-react";
 import { Card } from "../components/primitives/Card";
 import { Band } from "../components/primitives/Band";
 import { SectionTitle } from "../components/primitives/SectionTitle";
-import { Badge } from "../components/primitives/Badge";
-import { Delta } from "../components/primitives/Delta";
 import { SourceTag } from "../components/primitives/SourceTag";
+import { Sourced } from "../components/primitives/Sourced";
 import { HeroCard } from "../components/HeroCard";
 import { ShippingPanel } from "../components/panels/ShippingPanel";
 import { WeatherRisk } from "../components/panels/WeatherRisk";
@@ -97,7 +96,7 @@ export const PageDrivers = () => {
                   <XAxis dataKey="t" {...chartProps.axis} />
                   <YAxis yAxisId="L" {...chartProps.axis} orientation="left" width={42} domain={["auto", "auto"]} />
                   <YAxis yAxisId="R" {...chartProps.axis} orientation="right" width={46} domain={["auto", "auto"]} />
-                  <Tooltip content={<ChartTooltip />} />
+                  <Tooltip content={<ChartTooltip source="yahoo" />} />
                   <Line yAxisId="L" type="monotone" dataKey="dxy" stroke="#10b981" strokeWidth={1.4} dot={false} name="DXY" isAnimationActive={false} />
                   <Line yAxisId="R" type="monotone" dataKey="spx" stroke="#f59e0b" strokeWidth={1.4} dot={false} name="SPX" isAnimationActive={false} />
                 </ComposedChart>
@@ -119,7 +118,7 @@ export const PageDrivers = () => {
                   <CartesianGrid {...chartProps.grid} />
                   <XAxis dataKey="t" {...chartProps.axis} />
                   <YAxis {...chartProps.axis} width={32} />
-                  <Tooltip content={<ChartTooltip />} />
+                  <Tooltip content={<ChartTooltip source="yahoo" />} />
                   <Area type="monotone" dataKey="vix" stroke="#ef4444" strokeWidth={1.4} fill="url(#vixFill)" name="VIX" isAnimationActive={false} />
                 </AreaChart>
               </ResponsiveContainer>
@@ -136,23 +135,23 @@ export const PageDrivers = () => {
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-[#1c1d22]">
           {[
-            { sym: "OPEC+ COMP", name: "Quota Compliance", val: opecComp, chg: +1.4, pct: +1.4, spark: genSpark(81, 30, 1), unit: "%" },
+            { sym: "OPEC+ COMP", name: "Quota Compliance", val: opecComp, chg: null, pct: null, spark: genSpark(81, 30, 1), unit: "%", source: "curated", sourceNote: "Quota ÷ output, from curated OPEC+ policy targets & recent output estimates. Week-over-week change has no free source." },
             { sym: "US OIL RIGS", name: "Baker Hughes", val: rigsData.hero?.val ?? 497, chg: rigsData.hero?.chg ?? -3, pct: -0.6, spark: genSpark(82, 30, -1), unit: "rigs", modeled: true },
-            { sym: "US CRUDE STK", name: "EIA Commercial", val: crudeStk?.val ?? 429.1, chg: crudeStk?.chg ?? -4.2, pct: crudeStk?.pct ?? -0.97, spark: genSpark(83, 30, -1), unit: "MMbbl" },
+            { sym: "US CRUDE STK", name: "EIA Commercial", val: crudeStk?.val ?? 429.1, chg: crudeStk?.chg ?? -4.2, pct: crudeStk?.pct ?? -0.97, spark: genSpark(83, 30, -1), unit: "MMbbl", source: "eia", sourceNote: "U.S. commercial crude stocks excl. SPR (WCESTUS1) · EIA weekly." },
             { sym: "OPEC+ SPARE", name: "Spare Capacity", val: 4.21, chg: -0.12, pct: -2.77, spark: genSpark(84, 30, -1), unit: "mb/d", modeled: true },
           ].map((d) => <HeroCard key={d.sym} d={d} />)}
         </div>
 
         <div className="grid grid-cols-12 gap-3">
           <Card padding={false} className="col-span-12 lg:col-span-8">
-            <div className="p-4 pb-2"><SectionTitle sub="20W · MMbbl · EIA · draw bullish" action={<SourceTag live={!!stockFlows[0]?.period} />}>Weekly Crude Builds & Draws</SectionTitle></div>
+            <div className="p-4 pb-2"><SectionTitle sub="20W · MMbbl · EIA · draw bullish" action={<SourceTag live={!!stockFlows[0]?.period} source="eia" note="Week-over-week change in U.S. crude stocks (WCESTUS1) · EIA. The dashed API line is modeled." />}>Weekly Crude Builds & Draws</SectionTitle></div>
             <div className="h-60 px-2 pb-2">
               <ResponsiveContainer>
                 <ComposedChart data={stockFlows}>
                   <CartesianGrid {...chartProps.grid} />
                   <XAxis dataKey="w" {...chartProps.axis} interval={2} />
                   <YAxis {...chartProps.axis} width={40} />
-                  <Tooltip content={<ChartTooltip unit=" MMbbl" />} cursor={{ fill: "rgba(255,255,255,0.03)" }} />
+                  <Tooltip content={<ChartTooltip unit=" MMbbl" source="eia" />} cursor={{ fill: "rgba(255,255,255,0.03)" }} />
                   <ReferenceLine y={0} stroke="#3a3b41" />
                   <Bar dataKey="eia" name="EIA" maxBarSize={16} isAnimationActive={false}>
                     {stockFlows.map((d, i) => (
@@ -166,7 +165,7 @@ export const PageDrivers = () => {
           </Card>
 
           <Card padding={false} className="col-span-12 lg:col-span-4">
-            <div className="p-4 pb-2"><SectionTitle sub="Baker Hughes · 52W" action={<SourceTag modeled label="Modeled" />}>Rig Count</SectionTitle></div>
+            <div className="p-4 pb-2"><SectionTitle sub="Baker Hughes · 52W" action={<SourceTag modeled label="Modeled" source="modeled" note="Baker Hughes publishes the rig count as Excel only (no API), so the 52-week series is modeled." />}>Rig Count</SectionTitle></div>
             <div className="h-60 px-2 pb-2">
               <ResponsiveContainer>
                 <ComposedChart data={rigsData.hist || RIG_COUNT}>
@@ -180,7 +179,7 @@ export const PageDrivers = () => {
                   <XAxis dataKey="w" {...chartProps.axis} tick={false} />
                   <YAxis yAxisId="L" {...chartProps.axis} width={34} domain={["auto", "auto"]} />
                   <YAxis yAxisId="R" {...chartProps.axis} orientation="right" width={30} domain={["auto", "auto"]} />
-                  <Tooltip content={<ChartTooltip />} />
+                  <Tooltip content={<ChartTooltip source="modeled" />} />
                   <Area yAxisId="L" type="monotone" dataKey="oil" stroke="#f59e0b" strokeWidth={1.4} fill="url(#rigFill)" name="Oil" isAnimationActive={false} />
                   <Line yAxisId="R" type="monotone" dataKey="gas" stroke="#38bdf8" strokeWidth={1.2} dot={false} name="Gas" isAnimationActive={false} />
                 </ComposedChart>
@@ -190,7 +189,7 @@ export const PageDrivers = () => {
         </div>
 
         <Card>
-          <SectionTitle sub={`mb/d · output vs target · ${opecData.productionSource || "curated"}`}>OPEC+ Production & Quota Compliance</SectionTitle>
+          <SectionTitle sub={`mb/d · output vs target · ${opecData.productionSource || "curated"}`} action={<SourceTag live label="Curated" source="curated" note="OPEC+ quotas are published policy targets; output figures are recent curated estimates (no clean free per-member feed)." />}>OPEC+ Production & Quota Compliance</SectionTitle>
           <div className="grid grid-cols-[1.3fr_repeat(3,0.6fr)_1.4fr] items-center gap-x-3 gap-y-0.5">
             <div className="contents text-[9px] text-zinc-600 uppercase tracking-wider">
               <span>Member</span>
@@ -206,14 +205,20 @@ export const PageDrivers = () => {
               return (
                 <div key={m.member} className="contents">
                   <span className="text-[11px] text-zinc-300 py-1 border-t border-[#15161a] truncate">{m.member}</span>
-                  <span className="font-mono text-[11px] text-zinc-400 text-right py-1 border-t border-[#15161a]">{fmt(m.quota)}</span>
-                  <span className="font-mono text-[11px] text-zinc-200 text-right py-1 border-t border-[#15161a]">{fmt(m.prod)}</span>
+                  <span className="font-mono text-[11px] text-zinc-400 text-right py-1 border-t border-[#15161a]">
+                    <Sourced source="curated" note="Agreed OPEC+ production target (mb/d)" align="end">{fmt(m.quota)}</Sourced>
+                  </span>
+                  <span className="font-mono text-[11px] text-zinc-200 text-right py-1 border-t border-[#15161a]">
+                    <Sourced source="curated" note="Recent estimated crude output (mb/d)" align="end">{fmt(m.prod)}</Sourced>
+                  </span>
                   <span className={`font-mono text-[11px] text-right py-1 border-t border-[#15161a] ${delta > 0 ? "text-red-400" : "text-emerald-400"}`}>{fmtSigned(delta)}</span>
                   <div className="flex items-center gap-2 py-1 border-t border-[#15161a]">
                     <div className="flex-1 h-1.5 bg-[#15161a]">
                       <div className="h-full" style={{ width: `${Math.min(comp, 100)}%`, background: c, opacity: 0.7 }} />
                     </div>
-                    <span className="font-mono text-[10px] w-12 text-right" style={{ color: c }}>{fmt(comp, 1)}%</span>
+                    <span className="font-mono text-[10px] w-12 text-right" style={{ color: c }}>
+                      <Sourced source="derived" note="Compliance = target ÷ output × 100" align="end">{fmt(comp, 1)}%</Sourced>
+                    </span>
                   </div>
                 </div>
               );
@@ -241,14 +246,14 @@ export const PageDrivers = () => {
 
         <div className="grid grid-cols-12 gap-3">
           <Card padding={false} className="col-span-12 lg:col-span-8">
-            <div className="p-4 pb-2"><SectionTitle sub="$/day · time charter equivalent" action={<SourceTag modeled label="Indicative" />}>Tanker Rates</SectionTitle></div>
+            <div className="p-4 pb-2"><SectionTitle sub="$/day · time charter equivalent" action={<SourceTag modeled label="Indicative" source="modeled" note="Baltic Exchange tanker indices are paywalled — these TCE rates are modeled." />}>Tanker Rates</SectionTitle></div>
             <div className="h-64 px-2 pb-2">
               <ResponsiveContainer>
                 <LineChart data={rates}>
                   <CartesianGrid {...chartProps.grid} />
                   <XAxis dataKey="t" {...chartProps.axis} />
                   <YAxis {...chartProps.axis} width={48} />
-                  <Tooltip content={<ChartTooltip unit=" $/d" />} />
+                  <Tooltip content={<ChartTooltip unit=" $/d" source="modeled" />} />
                   <Line type="monotone" dataKey="vlcc" stroke="#f59e0b" strokeWidth={1.4} dot={false} name="VLCC" isAnimationActive={false} />
                   <Line type="monotone" dataKey="suezmax" stroke="#38bdf8" strokeWidth={1.4} dot={false} name="Suezmax" isAnimationActive={false} />
                   <Line type="monotone" dataKey="aframax" stroke="#10b981" strokeWidth={1.4} dot={false} name="Aframax" isAnimationActive={false} />
@@ -260,12 +265,13 @@ export const PageDrivers = () => {
           <div className="col-span-12 lg:col-span-4 space-y-3">
             <ShippingPanel />
             <Card>
-              <SectionTitle sub="$/bbl freight" action={<SourceTag modeled label="Indicative" />}>Route Spreads</SectionTitle>
+              <SectionTitle sub="$/bbl freight" action={<SourceTag modeled label="No source" source="modeled" note="Worldscale/freight route rates are paywalled — no free source." />}>Route Spreads</SectionTitle>
               {(freight.routes || FREIGHT_FALLBACK.routes).map((s) => (
                 <div key={s.r} className="flex items-center justify-between py-1.5 border-b border-[#15161a] last:border-0">
                   <span className="text-[11px] text-zinc-300">{s.r}</span>
-                  <span className="font-mono text-[11px] text-zinc-200">${fmt(s.v)}</span>
-                  <Delta v={s.c} pct={(s.c / s.v) * 100} />
+                  <span className="font-mono text-[11px] text-zinc-200">
+                    <Sourced source="modeled" note="Freight route rates (Worldscale) are paywalled — no free source." align="end">{fmt(s.v)}</Sourced>
+                  </span>
                 </div>
               ))}
             </Card>
@@ -279,23 +285,23 @@ export const PageDrivers = () => {
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-[#1c1d22]">
           {[
-            { sym: "US-HDD", name: "Heating Degree Days", val: weather.heroes?.usHdd ?? 142, chg: +18, pct: +14.5, spark: genSpark(71, 30, 1), unit: "7d sum" },
-            { sym: "EU-HDD", name: "EU Heating Demand", val: weather.heroes?.euHdd ?? 124, chg: +12, pct: +10.7, spark: genSpark(72, 30, 1), unit: "7d sum" },
-            { sym: "ASIA-CDD", name: "Asia Cooling", val: weather.heroes?.asiaCdd ?? 38, chg: -4, pct: -9.5, spark: genSpark(73, 30, -1), unit: "7d sum" },
+            { sym: "US-HDD", name: "Heating Degree Days", val: weather.heroes?.usHdd ?? 142, chg: null, pct: null, spark: genSpark(71, 30, 1), unit: "7d sum", source: "openmeteo", sourceNote: "7-day heating-degree-day sum from live Open-Meteo temps. No free prior-period series for the change." },
+            { sym: "EU-HDD", name: "EU Heating Demand", val: weather.heroes?.euHdd ?? 124, chg: null, pct: null, spark: genSpark(72, 30, 1), unit: "7d sum", source: "openmeteo", sourceNote: "7-day heating-degree-day sum from live Open-Meteo temps. No free prior-period series for the change." },
+            { sym: "ASIA-CDD", name: "Asia Cooling", val: weather.heroes?.asiaCdd ?? 38, chg: null, pct: null, spark: genSpark(73, 30, -1), unit: "7d sum", source: "openmeteo", sourceNote: "7-day cooling-degree-day sum from live Open-Meteo temps. No free prior-period series for the change." },
             { sym: "ENSO", name: "El Niño Index", val: 1.42, chg: +0.08, pct: +5.9, spark: genSpark(74, 30, 1), unit: "", modeled: true },
           ].map((d) => <HeroCard key={d.sym} d={d} />)}
         </div>
 
         <div className="grid grid-cols-12 gap-3">
           <Card padding={false} className="col-span-12 lg:col-span-8">
-            <div className="p-4 pb-2"><SectionTitle sub="±7/14-day anomaly · NW Europe" action={<SourceTag live />}>Temperature Forecast vs Normal</SectionTitle></div>
+            <div className="p-4 pb-2"><SectionTitle sub="±7/14-day anomaly · NW Europe" action={<SourceTag live source="openmeteo" note="Open-Meteo daily forecast; anomaly is vs the climatological monthly normal." />}>Temperature Forecast vs Normal</SectionTitle></div>
             <div className="h-64 px-2 pb-2">
               <ResponsiveContainer>
                 <ComposedChart data={temp}>
                   <CartesianGrid {...chartProps.grid} />
                   <XAxis dataKey="d" {...chartProps.axis} />
                   <YAxis {...chartProps.axis} width={40} />
-                  <Tooltip content={<ChartTooltip unit="°C" />} />
+                  <Tooltip content={<ChartTooltip unit="°C" source="openmeteo" />} />
                   <ReferenceLine y={0} stroke="#3a3b41" strokeDasharray="2 2" label={{ value: "Normal", fill: "#71717a", fontSize: 9, position: "right" }} />
                   <Area type="monotone" dataKey="obs" fill="#38bdf8" fillOpacity={0.18} stroke="#38bdf8" strokeWidth={1} name="Observed" isAnimationActive={false} />
                   <Line type="monotone" dataKey="fc" stroke="#f59e0b" strokeWidth={1.6} dot={{ r: 3, fill: "#f59e0b" }} name="Forecast" isAnimationActive={false} />
@@ -306,22 +312,12 @@ export const PageDrivers = () => {
 
           <div className="col-span-12 lg:col-span-4 space-y-3">
             <Card>
-              <SectionTitle sub="Active alerts" action={<SourceTag modeled label="Illustrative" />}>Storm Tracker</SectionTitle>
-              {[
-                { n: "Storm Erika", c: "Atlantic", cat: "Cat 2", risk: "high" },
-                { n: "Polar Vortex", c: "N. America", cat: "Severe", risk: "high" },
-                { n: "Heatwave Sirius", c: "Europe", cat: "Moderate", risk: "med" },
-                { n: "Typhoon Yagi", c: "W. Pacific", cat: "Cat 1", risk: "med" },
-              ].map((s) => (
-                <div key={s.n} className="flex items-start gap-2 py-2 border-b border-[#15161a] last:border-0">
-                  <Wind size={12} className={s.risk === "high" ? "text-red-400" : "text-amber-400"} />
-                  <div className="flex-1">
-                    <div className="text-[11px] text-zinc-200">{s.n}</div>
-                    <div className="text-[9px] text-zinc-500">{s.c} · {s.cat}</div>
-                  </div>
-                  <Badge tone={s.risk}>{s.risk}</Badge>
-                </div>
-              ))}
+              <SectionTitle sub="Active alerts" action={<SourceTag modeled label="No feed" source="modeled" note="No free live tropical-cyclone / severe-weather alert feed wired in." />}>Storm Tracker</SectionTitle>
+              <div className="flex flex-col items-center justify-center gap-1 py-6 text-center">
+                <Wind size={16} className="text-zinc-700" />
+                <span className="font-mono text-lg text-zinc-600">—</span>
+                <span className="text-[9px] text-zinc-600 uppercase tracking-wider">No live storm feed</span>
+              </div>
             </Card>
             <WeatherRisk />
           </div>

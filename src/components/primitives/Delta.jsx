@@ -1,9 +1,13 @@
 import { ArrowUp, ArrowDown } from "lucide-react";
-import { fmt, fmtSigned } from "../../lib/format";
+import { fmt, fmtSigned, DASH } from "../../lib/format";
 
 export const Delta = ({ v, pct, size = "sm" }) => {
-  const up = v >= 0;
   const cls = size === "lg" ? "text-sm" : "text-[11px]";
+  // No real change available → neutral dash, no arrow/colour (don't imply a direction).
+  if (v == null || Number.isNaN(Number(v))) {
+    return <span className={`inline-flex items-center font-mono ${cls} text-zinc-600`}>{DASH}</span>;
+  }
+  const up = v >= 0;
   return (
     <span
       className={`inline-flex items-center gap-1 font-mono ${cls} ${

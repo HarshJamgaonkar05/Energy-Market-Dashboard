@@ -6,10 +6,10 @@ import { Badge } from "../primitives/Badge";
 import { NEWS } from "../../data/mock";
 import { useLive } from "../../lib/useLive";
 
-// Live energy newswire — GDELT 2.0 (see server/sources/gdelt.js). Falls back to
-// the seeded NEWS headlines if the backend or GDELT is unreachable.
+// Live financial newswire — Financial Juice RSS (see server/sources/financialjuice.js).
+// Falls back to the seeded NEWS headlines if the backend or feed is unreachable.
 export const NewsPanel = ({ compact = false }) => {
-  const { data: news, live } = useLive("/api/news", NEWS, useLive.REFRESH.hourly);
+  const { data: news, live } = useLive("/api/news", NEWS, useLive.REFRESH.slow);
 
   return (
     <Card padding={false} className="flex flex-col">
@@ -51,7 +51,12 @@ export const NewsPanel = ({ compact = false }) => {
           >
             <div className="flex items-center gap-2 mb-1">
               <span className="text-[9px] font-mono text-zinc-600">{n.t}</span>
-              <span className="text-[9px] font-bold text-zinc-400 tracking-wider">{n.src}</span>
+              <span
+                className="text-[9px] font-bold text-zinc-400 tracking-wider cursor-help"
+                title={`${n.src === "FINJUICE" ? "Financial Juice" : n.src} · live financial newswire`}
+              >
+                {n.src}
+              </span>
               <Badge tone={n.sev}>{n.tag}</Badge>
               {n.sev === "high" && (
                 <AlertTriangle size={9} className="text-red-400 ml-auto" />

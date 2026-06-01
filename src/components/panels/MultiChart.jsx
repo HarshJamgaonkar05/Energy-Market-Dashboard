@@ -52,7 +52,7 @@ export const MultiChart = () => {
           <div>
             <h3 className="text-[11px] font-semibold tracking-[0.12em] text-zinc-300 uppercase inline-flex items-center gap-2">
               Price Action — Normalized
-              <SourceTag live={live} />
+              <SourceTag live={live} source="yahoo" note="Yahoo Finance daily closes, indexed to 100 at the start of the window." />
             </h3>
             <p className="text-[10px] text-zinc-600 mt-0.5">Indexed to 100 at start of window</p>
           </div>
@@ -131,7 +131,7 @@ export const MultiChart = () => {
             <CartesianGrid {...chartProps.grid} />
             <XAxis dataKey="date" {...chartProps.axis} interval={10} />
             <YAxis {...chartProps.axis} domain={["auto", "auto"]} width={40} />
-            <Tooltip content={<ChartTooltip />} />
+            <Tooltip content={<ChartTooltip source="yahoo" />} />
             {visible.map(({ k, c }) => (
               <Line key={k} type="monotone" dataKey={k} stroke={c} strokeWidth={1.4} dot={false} isAnimationActive={false} />
             ))}

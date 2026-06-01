@@ -1,7 +1,7 @@
 // ============================================================================
 // Tiny in-memory TTL cache + resilient JSON/text fetch helpers.
 //
-// Free upstream APIs (Yahoo, EIA, GDELT, Open-Meteo) are rate-limited and most
+// Free upstream APIs (Yahoo, EIA, Financial Juice, Open-Meteo) are rate-limited and most
 // of this data changes slowly (inventories weekly, weather every few hours).
 // We cache aggressively so the dashboard can poll often while we hit upstreams
 // rarely. Each cached entry also keeps the last *good* value so a transient

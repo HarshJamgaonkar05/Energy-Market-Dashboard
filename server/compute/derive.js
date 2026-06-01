@@ -34,30 +34,41 @@ const SCHEDULE = {
   5: [{ t: "13:00", evt: "Baker Hughes Rig Count", imp: "med" }], // Fri
 };
 
-export function calendar(enrich = {}) {
+const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+// Collect the upcoming week of scheduled releases (today first), each tagged
+// with its weekday + date. `enrich` supplies real forecast/prior numbers for
+// named events (e.g. EIA crude build pulled from the live WPSR) — anything not
+// enriched shows "—" because the consensus/prior figures are paywalled.
+export function calendar(enrich = {}, limit = 6) {
   const now = new Date();
-  let dow = now.getUTCDay();
-  let events = SCHEDULE[dow] || [];
-  let scanned = 0;
-  // Roll forward up to a week to find the next day that has releases.
-  while (events.length === 0 && scanned < 7) {
-    dow = (dow + 1) % 7;
-    events = SCHEDULE[dow] || [];
-    scanned++;
+  const out = [];
+  for (let offset = 0; offset < 7 && out.length < limit; offset++) {
+    const day = new Date(now);
+    day.setUTCDate(now.getUTCDate() + offset);
+    const events = SCHEDULE[day.getUTCDay()] || [];
+    for (const e of events) {
+      if (out.length >= limit) break;
+      out.push({
+        day: DOW[day.getUTCDay()],
+        date: `${day.getUTCMonth() + 1}/${day.getUTCDate()}`,
+        today: offset === 0,
+        t: e.t,
+        evt: e.evt,
+        imp: e.imp,
+        fc: enrich[e.evt]?.fc ?? "—",
+        prev: enrich[e.evt]?.prev ?? "—",
+      });
+    }
   }
-  return events.map((e) => ({
-    t: e.t,
-    evt: e.evt,
-    imp: e.imp,
-    fc: enrich[e.evt]?.fc ?? "—",
-    prev: enrich[e.evt]?.prev ?? "—",
-  }));
+  return out;
 }
 
 // ----------------------------------------------------------------------------
-// OPEC+ quotas (published policy targets) + production. Production is replaced
-// proportionally with the live EIA OPEC total when available; otherwise the
-// curated per-member estimates stand. compliance = quota / output * 100.
+// OPEC+ quotas (published policy targets) + per-member output (recent estimates).
+// These are policy/curated numbers — EIA's STEO only publishes an OPEC-only
+// aggregate (and is forecast-oriented), which doesn't map cleanly onto this
+// OPEC+ table that includes Russia/Kazakhstan. compliance = quota / output * 100.
 // ----------------------------------------------------------------------------
 const OPEC_QUOTAS = [
   { member: "Saudi Arabia", quota: 9.0,  prod: 8.97 },
@@ -70,23 +81,14 @@ const OPEC_QUOTAS = [
   { member: "Algeria",      quota: 0.91, prod: 0.9 },
 ];
 
-export function opec(eiaOpecTotalMbd = null) {
-  let quotas = OPEC_QUOTAS.map((m) => ({ ...m }));
-  // If we have a live EIA total, scale member output to match it (keeps the
-  // per-member split but anchors the aggregate to a real number).
-  const curatedTotal = quotas.reduce((s, m) => s + m.prod, 0);
-  // EIA total covers all OPEC; our table is the OPEC+ core, so only scale if
-  // the live number is in a sane band for these members.
-  if (eiaOpecTotalMbd && eiaOpecTotalMbd > 20 && eiaOpecTotalMbd < 40) {
-    const k = (eiaOpecTotalMbd * (curatedTotal / 27)) / curatedTotal; // gentle nudge
-    quotas = quotas.map((m) => ({ ...m, prod: +(m.prod * k).toFixed(2) }));
-  }
+export function opec() {
+  const quotas = OPEC_QUOTAS.map((m) => ({ ...m }));
   const total = quotas.reduce(
     (a, m) => ({ quota: +(a.quota + m.quota).toFixed(2), prod: +(a.prod + m.prod).toFixed(2) }),
     { quota: 0, prod: 0 }
   );
   const compliance = +((total.quota / total.prod) * 100).toFixed(1);
-  return { quotas, total, compliance, productionSource: eiaOpecTotalMbd ? "EIA STEO (anchored)" : "curated estimate" };
+  return { quotas, total, compliance, productionSource: "curated (targets & recent estimates)" };
 }
 
 // ----------------------------------------------------------------------------

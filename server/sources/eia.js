@@ -2,24 +2,24 @@
 // EIA Open Data API v2 — U.S. Energy Information Administration (official, free).
 // Register a key: https://www.eia.gov/opendata/register.php
 //
-// We use the v2 `/seriesid/{ID}` route, which resolves any legacy EIA series ID
-// directly without needing to know its category/facet path. Response shape:
+// We use the v2 `/seriesid/{ID}` route, which resolves a legacy EIA series ID
+// directly without needing its category/facet path. IMPORTANT: the ID must be
+// the FULL legacy form `CATEGORY.SERIES.FREQ` (e.g. PET.WCESTUS1.W) — the bare
+// series code 404s. Response shape:
 //   { response: { data: [ { period: "YYYY-MM-DD", value: <number> }, ... ] } }
 //
-// Weekly Petroleum Status Report series (stable for ~15 years):
-//   WCESTUS1            U.S. crude stocks excl. SPR        (Mbbl)
-//   WCSSTUS1            U.S. crude in Strategic Reserve     (Mbbl)
-//   W_EPC0_SAX_YCUOK_MBBL  Cushing, OK crude stocks         (Mbbl)
-//   WGTSTUS1            U.S. total gasoline stocks          (Mbbl)
-//   WDISTUS1            U.S. distillate fuel oil stocks     (Mbbl)
-//   WPULEUS3            Refinery % utilization of capacity  (percent)
-//   WCESTP{1..5}1       Crude stocks by PADD region         (Mbbl)
+// Weekly Petroleum Status Report series:
+//   PET.WCESTUS1.W            U.S. crude stocks excl. SPR        (Mbbl)
+//   PET.WCSSTUS1.W            U.S. crude in Strategic Reserve     (Mbbl)
+//   PET.W_EPC0_SAX_YCUOK_MBBL.W  Cushing, OK crude stocks         (Mbbl)
+//   PET.WGTSTUS1.W            U.S. total gasoline stocks          (Mbbl)
+//   PET.WDISTUS1.W            U.S. distillate fuel oil stocks     (Mbbl)
+//   PET.WPULEUS3.W            Refinery % utilization of capacity  (percent)
+//   PET.WCESTP{1..5}1.W       Crude stocks by PADD region         (Mbbl)
 // Daily spot prices:
-//   RWTC               WTI Cushing spot                     ($/bbl)
-//   RBRTE              Brent Europe spot                    ($/bbl)
-// Short-Term Energy Outlook (monthly):
-//   COPR_OPEC          OPEC total crude oil production      (Mb/d)
-// EIA reports in thousand barrels; we divide by 1000 to get MMbbl for the UI.
+//   PET.RWTC.D                WTI Cushing spot                    ($/bbl)
+//   PET.RBRTE.D               Brent Europe spot                   ($/bbl)
+// EIA reports stocks in thousand barrels; we divide by 1000 to get MMbbl.
 // ============================================================================
 import { cached, fetchJSON } from "../lib/cache.js";
 
@@ -57,17 +57,17 @@ export async function inventories() {
 
   const [crude, spr, cushing, gasoline, distillate, refUtil, p1, p2, p3, p4, p5] =
     await Promise.all([
-      series("WCESTUS1", 60),
-      series("WCSSTUS1", 8),
-      series("W_EPC0_SAX_YCUOK_MBBL", 8),
-      series("WGTSTUS1", 8),
-      series("WDISTUS1", 8),
-      series("WPULEUS3", 8),
-      series("WCESTP11", 4),
-      series("WCESTP21", 4),
-      series("WCESTP31", 4),
-      series("WCESTP41", 4),
-      series("WCESTP51", 4),
+      series("PET.WCESTUS1.W", 60),
+      series("PET.WCSSTUS1.W", 8),
+      series("PET.W_EPC0_SAX_YCUOK_MBBL.W", 8),
+      series("PET.WGTSTUS1.W", 8),
+      series("PET.WDISTUS1.W", 8),
+      series("PET.WPULEUS3.W", 8),
+      series("PET.WCESTP11.W", 4),
+      series("PET.WCESTP21.W", 4),
+      series("PET.WCESTP31.W", 4),
+      series("PET.WCESTP41.W", 4),
+      series("PET.WCESTP51.W", 4),
     ]);
 
   const heroCell = (arr, sym, name) => {
@@ -121,7 +121,7 @@ export async function inventories() {
 // ----------------------------------------------------------------------------
 export async function stockFlows() {
   if (!eiaEnabled()) return null;
-  const crude = await series("WCESTUS1", 24);
+  const crude = await series("PET.WCESTUS1.W", 24);
   if (!crude) return null;
   const out = [];
   for (let i = 1; i < crude.length; i++) {
@@ -137,15 +137,6 @@ export async function stockFlows() {
 // ----------------------------------------------------------------------------
 export async function spot() {
   if (!eiaEnabled()) return null;
-  const [wti, brent] = await Promise.all([series("RWTC", 5), series("RBRTE", 5)]);
+  const [wti, brent] = await Promise.all([series("PET.RWTC.D", 5), series("PET.RBRTE.D", 5)]);
   return { wti: latest(wti), brent: latest(brent) };
-}
-
-// ----------------------------------------------------------------------------
-// OPEC total crude production (STEO, monthly) — feeds the OPEC compliance panel.
-// ----------------------------------------------------------------------------
-export async function opecProduction() {
-  if (!eiaEnabled()) return null;
-  const s = await series("STEO.COPR_OPEC.M", 3);
-  return latest(s); // Mb/d
 }

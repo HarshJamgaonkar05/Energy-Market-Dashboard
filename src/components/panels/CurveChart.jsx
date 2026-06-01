@@ -4,10 +4,13 @@ import {
 import { Card } from "../primitives/Card";
 import { SectionTitle } from "../primitives/SectionTitle";
 import { SourceTag } from "../primitives/SourceTag";
+import { Sourced } from "../primitives/Sourced";
 import { FWD_CURVES } from "../../data/mock";
 import { chartProps, ChartTooltip } from "../../lib/chart-theme";
 import { fmt, fmtSigned } from "../../lib/format";
 import { useLive } from "../../lib/useLive";
+
+const CURVE_NOTE = "Front month anchored to the live Yahoo quote; the term structure uses a curated slope (exchange settlement curves are paywalled).";
 
 // Forward curves are MODELED: the front month is anchored to the live Yahoo
 // quote, but the term structure uses a curated slope (exchange settlement
@@ -25,7 +28,7 @@ export const CurveChart = () => {
   return (
     <Card padding={false}>
       <div className="p-4 pb-2">
-        <SectionTitle sub="Front 12 months" action={<SourceTag modeled label="Modeled curve" />}>Forward Curve Structure</SectionTitle>
+        <SectionTitle sub="Front 12 months" action={<SourceTag modeled label="Modeled curve" source="modeled" note={CURVE_NOTE} />}>Forward Curve Structure</SectionTitle>
       </div>
       <div className="h-48 px-2 pb-2">
         <ResponsiveContainer>
@@ -33,7 +36,7 @@ export const CurveChart = () => {
             <CartesianGrid {...chartProps.grid} />
             <XAxis dataKey="m" {...chartProps.axis} />
             <YAxis {...chartProps.axis} domain={["auto", "auto"]} width={40} />
-            <Tooltip content={<ChartTooltip unit=" $/bbl" />} />
+            <Tooltip content={<ChartTooltip unit=" $/bbl" source="modeled" />} />
             <Line type="monotone" dataKey="brent" stroke="#f59e0b" strokeWidth={1.6} dot={{ r: 2.5, fill: "#f59e0b" }} name="Brent" isAnimationActive={false} />
             <Line type="monotone" dataKey="wti" stroke="#38bdf8" strokeWidth={1.6} dot={{ r: 2.5, fill: "#38bdf8" }} name="WTI" isAnimationActive={false} />
           </LineChart>
@@ -42,17 +45,23 @@ export const CurveChart = () => {
       <div className="px-4 pb-3 grid grid-cols-3 gap-3 border-t border-[#1c1d22] pt-3">
         <div>
           <div className="text-[9px] text-zinc-600 uppercase tracking-wider">Brent C1-C12</div>
-          <div className="font-mono text-[13px] text-amber-400">{fmtSigned(-bSlope)}</div>
+          <div className="font-mono text-[13px] text-amber-400">
+            <Sourced source="modeled" note={CURVE_NOTE} align="start">{fmtSigned(-bSlope)}</Sourced>
+          </div>
           <div className="text-[9px] text-zinc-500">{bSlope >= 0 ? "Backwardation" : "Contango"}</div>
         </div>
         <div>
           <div className="text-[9px] text-zinc-600 uppercase tracking-wider">WTI C1-C12</div>
-          <div className="font-mono text-[13px] text-sky-400">{fmtSigned(-wSlope)}</div>
+          <div className="font-mono text-[13px] text-sky-400">
+            <Sourced source="modeled" note={CURVE_NOTE} align="start">{fmtSigned(-wSlope)}</Sourced>
+          </div>
           <div className="text-[9px] text-zinc-500">{wSlope >= 0 ? "Backwardation" : "Contango"}</div>
         </div>
         <div>
           <div className="text-[9px] text-zinc-600 uppercase tracking-wider">Brent-WTI M1</div>
-          <div className="font-mono text-[13px] text-zinc-100">${fmt(m1)}</div>
+          <div className="font-mono text-[13px] text-zinc-100">
+            <Sourced source="derived" note="Front-month Brent − WTI · from live Yahoo quotes" align="end">${fmt(m1)}</Sourced>
+          </div>
           <div className="text-[9px] text-zinc-500">spread</div>
         </div>
       </div>

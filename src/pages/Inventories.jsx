@@ -4,7 +4,7 @@ import {
 import { Card } from "../components/primitives/Card";
 import { SectionTitle } from "../components/primitives/SectionTitle";
 import { SourceTag } from "../components/primitives/SourceTag";
-import { Delta } from "../components/primitives/Delta";
+import { Sourced } from "../components/primitives/Sourced";
 import { InventorySnap } from "../components/panels/InventorySnap";
 import { chartProps, ChartTooltip } from "../lib/chart-theme";
 import { fmt, fmtSigned } from "../lib/format";
@@ -36,7 +36,7 @@ export const PageInventories = () => {
     <div className="space-y-3">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-[#1c1d22]">
         {heroes.map((d, i) => (
-          <HeroCard key={d.sym} d={{ ...d, unit: "MMbbl", spark: genSpark(81 + i, 30, d.chg >= 0 ? 1 : -1) }} />
+          <HeroCard key={d.sym} d={{ ...d, unit: "MMbbl", source: "eia", sourceNote: "EIA Weekly Petroleum Status Report (official, weekly).", spark: genSpark(81 + i, 30, d.chg >= 0 ? 1 : -1) }} />
         ))}
       </div>
 
@@ -44,7 +44,7 @@ export const PageInventories = () => {
         <div className="col-span-12 lg:col-span-8 space-y-3">
           <Card padding={false}>
             <div className="p-4 pb-2">
-              <SectionTitle sub="52W vs trailing avg" action={<SourceTag live={live} />}>US Crude Stocks</SectionTitle>
+              <SectionTitle sub="52W vs trailing avg" action={<SourceTag live={live} source="eia" note="EIA weekly U.S. crude stocks excl. SPR (WCESTUS1); band is the trailing-year average." />}>US Crude Stocks</SectionTitle>
             </div>
             <div className="h-80 px-2 pb-2">
               <ResponsiveContainer>
@@ -52,7 +52,7 @@ export const PageInventories = () => {
                   <CartesianGrid {...chartProps.grid} />
                   <XAxis dataKey="w" {...chartProps.axis} />
                   <YAxis {...chartProps.axis} width={40} domain={["auto", "auto"]} />
-                  <Tooltip content={<ChartTooltip unit=" MMbbl" />} />
+                  <Tooltip content={<ChartTooltip unit=" MMbbl" source="eia" />} />
                   <Area type="monotone" dataKey="avg5y" stroke="#3a3b41" strokeWidth={1} fill="#1c1d22" fillOpacity={0.4} name="Avg" isAnimationActive={false} />
                   <Line type="monotone" dataKey="total" stroke="#f59e0b" strokeWidth={1.6} dot={false} name="Current" isAnimationActive={false} />
                 </ComposedChart>
@@ -63,9 +63,11 @@ export const PageInventories = () => {
           <div className="grid grid-cols-2 gap-3">
             <InventorySnap />
             <Card>
-              <SectionTitle sub="US Refinery Utilization" action={<SourceTag live={live} />}>Refining</SectionTitle>
+              <SectionTitle sub="US Refinery Utilization" action={<SourceTag live={live} source="eia" note="EIA refinery % utilization of operable capacity (WPULEUS3), weekly." />}>Refining</SectionTitle>
               <div className="text-center py-3">
-                <div className="font-mono text-4xl text-amber-400">{fmt(refUtil, 1)}%</div>
+                <div className="font-mono text-4xl text-amber-400">
+                  <Sourced source="eia" note="EIA refinery % utilization of operable capacity (WPULEUS3)">{fmt(refUtil, 1)}%</Sourced>
+                </div>
                 <div className="text-[10px] text-zinc-500 mt-1 uppercase tracking-wider">Capacity used</div>
               </div>
               <div className="grid grid-cols-2 gap-3 mt-2 pt-3 border-t border-[#1c1d22]">
@@ -80,7 +82,7 @@ export const PageInventories = () => {
               </div>
               <div className="mt-3 flex items-center justify-between">
                 <span className="text-[9px] text-zinc-600 uppercase tracking-wider">PADD utilization</span>
-                <SourceTag modeled label="Illustrative" />
+                <SourceTag modeled label="No source" source="modeled" note="EIA publishes only the national refinery utilization — no free per-PADD breakdown." />
               </div>
               <div className="mt-1.5 space-y-1.5">
                 {[
@@ -91,10 +93,10 @@ export const PageInventories = () => {
                 ].map((p) => (
                   <div key={p.r} className="flex items-center gap-2">
                     <span className="text-[10px] text-zinc-400 w-12">{p.r}</span>
-                    <div className="flex-1 h-1.5 bg-[#15161a]">
-                      <div className="h-full bg-amber-500/70" style={{ width: `${p.v}%` }} />
-                    </div>
-                    <span className="font-mono text-[10px] text-zinc-300 w-8 text-right">{p.v}%</span>
+                    <div className="flex-1 h-1.5 bg-[#15161a]" />
+                    <span className="font-mono text-[10px] text-zinc-300 w-8 text-right">
+                      <Sourced source="modeled" note="EIA publishes only the national refinery utilization — no free per-PADD breakdown." align="end" />
+                    </span>
                   </div>
                 ))}
               </div>
@@ -104,7 +106,7 @@ export const PageInventories = () => {
 
         <div className="col-span-12 lg:col-span-4 space-y-3">
           <Card>
-            <SectionTitle sub="Storage utilization" action={<SourceTag modeled label="Indicative" />}>Global Crude Storage</SectionTitle>
+            <SectionTitle sub="Storage utilization" action={<SourceTag modeled label="No source" source="modeled" note="Tank-level storage data (Kpler/Vortexa) is paywalled — no free source." />}>Global Crude Storage</SectionTitle>
             {[
               { r: "OECD", v: 84.2, c: -0.4 },
               { r: "China SPR", v: 71.8, c: +0.8 },
@@ -115,8 +117,9 @@ export const PageInventories = () => {
             ].map((s) => (
               <div key={s.r} className="flex items-center gap-2 py-1.5 border-b border-[#15161a] last:border-0">
                 <span className="text-[11px] text-zinc-300 flex-1">{s.r}</span>
-                <span className="font-mono text-[11px] text-zinc-200 w-12 text-right">{s.v}%</span>
-                <Delta v={s.c} pct={s.c} />
+                <span className="font-mono text-[11px] text-zinc-200 w-12 text-right">
+                  <Sourced source="modeled" note="Commercial tank-level data (Kpler/Vortexa) is paywalled — no free source." align="end" />
+                </span>
               </div>
             ))}
           </Card>

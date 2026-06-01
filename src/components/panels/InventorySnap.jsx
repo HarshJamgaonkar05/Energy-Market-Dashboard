@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { Card } from "../primitives/Card";
 import { SectionTitle } from "../primitives/SectionTitle";
 import { SourceTag } from "../primitives/SourceTag";
+import { Sourced } from "../primitives/Sourced";
 import { INV } from "../../data/mock";
 import { fmt, fmtSigned } from "../../lib/format";
 import { useLive } from "../../lib/useLive";
@@ -27,7 +28,7 @@ export const InventorySnap = () => {
 
   return (
     <Card>
-      <SectionTitle sub="EIA Weekly · MMbbl" action={<SourceTag live={live} />}>US Crude Inventory by PADD</SectionTitle>
+      <SectionTitle sub="EIA Weekly · MMbbl" action={<SourceTag live={live} source="eia" note="EIA Weekly Petroleum Status Report — crude stocks by PADD (WCESTP1..5)." />}>US Crude Inventory by PADD</SectionTitle>
       <div className="space-y-1.5">
         {padd.map((p) => {
           const max = 250;
@@ -44,11 +45,11 @@ export const InventorySnap = () => {
                   className="absolute inset-y-0 left-0 bg-gradient-to-r from-amber-600/60 to-amber-500/40"
                 />
                 <span className="absolute inset-0 flex items-center px-1.5 text-[9px] font-mono text-zinc-100">
-                  {fmt(p.val, 1)}
+                  <Sourced source="eia" note={`${p.reg} crude stocks · EIA Weekly Petroleum Status Report`} align="start">{fmt(p.val, 1)}</Sourced>
                 </span>
               </div>
               <span className={`font-mono text-[10px] w-14 text-right ${up ? "text-emerald-400" : "text-red-400"}`}>
-                {fmtSigned(p.chg, 1)}
+                <Sourced source="eia" note="Week-over-week change · EIA" align="end">{fmtSigned(p.chg, 1)}</Sourced>
               </span>
             </div>
           );
@@ -57,15 +58,21 @@ export const InventorySnap = () => {
       <div className="grid grid-cols-3 gap-3 mt-3 pt-3 border-t border-[#1c1d22]">
         <div>
           <div className="text-[9px] text-zinc-600 uppercase tracking-wider">Total</div>
-          <div className="font-mono text-[13px] text-zinc-100">{fmt(total, 1)}</div>
+          <div className="font-mono text-[13px] text-zinc-100">
+            <Sourced source="eia" note="U.S. commercial crude stocks excl. SPR (WCESTUS1) · EIA" align="start">{fmt(total, 1)}</Sourced>
+          </div>
         </div>
         <div>
           <div className="text-[9px] text-zinc-600 uppercase tracking-wider">Δ Week</div>
-          <div className={`font-mono text-[13px] ${dWeek >= 0 ? "text-emerald-400" : "text-red-400"}`}>{fmtSigned(dWeek, 1)}</div>
+          <div className={`font-mono text-[13px] ${dWeek >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+            <Sourced source="eia" note="Week-over-week build/draw · EIA" align="start">{fmtSigned(dWeek, 1)}</Sourced>
+          </div>
         </div>
         <div>
           <div className="text-[9px] text-zinc-600 uppercase tracking-wider">vs 5Y</div>
-          <div className={`font-mono text-[13px] ${vs5y >= 0 ? "text-emerald-400" : "text-red-400"}`}>{fmtSigned(vs5y, 1)}%</div>
+          <div className={`font-mono text-[13px] ${vs5y >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+            <Sourced source="derived" note="Latest crude stocks vs trailing-year average (proxy for the 5-year band) · derived from EIA" align="end">{fmtSigned(vs5y, 1)}%</Sourced>
+          </div>
         </div>
       </div>
     </Card>

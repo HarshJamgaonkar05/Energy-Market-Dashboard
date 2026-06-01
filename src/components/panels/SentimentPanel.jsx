@@ -1,6 +1,7 @@
 import { Card } from "../primitives/Card";
 import { SectionTitle } from "../primitives/SectionTitle";
 import { SourceTag } from "../primitives/SourceTag";
+import { Sourced } from "../primitives/Sourced";
 import { motion } from "framer-motion";
 import { useLive } from "../../lib/useLive";
 
@@ -20,7 +21,7 @@ export const SentimentPanel = () => {
   const groups = data.groups || FALLBACK.groups;
   return (
     <Card>
-      <SectionTitle sub="Momentum + news" action={<SourceTag live={live} />}>Sentiment</SectionTitle>
+      <SectionTitle sub="Momentum + news" action={<SourceTag live={live} source="derived" note="Composite of live price momentum (Yahoo) and the bull/bear balance of recent news (Financial Juice)." />}>Sentiment</SectionTitle>
       <div className="space-y-2.5">
         {groups.map((s) => {
           const bull = s.value >= 50;
@@ -29,7 +30,7 @@ export const SentimentPanel = () => {
               <div className="flex items-center justify-between mb-1">
                 <span className="text-[10px] text-zinc-400 uppercase tracking-wider">{s.name}</span>
                 <span className={`text-[10px] font-mono ${bull ? "text-emerald-400" : "text-red-400"}`}>
-                  {s.value} · {s.lbl}
+                  <Sourced source="derived" note="0–100 composite from price momentum + news balance" align="end">{s.value} · {s.lbl}</Sourced>
                 </span>
               </div>
               <div className="h-1.5 bg-[#15161a] relative">
