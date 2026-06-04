@@ -13,7 +13,7 @@ import cors from "cors";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: join(__dirname, ".env") });
 
-import { instruments, ticker, movers, seriesAndCorrelation, cracks, curves, interSpreads, macro } from "./compute/markets.js";
+import { instruments, ticker, movers, seriesAndCorrelation, cracks, forwardCurves, interSpreads, macro } from "./compute/markets.js";
 import { calendar, opec, freight, rigs, sentiment } from "./compute/derive.js";
 import * as eia from "./sources/eia.js";
 import { weather, tempForecast } from "./sources/openmeteo.js";
@@ -81,7 +81,7 @@ app.get("/api/correlation", route(async () => (await seriesAndCorrelation()).cor
 app.get("/api/cracks", route(async () => cracks(await instruments()), "/api/cracks"));
 app.get("/api/curves", route(async () => {
   const instr = await instruments();
-  return { ...curves(instr), inter: interSpreads(instr) };
+  return { ...(await forwardCurves(instr)), inter: interSpreads(instr) };
 }, "/api/curves"));
 app.get("/api/macro", route(() => macro(), "/api/macro"));
 

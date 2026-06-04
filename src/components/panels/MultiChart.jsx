@@ -23,6 +23,10 @@ const VIEWS = [
   ...SERIES.map((s) => ({ v: s.k, label: s.name, c: s.c })),
 ];
 
+// Trailing window per range. The series is daily; the backend only carries
+// ~90 days (3M) of history, so 3M shows the whole window.
+const RANGE_POINTS = { "1W": 7, "1M": 30, "3M": Infinity };
+
 export const MultiChart = () => {
   const [view, setView] = useState("all");
   const [on, setOn] = useState({ Brent: true, WTI: true, HO: true, RBOB: true, Gasoil: true });
@@ -45,6 +49,22 @@ export const MultiChart = () => {
   // "all" honours the per-series toggle chips; a single view isolates one line.
   const visible = view === "all" ? SERIES.filter((s) => on[s.k]) : SERIES.filter((s) => s.k === view);
 
+  // Slice the series to the selected range, then re-index every line to 100 at
+  // the first visible point so the chart stays true to "indexed to 100 at start
+  // of window" regardless of which range is active.
+  const n = RANGE_POINTS[range] ?? Infinity;
+  const slice = series.slice(Math.max(0, series.length - n));
+  const base = slice[0];
+  const windowed = base
+    ? slice.map((row) => {
+        const out = { date: row.date };
+        for (const { k } of SERIES) out[k] = base[k] ? +((row[k] / base[k]) * 100).toFixed(2) : 100;
+        return out;
+      })
+    : slice;
+  // Aim for ~8 date labels regardless of how many points are in view.
+  const tickInterval = Math.max(0, Math.floor(windowed.length / 8));
+
   return (
     <Card padding={false} className="overflow-hidden">
       <div className="p-4 pb-2">
@@ -57,7 +77,7 @@ export const MultiChart = () => {
             <p className="text-[10px] text-zinc-600 mt-0.5">Indexed to 100 at start of window</p>
           </div>
           <div className="flex items-center gap-1">
-            {["1W", "1M", "3M", "6M", "1Y"].map((r) => (
+            {["1W", "1M", "3M"].map((r) => (
               <button
                 key={r}
                 onClick={() => setRange(r)}
@@ -127,9 +147,9 @@ export const MultiChart = () => {
       </div>
       <div className="h-64 px-2 pb-2">
         <ResponsiveContainer>
-          <LineChart data={series} margin={{ top: 8, right: 20, bottom: 6, left: 0 }}>
+          <LineChart data={windowed} margin={{ top: 8, right: 20, bottom: 6, left: 0 }}>
             <CartesianGrid {...chartProps.grid} />
-            <XAxis dataKey="date" {...chartProps.axis} interval={10} />
+            <XAxis dataKey="date" {...chartProps.axis} interval={tickInterval} />
             <YAxis {...chartProps.axis} domain={["auto", "auto"]} width={40} />
             <Tooltip content={<ChartTooltip source="yahoo" />} />
             {visible.map(({ k, c }) => (

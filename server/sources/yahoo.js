@@ -76,6 +76,29 @@ export async function getQuote(symbol) {
   };
 }
 
+/**
+ * Last price + last-trade time for a list of symbols — used to build real
+ * forward curves from individual dated contracts (e.g. CLZ26.NYM). One cached
+ * 1d chart fetch each; a delisted contract resolves to {price:null}. The time
+ * lets the caller drop an expiring front that stopped trading before the rest.
+ * @returns {Promise<Record<string, {price:number|null, time:number|null}>>}
+ */
+export async function getFrontPrices(symbols) {
+  const entries = await Promise.all(
+    symbols.map(async (s) => {
+      try {
+        const r = await rawChart(s, "1d", "1d");
+        const p = r?.meta?.regularMarketPrice;
+        const t = r?.meta?.regularMarketTime;
+        return [s, { price: Number.isFinite(p) ? p : null, time: Number.isFinite(t) ? t : null }];
+      } catch {
+        return [s, { price: null, time: null }];
+      }
+    })
+  );
+  return Object.fromEntries(entries);
+}
+
 /** Fetch quotes for many symbols in parallel; failures resolve to null. */
 export async function getQuotes(symbols) {
   const entries = await Promise.all(

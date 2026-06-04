@@ -44,16 +44,24 @@ export const PageInventories = () => {
         <div className="col-span-12 lg:col-span-8 space-y-3">
           <Card padding={false}>
             <div className="p-4 pb-2">
-              <SectionTitle sub="52W vs trailing avg" action={<SourceTag live={live} source="eia" note="EIA weekly U.S. crude stocks excl. SPR (WCESTUS1); band is the trailing-year average." />}>US Crude Stocks</SectionTitle>
+              <SectionTitle sub="52W vs 5-yr seasonal range" action={<SourceTag live={live} source="eia" note="EIA weekly U.S. crude stocks excl. SPR (WCESTUS1). Shaded band is the min–max across the 5 prior years for each week-of-year; dashed line is the 5-yr average." />}>US Crude Stocks</SectionTitle>
+              {/* Legend */}
+              <div className="mt-2 flex items-center flex-wrap gap-x-4 gap-y-1 text-[9px] uppercase tracking-wider text-zinc-500">
+                <span className="flex items-center gap-1.5"><span className="w-3 h-1.5 bg-sky-500/20 border-y border-sky-500/30" /> 5-yr range</span>
+                <span className="flex items-center gap-1.5"><span className="w-3 border-t border-dashed border-zinc-500" /> 5-yr avg</span>
+                <span className="flex items-center gap-1.5"><span className="w-3 h-[2px] bg-amber-500" /> Current</span>
+              </div>
             </div>
             <div className="h-80 px-2 pb-2">
               <ResponsiveContainer>
                 <ComposedChart data={hist}>
                   <CartesianGrid {...chartProps.grid} />
-                  <XAxis dataKey="w" {...chartProps.axis} />
+                  <XAxis dataKey="w" {...chartProps.axis} interval={5} minTickGap={16} />
                   <YAxis {...chartProps.axis} width={40} domain={["auto", "auto"]} />
                   <Tooltip content={<ChartTooltip unit=" MMbbl" source="eia" />} />
-                  <Area type="monotone" dataKey="avg5y" stroke="#3a3b41" strokeWidth={1} fill="#1c1d22" fillOpacity={0.4} name="Avg" isAnimationActive={false} />
+                  {/* Seasonal envelope: Recharts fills a [min,max] dataKey as a band. */}
+                  <Area type="monotone" dataKey="band" stroke="none" fill="#38bdf8" fillOpacity={0.12} name="5-yr range" isAnimationActive={false} connectNulls />
+                  <Line type="monotone" dataKey="avg5y" stroke="#71717a" strokeWidth={1} strokeDasharray="4 3" dot={false} name="5-yr avg" isAnimationActive={false} connectNulls />
                   <Line type="monotone" dataKey="total" stroke="#f59e0b" strokeWidth={1.6} dot={false} name="Current" isAnimationActive={false} />
                 </ComposedChart>
               </ResponsiveContainer>

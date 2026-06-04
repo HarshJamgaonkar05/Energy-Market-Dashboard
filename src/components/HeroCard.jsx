@@ -1,14 +1,20 @@
 import { motion } from "framer-motion";
 import { AreaChart, Area, ResponsiveContainer } from "recharts";
-import { Circle } from "lucide-react";
+import { Circle, BellPlus } from "lucide-react";
 import { Delta } from "./primitives/Delta";
 import { Sourced } from "./primitives/Sourced";
 import { sourceOf } from "../lib/sources";
+import { useAlerts } from "../lib/alerts";
 import { fmt } from "../lib/format";
 
 export const HeroCard = ({ d }) => {
   const up = d.chg >= 0;
   const gid = `g-${d.sym.replace(/[^a-zA-Z0-9]/g, "")}`;
+  // Quick-add a price alert straight from the tile (only where an alertable
+  // metric exists for this instrument — i.e. the energy futures, not macro tiles).
+  const alerts = useAlerts();
+  const alertMetricId = `px:${d.sym}`;
+  const canAlert = !!alerts?.metricMap?.[alertMetricId];
   // Each tile carries its provenance: explicit `d.source`, else modeled tiles
   // fall back to "modeled" and everything else to the live Yahoo quote.
   const source = d.source || (d.modeled ? "modeled" : "yahoo");
@@ -21,6 +27,16 @@ export const HeroCard = ({ d }) => {
       whileHover={{ y: -1 }}
       className="relative bg-[#0e0f12] border border-[#1c1d22] p-3 hover:border-[#2a2b31] transition-colors cursor-pointer group overflow-hidden"
     >
+      {canAlert && (
+        <button
+          onClick={(e) => { e.stopPropagation(); alerts.openComposer(alertMetricId); }}
+          aria-label={`Set a price alert for ${d.sym}`}
+          title="Set price alert"
+          className="absolute bottom-1.5 right-1.5 z-10 w-5 h-5 flex items-center justify-center bg-[#0a0b0e]/90 border border-[#2a2b31] text-zinc-400 opacity-0 group-hover:opacity-100 hover:text-amber-400 hover:border-amber-500/40 transition-all"
+        >
+          <BellPlus size={11} />
+        </button>
+      )}
       <div className="flex items-center justify-between mb-1">
         <div className="flex items-center gap-1.5">
           <span className="text-[10px] font-bold tracking-wider text-zinc-400">{d.sym}</span>

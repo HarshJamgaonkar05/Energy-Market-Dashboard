@@ -1,7 +1,14 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "Bash(node -e ' *)",
+      "Bash(node --env-file=server/.env -e ' *)",
+      "PowerShell(Get-NetTCPConnection -State Listen -LocalPort 3001,3002,5173 -ErrorAction SilentlyContinue | Select-Object LocalPort, OwningProcess | ForEach-Object { $p = \\(Get-Process -Id $_.OwningProcess -ErrorAction SilentlyContinue\\).ProcessName; \"Port $\\($_.LocalPort\\) -> PID $\\($_.OwningProcess\\) \\($p\\)\" })",
+      "Bash(node -e 'const p=require\\(\"./node_modules/@anthropic-ai/sdk/package.json\"\\);console.log\\(\"@anthropic-ai/sdk version:\",p.version\\);')",
+      "PowerShell(Get-NetTCPConnection -State Listen -LocalPort 3001 -ErrorAction SilentlyContinue | ForEach-Object { $p=Get-Process -Id $_.OwningProcess -ErrorAction SilentlyContinue; \"3001 -> PID $\\($_.OwningProcess\\) \\($\\($p.ProcessName\\)\\) started $\\($p.StartTime\\)\" })",
+      "PowerShell(Remove-Item -Force \"server\\\\sources\\\\marketread.js\",\"src\\\\components\\\\panels\\\\MarketRead.jsx\"; \"deleted: $\\(-not \\(Test-Path 'server\\\\sources\\\\marketread.js'\\)\\) / $\\(-not \\(Test-Path 'src\\\\components\\\\panels\\\\MarketRead.jsx'\\)\\)\")",
+      "Bash(npm uninstall *)"
     ]
   }
 }

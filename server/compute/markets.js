@@ -4,7 +4,8 @@
 // correlation matrix, crack spreads, forward curves, inter-commodity spreads,
 // and the macro block.
 // ============================================================================
-import { getQuotes } from "../sources/yahoo.js";
+import { getQuotes, getFrontPrices } from "../sources/yahoo.js";
+import { cached } from "../lib/cache.js";
 
 const GAL_PER_BBL = 42;
 const BBL_PER_MT_GASOIL = 7.45;
@@ -229,10 +230,105 @@ export function curves(instr) {
       color: s.color, unit: s.unit, modeled: !!s.modeled,
       data: Array.from({ length: 12 }, (_, i) => ({
         m: `M${i + 1}`,
-        v: +(front + slope * i).toFixed(s.unit === "$/gal" ? 4 : s.unit === "$/mt" ? 1 : 3),
+        v: +(front + slope * i).toFixed(curveDp(s.unit)),
       })),
     };
   }
+  return out;
+}
+
+// ----------------------------------------------------------------------------
+// Forward curves (REAL where a free dated-contract feed exists).
+//
+// Yahoo serves individual NYMEX/ICE dated contracts for free as e.g. CLZ26.NYM
+// (WTI Dec-2026). Brent/WTI/HO/RBOB curves are therefore the *genuine* term
+// structure: M1..M12 = consecutive real contract settlements. ICE Gas Oil has
+// no free feed, so its curve is proxied from the real ULSD (HO) curve, scaled to
+// the live Gas Oil front. Anything that fails to resolve falls back to the
+// modeled straight-line curve above so a panel never blanks.
+// ----------------------------------------------------------------------------
+const MONTH_CODE = ["F", "G", "H", "J", "K", "M", "N", "Q", "U", "V", "X", "Z"]; // Jan..Dec
+const CURVE_ROOT = { brent: "BZ", wti: "CL", ho: "HO", rbob: "RB" };
+const CURVE_HORIZON = 15; // probe a few extra so 12 land after the expired front drops out
+const FRESH_LAG = 30 * 3600; // s: an expiring front lags its freshest sibling by a session+
+const curveDp = (unit) => (unit === "$/gal" ? 4 : unit === "$/mt" ? 1 : 3);
+
+// Next `n` monthly contract symbols from `from`, e.g. CLN26.NYM, CLQ26.NYM, …
+function contractSymbols(root, n, from = new Date()) {
+  const out = [];
+  let y = from.getUTCFullYear();
+  let m = from.getUTCMonth();
+  for (let i = 0; i < n; i++) {
+    out.push(`${root}${MONTH_CODE[m]}${String(y).slice(-2)}.NYM`);
+    if (++m > 11) { m = 0; y++; }
+  }
+  return out;
+}
+
+export async function forwardCurves(instr) {
+  const modeled = curves(instr); // straight-line fallback, keyed by id
+  const blocks = Object.entries(CURVE_ROOT).map(([id, root]) => ({ id, syms: contractSymbols(root, CURVE_HORIZON) }));
+
+  // One batched, 10-min-cached fetch of every dated contract: forward curves
+  // barely move intraday and deferred contracts settle ~daily, so this keeps us
+  // well clear of Yahoo's rate limits no matter how often panels poll.
+  const prices = await cached("curve:prices", 10 * 60_000, () =>
+    getFrontPrices(blocks.flatMap((b) => b.syms))
+  ).catch(() => ({}));
+
+  const out = { modeled: true };
+  const realPts = {}; // id -> raw contract prices (M1 first)
+  for (const { id, syms } of blocks) {
+    const s = SPEC.find((x) => x.id === id);
+    const quotes = syms.map((sym) => prices[sym]).filter((q) => q && Number.isFinite(q.price));
+    // The freshest last-trade among this instrument's contracts ≈ "now" for the
+    // active months; an expiring front that stopped trading lags it by a session+.
+    const maxTime = quotes.reduce((mx, q) => (q.time && q.time > mx ? q.time : mx), 0);
+    // Skip stale contracts only at the FRONT (an expiring/expired month that
+    // stopped trading early). Once the active front is found, keep every later
+    // month — back-month staleness is just illiquidity, not expiry, and its
+    // last settle is still the real curve point.
+    let started = false;
+    const pts = [];
+    for (const sym of syms) {
+      const q = prices[sym];
+      if (!q || !Number.isFinite(q.price)) continue;
+      if (!started && maxTime && q.time && maxTime - q.time > FRESH_LAG) continue;
+      started = true;
+      pts.push(q.price);
+      if (pts.length === 12) break;
+    }
+    // Require a full 12 months of real data; otherwise fall back to the modeled
+    // 12-point curve so every curve the API serves is exactly M1..M12.
+    if (pts.length === 12) {
+      realPts[id] = pts;
+      out[id] = {
+        id, label: s.label, color: s.color, unit: s.unit, modeled: false,
+        source: "yahoo",
+        sourceNote: "Live forward curve — individual Yahoo dated-contract settlements (M1..M12), the genuine term structure.",
+        data: pts.map((v, i) => ({ m: `M${i + 1}`, v: +v.toFixed(curveDp(s.unit)) })),
+      };
+    } else if (modeled[id]) {
+      out[id] = { ...modeled[id], modeled: true, source: "modeled" };
+    }
+  }
+
+  // Gas Oil: no free dated feed → proxy the real ULSD curve shape, anchored to
+  // the live Gas Oil front and kept in $/mt (consistent with the spot proxy).
+  const goSpec = SPEC.find((s) => s.id === "gasoil");
+  const go = byId(instr, "gasoil");
+  if (realPts.ho && go?.val && realPts.ho[0]) {
+    const ho = realPts.ho, base = ho[0];
+    out.gasoil = {
+      id: "gasoil", label: goSpec.label, color: goSpec.color, unit: goSpec.unit, modeled: true,
+      source: "derived",
+      sourceNote: "Proxied from the live NYMEX ULSD forward curve (HO), scaled to the live Gas Oil front — ICE Gas Oil has no free feed.",
+      data: ho.map((v, i) => ({ m: `M${i + 1}`, v: +(go.val * (v / base)).toFixed(1) })),
+    };
+  } else if (modeled.gasoil) {
+    out.gasoil = { ...modeled.gasoil, modeled: true, source: "modeled" };
+  }
+
   return out;
 }
 

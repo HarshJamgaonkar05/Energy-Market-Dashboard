@@ -49,6 +49,37 @@ const latest = (arr) => (arr && arr.length ? arr.at(-1).value : null);
 const prior = (arr) => (arr && arr.length > 1 ? arr.at(-2).value : null);
 const toMM = (kbbl) => (kbbl == null ? null : +(kbbl / 1000).toFixed(1));
 
+// Week-of-year (1..53) for a YYYY-MM-DD period, used to align weekly stock
+// readings across calendar years for the 5-year seasonal band.
+const weekOfYear = (period) => {
+  const d = new Date(`${period}T00:00:00Z`);
+  const dayOfYear = Math.floor((d - Date.UTC(d.getUTCFullYear(), 0, 1)) / 86_400_000);
+  return Math.floor(dayOfYear / 7) + 1;
+};
+
+// Build a week-of-year → {min,max,avg} map from the 5 calendar years preceding
+// `curYear` (the current year is excluded so "this year vs history" is honest).
+function seasonalBand(rows, curYear) {
+  const window = new Set([1, 2, 3, 4, 5].map((n) => curYear - n));
+  const byWeek = {};
+  for (const r of rows) {
+    const mm = toMM(r.value);
+    if (mm == null) continue;
+    const yr = new Date(`${r.period}T00:00:00Z`).getUTCFullYear();
+    if (!window.has(yr)) continue;
+    (byWeek[weekOfYear(r.period)] ??= []).push(mm);
+  }
+  const band = {};
+  for (const [w, vals] of Object.entries(byWeek)) {
+    band[w] = {
+      min: +Math.min(...vals).toFixed(1),
+      max: +Math.max(...vals).toFixed(1),
+      avg: +(vals.reduce((s, v) => s + v, 0) / vals.length).toFixed(1),
+    };
+  }
+  return band;
+}
+
 // ----------------------------------------------------------------------------
 // Inventory snapshot: hero tiles, PADD breakdown, 52-week crude history.
 // ----------------------------------------------------------------------------
@@ -57,7 +88,8 @@ export async function inventories() {
 
   const [crude, spr, cushing, gasoline, distillate, refUtil, p1, p2, p3, p4, p5] =
     await Promise.all([
-      series("PET.WCESTUS1.W", 60),
+      // ~5.4 years so the seasonal band has 5 prior years per week-of-year.
+      series("PET.WCESTUS1.W", 285),
       series("PET.WCSSTUS1.W", 8),
       series("PET.W_EPC0_SAX_YCUOK_MBBL.W", 8),
       series("PET.WGTSTUS1.W", 8),
@@ -84,14 +116,26 @@ export async function inventories() {
     return { reg, val: cur, chg: cur != null && prv != null ? +(cur - prv).toFixed(1) : 0 };
   };
 
-  // 52W crude history vs a flat 5Y mean proxy (EIA doesn't expose the 5Y band
-  // as a series, so we draw it as the trailing-year average — labeled in UI).
-  const hist = (crude || []).slice(-52).map((r, i) => ({
-    w: i,
-    total: toMM(r.value),
-  }));
-  const mean = hist.length ? hist.reduce((s, p) => s + p.total, 0) / hist.length : 0;
-  hist.forEach((p) => (p.avg5y = +mean.toFixed(1)));
+  // 52W crude history with a REAL 5-year seasonal band: for each week-of-year
+  // we take the min/max/avg of the 5 prior calendar years, so the chart shows
+  // where current stocks sit inside the normal seasonal envelope.
+  const curYear = crude?.length
+    ? new Date(`${crude.at(-1).period}T00:00:00Z`).getUTCFullYear()
+    : new Date().getUTCFullYear();
+  const band = crude ? seasonalBand(crude, curYear) : {};
+  const hist = (crude || []).slice(-52).map((r) => {
+    const b = band[weekOfYear(r.period)];
+    const d = new Date(`${r.period}T00:00:00Z`);
+    return {
+      w: `${d.getUTCMonth() + 1}/${d.getUTCDate()}`,
+      total: toMM(r.value),
+      avg5y: b?.avg ?? null,
+      min5y: b?.min ?? null,
+      max5y: b?.max ?? null,
+      // Recharts renders a [low, high] dataKey as a filled range band.
+      band: b ? [b.min, b.max] : null,
+    };
+  });
 
   return {
     heroes: [

@@ -27,7 +27,9 @@ export const ChartTooltip = ({ active, payload, label, unit = "", source }) => {
             <span className="text-zinc-400">{p.name}</span>
           </div>
           <span className="font-mono text-zinc-100">
-            {typeof p.value === "number" ? p.value.toFixed(2) : p.value}
+            {Array.isArray(p.value)
+              ? `${Number(p.value[0]).toFixed(1)}–${Number(p.value[1]).toFixed(1)}`
+              : typeof p.value === "number" ? p.value.toFixed(2) : p.value}
             {unit}
           </span>
         </div>

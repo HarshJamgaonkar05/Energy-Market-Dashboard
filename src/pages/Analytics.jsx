@@ -165,6 +165,14 @@ const FuturesSpreads = () => {
   const d = curve.data;
   const inter = curves.inter || INTER_FALLBACK;
 
+  // Provenance: Brent/WTI/HO/RBOB are real Yahoo dated-contract curves
+  // (modeled === false); Gas Oil is proxied (source "derived"); a failed fetch
+  // falls back to the modeled slope.
+  const isLive = curve.modeled === false;
+  const src = curve.source || "modeled";
+  const curveNote = curve.sourceNote
+    || (isLive ? "Live Yahoo dated-contract settlements (M1–M12)." : "Front month anchored to the live Yahoo quote; term structure uses a curated slope (settlement curves are paywalled).");
+
   const cal = [
     { lbl: "M1–M2", v: d[0].v - d[1].v },
     { lbl: "M2–M3", v: d[1].v - d[2].v },
@@ -180,7 +188,9 @@ const FuturesSpreads = () => {
         <div className="p-4 pb-2 flex items-center justify-between flex-wrap gap-2">
           <div>
             <div className="text-[11px] font-semibold tracking-[0.12em] text-zinc-300 uppercase inline-flex items-center gap-2">
-              Forward Curve <SourceTag modeled label="Modeled curve" source="modeled" note="Front month anchored to the live Yahoo quote; term structure uses a curated slope (settlement curves are paywalled)." />
+              Forward Curve {isLive
+                ? <SourceTag live label="Live curve" source="yahoo" note={curveNote} />
+                : <SourceTag modeled label={src === "derived" ? "Proxied" : "Modeled curve"} source={src} note={curveNote} />}
             </div>
             <div className="text-[10px] text-zinc-600 mt-0.5">{curve.label} · M1–M12 · {curve.unit}</div>
           </div>
@@ -206,7 +216,7 @@ const FuturesSpreads = () => {
               <CartesianGrid {...chartProps.grid} />
               <XAxis dataKey="m" {...chartProps.axis} />
               <YAxis {...chartProps.axis} width={48} domain={["auto", "auto"]} />
-              <Tooltip content={<ChartTooltip source="modeled" />} />
+              <Tooltip content={<ChartTooltip source={src} />} />
               <Line type="monotone" dataKey="v" name={curve.label} stroke={curve.color} strokeWidth={1.6} dot={{ r: 2.5, fill: curve.color }} isAnimationActive={false} />
             </LineChart>
           </ResponsiveContainer>
