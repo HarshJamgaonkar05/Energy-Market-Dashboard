@@ -14,14 +14,26 @@ const FALLBACK = {
     { name: "Gasoline", value: 71, lbl: "V. Bullish" },
     { name: "Gas Oil", value: 46, lbl: "Neutral" },
   ],
+  newsIndex: { value: 56, lbl: "Bullish", n: 0, model: "FinBERT" },
 };
 
 export const SentimentPanel = () => {
   const { data, live } = useLive("/api/sentiment", FALLBACK, useLive.REFRESH.slow);
   const groups = data.groups || FALLBACK.groups;
+  const idx = data.newsIndex || FALLBACK.newsIndex;
+  const finbert = idx.model === "FinBERT";
   return (
     <Card>
-      <SectionTitle sub="Momentum + news" action={<SourceTag live={live} source="derived" note="Composite of live price momentum (Yahoo) and the bull/bear balance of recent news (Financial Juice)." />}>Sentiment</SectionTitle>
+      <SectionTitle sub="Momentum + FinBERT news" action={<SourceTag live={live} source="derived" note="Per-group gauges are live price momentum (Yahoo). The news tone index is FinBERT scoring recent headlines positive/negative/neutral." />}>Sentiment</SectionTitle>
+      {/* FinBERT news tone — model read of the wire, separate from price momentum */}
+      <div className="flex items-center justify-between mb-3 pb-3 border-b border-[#1c1d22]">
+        <span className="text-[10px] text-zinc-400 uppercase tracking-wider">
+          News tone <span className="text-zinc-600 normal-case tracking-normal">· {finbert ? "FinBERT" : "keyword"}</span>
+        </span>
+        <span className={`text-[11px] font-mono ${idx.value >= 55 ? "text-emerald-400" : idx.value <= 45 ? "text-red-400" : "text-zinc-400"}`}>
+          <Sourced source="finbert" note={finbert ? `Mean FinBERT signed score across ${idx.n} headlines, mapped to 0–100.` : "FinBERT unavailable — keyword tilt of recent headlines."} align="end">{idx.value} · {idx.lbl}</Sourced>
+        </span>
+      </div>
       <div className="space-y-2.5">
         {groups.map((s) => {
           const bull = s.value >= 50;

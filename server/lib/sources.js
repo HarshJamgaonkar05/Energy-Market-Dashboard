@@ -34,12 +34,33 @@ export const SOURCES = {
     kind: "live",
     url: "https://open-meteo.com",
   },
+  noaa: {
+    id: "noaa",
+    label: "NOAA",
+    detail: "U.S. NOAA — National Hurricane Center active storms & Climate Prediction Center El Niño index (official, free).",
+    kind: "official",
+    url: "https://www.nhc.noaa.gov",
+  },
+  cftc: {
+    id: "cftc",
+    label: "CFTC",
+    detail: "U.S. Commodity Futures Trading Commission — weekly Commitments of Traders (Managed Money positioning), official & free.",
+    kind: "official",
+    url: "https://www.cftc.gov/MarketReports/CommitmentsofTraders/index.htm",
+  },
   financialjuice: {
     id: "financialjuice",
     label: "Financial Juice",
     detail: "Real-time financial newswire (RSS).",
     kind: "live",
     url: "https://www.financialjuice.com",
+  },
+  finbert: {
+    id: "finbert",
+    label: "FinBERT",
+    detail: "ProsusAI/finbert — a financial-language model scoring each headline positive/negative/neutral, run locally via Transformers.js (ONNX).",
+    kind: "derived",
+    url: "https://huggingface.co/ProsusAI/finbert",
   },
   derived: {
     id: "derived",
@@ -83,11 +104,15 @@ export const ENDPOINT_SOURCES = {
   "/api/spot": { source: "eia" },
   "/api/opec": { source: "curated" },
   "/api/weather": { source: "openmeteo" },
-  "/api/news": { source: "financialjuice" },
+  "/api/news": { source: "financialjuice", mixed: ["finbert"] },
   "/api/calendar": { source: "schedule", mixed: ["eia"] },
   "/api/freight": { source: "modeled" },
   "/api/rigs": { source: "modeled" },
-  "/api/sentiment": { source: "derived", mixed: ["yahoo", "financialjuice"] },
+  "/api/storms": { source: "noaa" },
+  "/api/enso": { source: "noaa" },
+  "/api/cot": { source: "cftc" },
+  "/api/seasonality": { source: "yahoo", mixed: ["derived"] },
+  "/api/sentiment": { source: "derived", mixed: ["yahoo", "financialjuice", "finbert"] },
 };
 
 // Flat self-describing manifest for GET /api/sources.

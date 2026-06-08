@@ -13,6 +13,7 @@
 // dashboard's tag/severity taxonomy → { t, sev, src, txt, tag, url }.
 // ============================================================================
 import { cached, fetchText } from "../lib/cache.js";
+import { scoreHeadlines } from "./finbert.js";
 
 const FEED = "https://www.financialjuice.com/feed.ashx?xy=rss";
 
@@ -89,6 +90,13 @@ export async function news() {
       if (out.length >= 24) break;
     }
     if (out.length === 0) throw new Error("Financial Juice: no items");
+
+    // Score every headline with FinBERT (local model). On any failure this
+    // resolves to null and each item simply carries `sent: null`, so the
+    // downstream sentiment compute falls back to the keyword heuristic.
+    const sents = await scoreHeadlines(out.map((n) => n.txt)).catch(() => null);
+    out.forEach((n, i) => { n.sent = sents?.[i] ?? null; });
+
     return out;
   });
 }

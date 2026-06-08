@@ -177,6 +177,26 @@ export async function stockFlows() {
 }
 
 // ----------------------------------------------------------------------------
+// Week-over-week change (MMbbl) for the headline weekly stocks — used to fill
+// the economic calendar's "prior" column with the real last print (the
+// consensus FORECAST stays "—" because it's paywalled). Negative = draw.
+// ----------------------------------------------------------------------------
+export async function weeklyChanges() {
+  if (!eiaEnabled()) return null;
+  const [crude, gasoline, distillate] = await Promise.all([
+    series("PET.WCESTUS1.W", 2),
+    series("PET.WGTSTUS1.W", 2),
+    series("PET.WDISTUS1.W", 2),
+  ]);
+  const wow = (arr) => {
+    const c = toMM(latest(arr));
+    const p = toMM(prior(arr));
+    return c != null && p != null ? +(c - p).toFixed(1) : null;
+  };
+  return { crude: wow(crude), gasoline: wow(gasoline), distillate: wow(distillate) };
+}
+
+// ----------------------------------------------------------------------------
 // Official daily spot prices (used as a settlement cross-check vs Yahoo).
 // ----------------------------------------------------------------------------
 export async function spot() {

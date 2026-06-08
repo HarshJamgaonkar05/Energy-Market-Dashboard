@@ -24,10 +24,25 @@ export const SOURCES = {
     detail: "Open weather-forecast model, refreshed hourly.",
     kind: "live",
   },
+  noaa: {
+    label: "NOAA",
+    detail: "U.S. NOAA — National Hurricane Center active storms & CPC El Niño index (official, free).",
+    kind: "official",
+  },
+  cftc: {
+    label: "CFTC",
+    detail: "U.S. CFTC — weekly Commitments of Traders (Managed Money positioning), official & free.",
+    kind: "official",
+  },
   financialjuice: {
     label: "Financial Juice",
     detail: "Real-time financial newswire (RSS).",
     kind: "live",
+  },
+  finbert: {
+    label: "FinBERT",
+    detail: "ProsusAI/finbert — a financial-language model scoring each headline positive/negative/neutral, run locally (Transformers.js).",
+    kind: "derived",
   },
   derived: {
     label: "Derived",

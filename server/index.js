@@ -17,7 +17,11 @@ import { instruments, ticker, movers, seriesAndCorrelation, cracks, forwardCurve
 import { calendar, opec, freight, rigs, sentiment } from "./compute/derive.js";
 import * as eia from "./sources/eia.js";
 import { weather, tempForecast } from "./sources/openmeteo.js";
+import { storms, enso } from "./sources/noaa.js";
+import { cot } from "./sources/cftc.js";
+import { seasonality } from "./compute/seasonality.js";
 import { news } from "./sources/financialjuice.js";
+import { finbertReady, finbertDisabled } from "./sources/finbert.js";
 import { sourceManifest, SOURCES, ENDPOINT_SOURCES } from "./lib/sources.js";
 
 const app = express();
@@ -60,11 +64,15 @@ app.get("/api/health", (_req, res) =>
     ok: true,
     time: new Date().toISOString(),
     eia: eia.eiaEnabled(),
+    finbert: finbertDisabled() ? "unavailable" : finbertReady() ? "live" : "loading",
     sources: {
       yahoo: "live",
       openmeteo: "live",
       financialjuice: "live",
       eia: eia.eiaEnabled() ? "live" : "missing key — fundamentals use fallback",
+      finbert: finbertDisabled()
+        ? "model unavailable — news sentiment uses keyword fallback"
+        : finbertReady() ? "live" : "loading model…",
     },
   })
 );
@@ -95,17 +103,22 @@ app.get("/api/opec", route(() => opec(), "/api/opec"));
 app.get("/api/weather", route(async () => ({ ...(await weather()), forecast: await tempForecast() }), "/api/weather"));
 app.get("/api/news", route(() => news(), "/api/news"));
 app.get("/api/calendar", route(async () => {
-  // Enrich the schedule with the latest *real* EIA weekly crude build as the
-  // "prior" for the EIA Crude Stocks release; everything else stays "—".
-  const flows = await eia.stockFlows().catch(() => null);
-  const lastBuild = flows?.at(-1)?.eia;
-  const enrich = Number.isFinite(lastBuild)
-    ? { "EIA Crude Stocks": { prev: `${lastBuild >= 0 ? "+" : ""}${lastBuild.toFixed(1)}M` } }
-    : {};
+  // Fill the "prior" column with the latest *real* EIA weekly builds/draws for
+  // crude, gasoline and distillate. The consensus FORECAST stays "—" (paywalled).
+  const wc = await eia.weeklyChanges().catch(() => null);
+  const fmtB = (v) => (v == null ? null : `${v >= 0 ? "+" : ""}${v.toFixed(1)}M`);
+  const enrich = {};
+  if (wc?.crude != null) enrich["EIA Crude Stocks"] = { prev: fmtB(wc.crude) };
+  if (wc?.gasoline != null) enrich["EIA Gasoline Stocks"] = { prev: fmtB(wc.gasoline) };
+  if (wc?.distillate != null) enrich["EIA Distillate"] = { prev: fmtB(wc.distillate) };
   return calendar(enrich);
 }, "/api/calendar"));
 app.get("/api/freight", route(() => freight(), "/api/freight"));
 app.get("/api/rigs", route(() => rigs(), "/api/rigs"));
+app.get("/api/storms", route(() => storms(), "/api/storms"));
+app.get("/api/enso", route(() => enso(), "/api/enso"));
+app.get("/api/cot", route(() => cot(), "/api/cot"));
+app.get("/api/seasonality", route(() => seasonality(), "/api/seasonality"));
 app.get("/api/sentiment", route(async () => {
   const [instr, n] = await Promise.all([instruments(), news().catch(() => [])]);
   return sentiment(instr, n);

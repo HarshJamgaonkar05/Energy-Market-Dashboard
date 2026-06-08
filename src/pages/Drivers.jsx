@@ -1,7 +1,7 @@
 import {
   LineChart, Line, AreaChart, Area, Bar, ComposedChart, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine,
 } from "recharts";
-import { TrendingUp, Anchor, CloudSnow, Wind, Gauge } from "lucide-react";
+import { TrendingUp, Anchor, CloudSnow, Wind, Gauge, Activity } from "lucide-react";
 import { Card } from "../components/primitives/Card";
 import { Band } from "../components/primitives/Band";
 import { SectionTitle } from "../components/primitives/SectionTitle";
@@ -10,6 +10,7 @@ import { Sourced } from "../components/primitives/Sourced";
 import { HeroCard } from "../components/HeroCard";
 import { ShippingPanel } from "../components/panels/ShippingPanel";
 import { WeatherRisk } from "../components/panels/WeatherRisk";
+import { CotPanel } from "../components/panels/CotPanel";
 import { EconCalendar } from "../components/panels/EconCalendar";
 import { chartProps, ChartTooltip } from "../lib/chart-theme";
 import { fmt, fmtSigned } from "../lib/format";
@@ -53,6 +54,8 @@ const OPEC_FALLBACK = {
   productionSource: "curated estimate",
 };
 const RIGS_FALLBACK = { hist: RIG_COUNT, hero: { sym: "US OIL RIGS", name: "Baker Hughes", val: 497, chg: -3, unit: "rigs" } };
+const ENSO_FALLBACK = { oni: 0.48, chg: null, season: "", year: "", phase: "Neutral" };
+const STORMS_FALLBACK = { storms: [], count: 0 };
 
 export const PageDrivers = () => {
   const { data: macroData } = useLive("/api/macro", MACRO_FALLBACK);
@@ -62,6 +65,9 @@ export const PageDrivers = () => {
   const { data: rigsData } = useLive("/api/rigs", RIGS_FALLBACK, useLive.REFRESH.slow);
   const { data: stockFlows } = useLive("/api/stockflows", STOCK_FLOWS, useLive.REFRESH.hourly);
   const { data: inv } = useLive("/api/inventories", { heroes: [] }, useLive.REFRESH.hourly);
+  const { data: ensoData } = useLive("/api/enso", ENSO_FALLBACK, useLive.REFRESH.hourly);
+  const { data: stormData, live: stormsLive } = useLive("/api/storms", STORMS_FALLBACK, useLive.REFRESH.hourly);
+  const storms = stormData.storms || [];
 
   const macro = macroData.series || MACRO_FALLBACK.series;
   const rates = freight.rates || FREIGHT_FALLBACK.rates;
@@ -234,6 +240,12 @@ export const PageDrivers = () => {
         </Card>
       </section>
 
+      {/* ====================== SPECULATIVE POSITIONING ====================== */}
+      <section className="space-y-3">
+        <Band icon={Activity} title="Speculative Positioning" sub="CFTC Commitments of Traders · managed money" />
+        <CotPanel />
+      </section>
+
       {/* ========================= FREIGHT & SHIPPING ========================= */}
       <section className="space-y-3">
         <Band icon={Anchor} title="Freight & Shipping" sub="Tanker rates & port congestion" />
@@ -288,7 +300,7 @@ export const PageDrivers = () => {
             { sym: "US-HDD", name: "Heating Degree Days", val: weather.heroes?.usHdd ?? 142, chg: null, pct: null, spark: genSpark(71, 30, 1), unit: "7d sum", source: "openmeteo", sourceNote: "7-day heating-degree-day sum from live Open-Meteo temps. No free prior-period series for the change." },
             { sym: "EU-HDD", name: "EU Heating Demand", val: weather.heroes?.euHdd ?? 124, chg: null, pct: null, spark: genSpark(72, 30, 1), unit: "7d sum", source: "openmeteo", sourceNote: "7-day heating-degree-day sum from live Open-Meteo temps. No free prior-period series for the change." },
             { sym: "ASIA-CDD", name: "Asia Cooling", val: weather.heroes?.asiaCdd ?? 38, chg: null, pct: null, spark: genSpark(73, 30, -1), unit: "7d sum", source: "openmeteo", sourceNote: "7-day cooling-degree-day sum from live Open-Meteo temps. No free prior-period series for the change." },
-            { sym: "ENSO", name: "El Niño Index", val: 1.42, chg: +0.08, pct: +5.9, spark: genSpark(74, 30, 1), unit: "", modeled: true },
+            { sym: "ENSO", name: ensoData.phase ? `El Niño · ${ensoData.phase}` : "El Niño Index", val: ensoData.oni ?? 0.48, chg: ensoData.chg, pct: null, spark: genSpark(74, 30, (ensoData.chg ?? 0) >= 0 ? 1 : -1), unit: "ONI", source: "noaa", sourceNote: `NOAA CPC Oceanic Niño Index${ensoData.season ? ` (${ensoData.season} ${ensoData.year})` : ""}. ≥+0.5 El Niño · ≤−0.5 La Niña.` },
           ].map((d) => <HeroCard key={d.sym} d={d} />)}
         </div>
 
@@ -312,12 +324,39 @@ export const PageDrivers = () => {
 
           <div className="col-span-12 lg:col-span-4 space-y-3">
             <Card>
-              <SectionTitle sub="Active alerts" action={<SourceTag modeled label="No feed" source="modeled" note="No free live tropical-cyclone / severe-weather alert feed wired in." />}>Storm Tracker</SectionTitle>
-              <div className="flex flex-col items-center justify-center gap-1 py-6 text-center">
-                <Wind size={16} className="text-zinc-700" />
-                <span className="font-mono text-lg text-zinc-600">—</span>
-                <span className="text-[9px] text-zinc-600 uppercase tracking-wider">No live storm feed</span>
-              </div>
+              <SectionTitle sub={storms.length ? `${storms.length} active` : "Atlantic · E/C Pacific"} action={<SourceTag live={stormsLive} source="noaa" note="NOAA National Hurricane Center — active tropical cyclones (Atlantic + East/Central Pacific basins)." />}>Storm Tracker</SectionTitle>
+              {storms.length === 0 ? (
+                <div className="flex flex-col items-center justify-center gap-1 py-6 text-center">
+                  <Wind size={16} className="text-zinc-600" />
+                  <span className="text-[11px] text-zinc-400">No active tropical cyclones</span>
+                  <span className="text-[9px] text-zinc-600 uppercase tracking-wider">NOAA NHC · live</span>
+                </div>
+              ) : (
+                <div className="space-y-1.5">
+                  {storms.map((s) => {
+                    const tone = s.severity === "high" ? "text-red-400" : s.severity === "med" ? "text-amber-400" : "text-sky-400";
+                    return (
+                      <div key={s.id} className="flex items-center gap-2 py-1.5 border-b border-[#15161a] last:border-0">
+                        <Wind size={13} className={tone} />
+                        <div className="min-w-0 flex-1">
+                          <div className="text-[11px] text-zinc-200 truncate">
+                            {s.name} <span className={`${tone} font-mono`}>{s.cat}</span>
+                          </div>
+                          <div className="text-[9px] text-zinc-600 uppercase tracking-wider truncate">
+                            {s.basin}{s.movement ? ` · ${s.movement}` : ""}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-mono text-[11px] text-zinc-300">
+                            <Sourced source="noaa" note={`${s.kind} · NOAA NHC advisory`} align="end">{s.winds ? `${s.winds}kt` : "—"}</Sourced>
+                          </div>
+                          {s.pressure && <div className="font-mono text-[9px] text-zinc-600">{s.pressure}mb</div>}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </Card>
             <WeatherRisk />
           </div>

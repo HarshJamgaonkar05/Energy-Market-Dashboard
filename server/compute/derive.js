@@ -154,24 +154,16 @@ export function rigs() {
 }
 
 // ----------------------------------------------------------------------------
-// COMPUTED sentiment: blend live price momentum (instrument %chg) with the
-// balance of high-severity bullish/bearish news into a 0–100 composite.
+// COMPUTED sentiment: blend live price momentum (instrument %chg) with the tone
+// of recent news. News tone now comes from FinBERT (a financial-language model)
+// scoring each headline positive/negative/neutral — see sources/finbert.js. If
+// FinBERT is unavailable the headlines carry no `sent`, and we transparently
+// fall back to the old bull/bear keyword heuristic.
 // ----------------------------------------------------------------------------
-export function sentiment(instruments = [], newsItems = []) {
-  const byId = (id) => instruments.find((i) => i.id === id) || {};
-  // momentum → 50-centered score (each 1% move ≈ 6 points)
-  const score = (pct) => Math.max(2, Math.min(98, Math.round(50 + (pct || 0) * 6)));
-  const lbl = (v) => (v >= 70 ? "V. Bullish" : v >= 55 ? "Bullish" : v >= 45 ? "Neutral" : v >= 30 ? "Bearish" : "V. Bearish");
+const lblFor = (v) => (v >= 70 ? "V. Bullish" : v >= 55 ? "Bullish" : v >= 45 ? "Neutral" : v >= 30 ? "Bearish" : "V. Bearish");
 
-  const crude = (byId("brent").pct + byId("wti").pct) / 2;
-  const groups = [
-    { name: "Crude", value: score(crude) },
-    { name: "Distillates", value: score(byId("ho").pct) },
-    { name: "Gasoline", value: score(byId("rbob").pct) },
-    { name: "Gas Oil", value: score(byId("gasoil").pct) },
-  ].map((g) => ({ ...g, lbl: lbl(g.value) }));
-
-  // News-driven distribution (share of recent stories that read bullish/bearish).
+// Keyword fallback distribution (used only when FinBERT produced no scores).
+function keywordDistribution(newsItems) {
   const bullishKw = /surge|rally|tighten|draw|cut|widen|firm|gain|rise/i;
   const bearishKw = /plunge|build|glut|fall|drop|weak|ease|oversupply/i;
   let bull = 0, bear = 0;
@@ -182,7 +174,46 @@ export function sentiment(instruments = [], newsItems = []) {
   const total = Math.max(1, newsItems.length);
   const bullish = Math.round((bull / total) * 100);
   const bearish = Math.round((bear / total) * 100);
-  const neutral = Math.max(0, 100 - bullish - bearish);
+  return { bullish, neutral: Math.max(0, 100 - bullish - bearish), bearish };
+}
 
-  return { groups, distribution: { bullish, neutral, bearish } };
+export function sentiment(instruments = [], newsItems = []) {
+  const byId = (id) => instruments.find((i) => i.id === id) || {};
+  // momentum → 50-centered score (each 1% move ≈ 6 points)
+  const score = (pct) => Math.max(2, Math.min(98, Math.round(50 + (pct || 0) * 6)));
+
+  const crude = (byId("brent").pct + byId("wti").pct) / 2;
+  const groups = [
+    { name: "Crude", value: score(crude) },
+    { name: "Distillates", value: score(byId("ho").pct) },
+    { name: "Gasoline", value: score(byId("rbob").pct) },
+    { name: "Gas Oil", value: score(byId("gasoil").pct) },
+  ].map((g) => ({ ...g, lbl: lblFor(g.value) }));
+
+  // News tone from FinBERT, when present on the items.
+  const scored = newsItems.filter((n) => n.sent);
+  const model = scored.length ? "finbert" : "keyword";
+
+  let distribution, newsIndex;
+  if (scored.length) {
+    // Distribution = share of headlines per FinBERT class.
+    const n = scored.length;
+    const pos = scored.filter((s) => s.sent.label === "positive").length;
+    const neg = scored.filter((s) => s.sent.label === "negative").length;
+    const bullish = Math.round((pos / n) * 100);
+    const bearish = Math.round((neg / n) * 100);
+    distribution = { bullish, neutral: Math.max(0, 100 - bullish - bearish), bearish };
+
+    // News index = mean signed score (P(pos) − P(neg)) mapped to 0–100.
+    const meanSigned = scored.reduce((s, x) => s + x.sent.signed, 0) / n;
+    const value = Math.max(2, Math.min(98, Math.round(50 + meanSigned * 50)));
+    newsIndex = { value, lbl: lblFor(value), n, model: "FinBERT" };
+  } else {
+    distribution = keywordDistribution(newsItems);
+    // Keyword index = bull/bear tilt centered at 50.
+    const value = Math.max(2, Math.min(98, Math.round(50 + (distribution.bullish - distribution.bearish) / 2)));
+    newsIndex = { value, lbl: lblFor(value), n: newsItems.length, model: "keyword" };
+  }
+
+  return { groups, distribution, newsIndex, model };
 }

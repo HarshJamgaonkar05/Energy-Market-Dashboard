@@ -2,12 +2,13 @@ import { useState, useMemo } from "react";
 import {
   AreaChart, Area, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine,
 } from "recharts";
-import { GitBranch, Layers, Grid3x3 } from "lucide-react";
+import { GitBranch, Layers, Grid3x3, CalendarRange } from "lucide-react";
 import { Card } from "../components/primitives/Card";
 import { Band } from "../components/primitives/Band";
 import { SourceTag } from "../components/primitives/SourceTag";
 import { Sourced } from "../components/primitives/Sourced";
 import { Heatmap } from "../components/panels/Heatmap";
+import { SeasonalityPanel } from "../components/panels/SeasonalityPanel";
 import { chartProps, ChartTooltip } from "../lib/chart-theme";
 import { fmt, fmtSigned } from "../lib/format";
 import { useLive } from "../lib/useLive";
@@ -325,6 +326,9 @@ export const PageAnalytics = () => (
   <div className="space-y-3">
     <Band icon={Layers} title="Crack Spreads" sub="Refining margins across the five instruments" />
     <CrackSpreads />
+
+    <Band icon={CalendarRange} title="Seasonality" sub="Typical move by calendar month · ~10y · price & cracks" />
+    <SeasonalityPanel />
 
     <Band icon={GitBranch} title="Futures Spreads" sub="Forward curves · calendar & inter-commodity" />
     <FuturesSpreads />

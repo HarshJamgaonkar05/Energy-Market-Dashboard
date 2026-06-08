@@ -4,6 +4,7 @@ import { ExternalLink, AlertTriangle, Circle } from "lucide-react";
 import { Card } from "../components/primitives/Card";
 import { SectionTitle } from "../components/primitives/SectionTitle";
 import { Badge } from "../components/primitives/Badge";
+import { SentimentChip } from "../components/primitives/SentimentChip";
 import { Sourced } from "../components/primitives/Sourced";
 import { SourceTag } from "../components/primitives/SourceTag";
 import { NEWS } from "../data/mock";
@@ -11,14 +12,19 @@ import { EconCalendar } from "../components/panels/EconCalendar";
 import { SentimentPanel } from "../components/panels/SentimentPanel";
 import { useLive } from "../lib/useLive";
 
-const SENT_FALLBACK = { distribution: { bullish: 38, neutral: 42, bearish: 20 } };
+const SENT_FALLBACK = {
+  distribution: { bullish: 38, neutral: 42, bearish: 20 },
+  newsIndex: { value: 56, lbl: "Bullish", n: 0, model: "FinBERT" },
+};
 
 export const PageNews = () => {
   const [filter, setFilter] = useState("ALL");
-  // Live financial newswire (Financial Juice) + computed sentiment distribution.
+  // Live financial newswire (Financial Juice) + FinBERT-scored sentiment.
   const { data: news, live } = useLive("/api/news", NEWS, useLive.REFRESH.slow);
   const { data: sent } = useLive("/api/sentiment", SENT_FALLBACK, useLive.REFRESH.slow);
   const dist = sent.distribution || SENT_FALLBACK.distribution;
+  const idx = sent.newsIndex || SENT_FALLBACK.newsIndex;
+  const finbert = idx.model === "FinBERT";
   const filtered = filter === "ALL" ? news : news.filter((n) => n.tag === filter);
 
   return (
@@ -68,7 +74,8 @@ export const PageNews = () => {
                     </span>
                     <Badge tone={n.sev}>{n.tag}</Badge>
                     {n.sev === "high" && <AlertTriangle size={10} className="text-red-400" />}
-                    <ExternalLink size={10} className="text-zinc-700 opacity-0 group-hover:opacity-100 ml-auto" />
+                    <SentimentChip sent={n.sent} className="ml-auto" />
+                    <ExternalLink size={10} className="text-zinc-700 opacity-0 group-hover:opacity-100 ml-2" />
                   </div>
                   <p className="text-[12px] text-zinc-200 leading-snug group-hover:text-zinc-100">{n.txt}</p>
                 </motion.a>
@@ -80,7 +87,17 @@ export const PageNews = () => {
         <div className="col-span-12 lg:col-span-3 space-y-3">
           <SentimentPanel />
           <Card>
-            <SectionTitle sub="From newswire" action={<SourceTag live source="derived" note="Share of recent Financial Juice headlines that read bullish vs bearish." />}>Sentiment Distribution</SectionTitle>
+            <SectionTitle sub={finbert ? "FinBERT · newswire" : "Keyword · newswire"} action={<SourceTag live source="finbert" note={finbert ? `FinBERT scored ${idx.n} recent headlines positive/negative/neutral.` : "FinBERT unavailable — using the bull/bear keyword heuristic."} />}>Sentiment Distribution</SectionTitle>
+            {/* Overall news tone index (0–100, 50 = neutral) */}
+            <div className="flex items-baseline justify-between mb-3 pb-3 border-b border-[#1c1d22]">
+              <div>
+                <div className="text-[9px] text-zinc-600 uppercase tracking-wider">News tone index</div>
+                <div className={`text-[10px] font-mono ${idx.value >= 55 ? "text-emerald-400" : idx.value <= 45 ? "text-red-400" : "text-zinc-400"}`}>{idx.lbl}</div>
+              </div>
+              <span className={`font-mono text-2xl ${idx.value >= 55 ? "text-emerald-400" : idx.value <= 45 ? "text-red-400" : "text-zinc-200"}`}>
+                <Sourced source="finbert" note={`Mean FinBERT signed score (P(pos) − P(neg)) across ${idx.n} headlines, mapped to 0–100.`} align="end">{idx.value}</Sourced>
+              </span>
+            </div>
             <div className="space-y-2">
               {[
                 { l: "Bullish", v: dist.bullish, c: "#10b981" },
@@ -91,7 +108,7 @@ export const PageNews = () => {
                   <div className="flex justify-between text-[10px] mb-1">
                     <span className="text-zinc-400">{s.l}</span>
                     <span className="font-mono text-zinc-300">
-                      <Sourced source="derived" note="Computed from the live Financial Juice newswire balance" align="end">{s.v}%</Sourced>
+                      <Sourced source="finbert" note="Share of recent headlines FinBERT scored in this class" align="end">{s.v}%</Sourced>
                     </span>
                   </div>
                   <div className="h-1.5 bg-[#15161a]">

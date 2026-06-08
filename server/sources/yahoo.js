@@ -77,6 +77,22 @@ export async function getQuote(symbol) {
 }
 
 /**
+ * Long monthly close history for a symbol (default 10 years), used for
+ * seasonality (average return / crack level by calendar month). Cached 12h —
+ * monthly bars change slowly. Returns chronological [{date, close}].
+ */
+export async function monthlyCloses(symbol, range = "10y") {
+  const key = `yahoo:${symbol}:${range}:1mo`;
+  return cached(key, 12 * 60 * 60_000, async () => {
+    const url = `${BASE}/${encodeURIComponent(symbol)}?range=${range}&interval=1mo&includePrePost=false`;
+    const json = await fetchJSON(url);
+    const r = json?.chart?.result?.[0];
+    if (!r) throw new Error(`Yahoo: empty monthly result for ${symbol}`);
+    return closeSeries(r).map((p) => ({ date: p.date, close: p.close }));
+  });
+}
+
+/**
  * Last price + last-trade time for a list of symbols — used to build real
  * forward curves from individual dated contracts (e.g. CLZ26.NYM). One cached
  * 1d chart fetch each; a delisted contract resolves to {price:null}. The time
