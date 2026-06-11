@@ -1,18 +1,26 @@
 // ============================================================================
-// FinBERT sentiment — runs the ProsusAI/finbert model locally, in-process, via
-// Transformers.js (ONNX). No Python, no API key, no network at inference time
-// (the quantized model is downloaded once on first run and cached on disk).
+// FinBERT sentiment — scores each newswire headline positive / negative /
+// neutral with ProsusAI/finbert (BERT fine-tuned on financial text), replacing
+// the old bull/bear keyword regexes.
 //
-// FinBERT is BERT fine-tuned on financial text; it classifies a sentence as
-// positive / negative / neutral. We use it to score each newswire headline,
-// replacing the old bull/bear keyword regexes.
+// Two backends, picked automatically:
+//   • HF_TOKEN set  → Hugging Face's hosted Inference API does the inference.
+//     Nothing heavy runs in this process, so it works on a tiny free host.
+//   • otherwise     → the model runs LOCALLY in-process via Transformers.js
+//     (ONNX, downloaded once & cached) — great for local dev, but needs ~1–2 GB
+//     RAM so it's unsuitable for a 512 MB free instance.
 //
-// Everything here degrades gracefully: if the model can't load (offline first
-// run, unsupported platform, etc.) `scoreHeadlines` resolves to `null` and the
-// callers fall back to the keyword heuristic — the dashboard never breaks.
+// Everything degrades gracefully: if the chosen backend is unavailable,
+// `scoreHeadlines` resolves to `null` and callers fall back to the keyword
+// heuristic — the dashboard never breaks. Set FINBERT_DISABLE=1 to force the
+// keyword fallback regardless.
 // ============================================================================
 
-const MODEL = "Xenova/finbert"; // ONNX port of ProsusAI/finbert (positive/negative/neutral)
+const MODEL = "Xenova/finbert"; // ONNX port of ProsusAI/finbert (local backend)
+const HF_TOKEN = (process.env.HF_TOKEN || process.env.HUGGINGFACE_TOKEN || "").trim();
+// HF's current hosted-inference endpoint (the old api-inference.huggingface.co
+// host was retired). Override with HF_URL if you use a different provider/model.
+const HF_URL = process.env.HF_URL || "https://router.huggingface.co/hf-inference/models/ProsusAI/finbert";
 
 // Per-headline score cache. Headlines repeat across polls (the wire is cached
 // 4 min and items linger for hours), so we never re-run the model on text we've
@@ -53,9 +61,26 @@ async function getClassifier() {
   return classifierPromise;
 }
 
-// Kick off the (slow, one-time) model load in the background as soon as this
-// module is imported, so the first /api/news request isn't the one that waits.
-getClassifier();
+// Warm up the LOCAL model in the background on import (so the first /api/news
+// request doesn't pay the load cost). Skipped when offloading to HF or disabled.
+if (!HF_TOKEN && !disabled) getClassifier();
+
+// Score a batch of headlines via Hugging Face's hosted Inference API. Returns
+// shaped records aligned to `texts`. `wait_for_model` lets HF spin the model up
+// on a cold call instead of 503-ing. Throws on any HTTP/shape error so the
+// caller falls back to keywords.
+async function scoreViaHF(texts) {
+  const res = await fetch(HF_URL, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${HF_TOKEN}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ inputs: texts, options: { wait_for_model: true } }),
+  });
+  if (!res.ok) throw new Error(`HF API ${res.status}: ${(await res.text()).slice(0, 120)}`);
+  const data = await res.json();
+  // Expected: Array<Array<{label,score}>> aligned to inputs.
+  if (!Array.isArray(data) || !Array.isArray(data[0])) throw new Error("HF API unexpected response shape");
+  return data.map(shape);
+}
 
 // Normalize one model output (an array of {label, score} for the 3 classes)
 // into a tidy record. `signed` ∈ [-1, 1] = P(positive) − P(negative), the single
@@ -87,16 +112,23 @@ export async function scoreHeadlines(texts = []) {
   const todo = [...new Set(texts.filter((t) => t && !scoreCache.has(t)))];
 
   if (todo.length) {
-    const clf = await getClassifier();
-    if (!clf) return null; // model unavailable → signal keyword fallback
-
+    if (disabled) return null;
     try {
-      // top_k: 3 → return all three class probabilities per headline.
-      const raw = await clf(todo, { top_k: 3 });
-      // The pipeline returns Array<Array<{label,score}>> for a batch, or a flat
-      // Array<{label,score}> for a single input — normalize both shapes.
-      const perText = todo.length === 1 && !Array.isArray(raw[0]) ? [raw] : raw;
-      todo.forEach((t, i) => scoreCache.set(t, shape(perText[i])));
+      let records;
+      if (HF_TOKEN) {
+        // Hosted backend — nothing heavy runs here.
+        records = await scoreViaHF(todo);
+      } else {
+        const clf = await getClassifier();
+        if (!clf) return null; // local model unavailable → signal keyword fallback
+        // top_k: 3 → all three class probabilities per headline. The pipeline
+        // returns Array<Array<{label,score}>> for a batch, or a flat array for a
+        // single input — normalize both shapes.
+        const raw = await clf(todo, { top_k: 3 });
+        const perText = todo.length === 1 && !Array.isArray(raw[0]) ? [raw] : raw;
+        records = perText.map(shape);
+      }
+      todo.forEach((t, i) => scoreCache.set(t, records[i]));
     } catch (err) {
       console.warn(`[finbert] inference failed, using keyword fallback: ${err.message}`);
       return null;
