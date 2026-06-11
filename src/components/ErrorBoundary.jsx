@@ -14,6 +14,18 @@ export class ErrorBoundary extends Component {
     return { error };
   }
 
+  componentDidCatch(error) {
+    // A failed lazy-chunk fetch (e.g. a cold free host that timed out) is
+    // recoverable by reloading once — the instance is warm by then and the
+    // fresh index.html points at current chunks. Guard against reload loops.
+    const msg = String(error?.message || error);
+    const isChunkError = /dynamically imported module|Importing a module script failed|Failed to fetch/i.test(msg);
+    if (isChunkError && !sessionStorage.getItem("chunk-reload")) {
+      sessionStorage.setItem("chunk-reload", "1");
+      window.location.reload();
+    }
+  }
+
   componentDidUpdate(prev) {
     if (prev.resetKey !== this.props.resetKey && this.state.error) {
       this.setState({ error: null });

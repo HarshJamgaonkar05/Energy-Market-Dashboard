@@ -10,11 +10,32 @@ import { useLive } from "./lib/useLive";
 
 // Pages are code-split (lazy) so the initial load only ships the Dashboard +
 // shared chart vendor; the other views download on first visit.
-const PageDashboard = lazy(() => import("./pages/Dashboard").then((m) => ({ default: m.PageDashboard })));
-const PageAnalytics = lazy(() => import("./pages/Analytics").then((m) => ({ default: m.PageAnalytics })));
-const PageDrivers = lazy(() => import("./pages/Drivers").then((m) => ({ default: m.PageDrivers })));
-const PageInventories = lazy(() => import("./pages/Inventories").then((m) => ({ default: m.PageInventories })));
-const PageNews = lazy(() => import("./pages/News").then((m) => ({ default: m.PageNews })));
+//
+// On a sleeping free host the first chunk fetch after a cold start can time out,
+// which would otherwise surface as "Failed to fetch dynamically imported
+// module". `lazyRetry` retries the import a few times with backoff (giving the
+// instance time to wake) before giving up — so a cold start self-heals.
+const lazyRetry = (importer) =>
+  lazy(async () => {
+    let lastErr;
+    for (let attempt = 0; attempt < 4; attempt++) {
+      try {
+        const mod = await importer();
+        sessionStorage.removeItem("chunk-reload"); // a load succeeded → reset the reload guard
+        return mod;
+      } catch (err) {
+        lastErr = err;
+        await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
+      }
+    }
+    throw lastErr;
+  });
+
+const PageDashboard = lazyRetry(() => import("./pages/Dashboard").then((m) => ({ default: m.PageDashboard })));
+const PageAnalytics = lazyRetry(() => import("./pages/Analytics").then((m) => ({ default: m.PageAnalytics })));
+const PageDrivers = lazyRetry(() => import("./pages/Drivers").then((m) => ({ default: m.PageDrivers })));
+const PageInventories = lazyRetry(() => import("./pages/Inventories").then((m) => ({ default: m.PageInventories })));
+const PageNews = lazyRetry(() => import("./pages/News").then((m) => ({ default: m.PageNews })));
 
 const PAGES = {
   dashboard: { title: "Dashboard", el: PageDashboard },
