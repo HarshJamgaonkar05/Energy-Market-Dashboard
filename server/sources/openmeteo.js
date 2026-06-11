@@ -52,8 +52,12 @@ export async function weather() {
           const anom = todayMean != null ? +(todayMean - normal).toFixed(1) : 0;
           const hdd7 = +days.reduce((s, d) => s + hdd(d.mean), 0).toFixed(0);
           const cdd7 = +days.reduce((s, d) => s + cdd(d.mean), 0).toFixed(0);
+          // Climatological-normal degree days for the 7-day window (normal monthly
+          // mean temp applied across the week) — the baseline for the demand anomaly.
+          const nHdd = +(hdd(normal) * 7).toFixed(0);
+          const nCdd = +(cdd(normal) * 7).toFixed(0);
           const severity = hdd7 > 70 || anom < -3 ? "high" : hdd7 > 35 || Math.abs(anom) > 1.5 ? "med" : "low";
-          return { reg: r.key, group: r.group, temp: Math.round(todayMean), anom, hdd: hdd7, cdd: cdd7, severity };
+          return { reg: r.key, group: r.group, temp: Math.round(todayMean), anom, hdd: hdd7, cdd: cdd7, nHdd, nCdd, severity };
         } catch (e) {
           console.warn(`[open-meteo] ${r.key} failed: ${e.message}`);
           return null;
@@ -65,6 +69,27 @@ export async function weather() {
     const sumBy = (g, field) =>
       regions.filter((r) => r.group === g).reduce((s, r) => s + r[field], 0);
 
+    // Weather-driven demand signal: aggregate actual vs normal degree days across
+    // all regions. Colder-than-normal (positive HDD anomaly) lifts heating-fuel
+    // demand (distillate / nat gas); hotter-than-normal (positive CDD anomaly)
+    // lifts cooling/power demand (gas burn / gasoline). >±8% reads bullish/bearish.
+    const tot = regions.reduce(
+      (a, r) => ({ hdd: a.hdd + r.hdd, cdd: a.cdd + r.cdd, nHdd: a.nHdd + r.nHdd, nCdd: a.nCdd + r.nCdd }),
+      { hdd: 0, cdd: 0, nHdd: 0, nCdd: 0 }
+    );
+    const anomPct = (act, norm) => (norm ? +(((act - norm) / norm) * 100).toFixed(0) : 0);
+    // Gate the read by absolute level: a big % swing off a tiny off-season base
+    // (e.g. heating demand in July) isn't a real signal, so it stays neutral
+    // until the absolute degree-day load is meaningful.
+    const MIN_LOAD = 70;
+    const sig = (p, level) => (level < MIN_LOAD ? "neutral" : p > 8 ? "bullish" : p < -8 ? "bearish" : "neutral");
+    const heatPct = anomPct(tot.hdd, tot.nHdd);
+    const coolPct = anomPct(tot.cdd, tot.nCdd);
+    const demand = {
+      heating: { anomPct: heatPct, signal: sig(heatPct, tot.hdd), drives: "Heating Oil · Nat Gas", hdd: tot.hdd, normalHdd: tot.nHdd },
+      cooling: { anomPct: coolPct, signal: sig(coolPct, tot.cdd), drives: "Power burn · Gasoline", cdd: tot.cdd, normalCdd: tot.nCdd },
+    };
+
     return {
       regions,
       heroes: {
@@ -72,6 +97,7 @@ export async function weather() {
         euHdd: sumBy("EU", "hdd"),
         asiaCdd: sumBy("ASIA", "cdd"),
       },
+      demand,
       asOf: new Date().toISOString().slice(0, 10),
     };
   });

@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from "recharts";
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine } from "recharts";
+import { ResponsiveContainer } from "../../lib/ResponsiveContainer";
 import { Card } from "../primitives/Card";
 import { SectionTitle } from "../primitives/SectionTitle";
 import { SourceTag } from "../primitives/SourceTag";

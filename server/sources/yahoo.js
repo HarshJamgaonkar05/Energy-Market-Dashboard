@@ -77,6 +77,22 @@ export async function getQuote(symbol) {
 }
 
 /**
+ * Long DAILY close history for a symbol (default 2 years). Used for the one
+ * instrument not in the dataset (RBOB) when building real crack histories.
+ * Cached 6h. Returns chronological [{ iso:"YYYY-MM-DD", close }].
+ */
+export async function dailyCloses(symbol, range = "2y") {
+  const key = `yahoo:${symbol}:${range}:1d`;
+  return cached(key, 6 * 60 * 60_000, async () => {
+    const url = `${BASE}/${encodeURIComponent(symbol)}?range=${range}&interval=1d&includePrePost=false`;
+    const json = await fetchJSON(url);
+    const r = json?.chart?.result?.[0];
+    if (!r) throw new Error(`Yahoo: empty daily result for ${symbol}`);
+    return closeSeries(r).map((p) => ({ iso: p.date.toISOString().slice(0, 10), close: p.close }));
+  });
+}
+
+/**
  * Long monthly close history for a symbol (default 10 years), used for
  * seasonality (average return / crack level by calendar month). Cached 12h —
  * monthly bars change slowly. Returns chronological [{date, close}].

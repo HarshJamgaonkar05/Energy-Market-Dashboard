@@ -4,8 +4,9 @@
 // correlation matrix, crack spreads, forward curves, inter-commodity spreads,
 // and the macro block.
 // ============================================================================
-import { getQuotes, getFrontPrices } from "../sources/yahoo.js";
+import { getQuotes, getFrontPrices, dailyCloses } from "../sources/yahoo.js";
 import { cached } from "../lib/cache.js";
+import * as history from "../lib/history.js";
 
 const GAL_PER_BBL = 42;
 const BBL_PER_MT_GASOIL = 7.45;
@@ -17,7 +18,7 @@ const SPEC = [
   { id: "wti",    sym: "WTI",    name: "WTI Crude",          label: "WTI",         kind: "crude",   color: "#38bdf8", unit: "$/bbl", yahoo: "CL=F" },
   { id: "ho",     sym: "HO",     name: "Heating Oil · ULSD", label: "Heating Oil", kind: "product", color: "#10b981", unit: "$/gal", yahoo: "HO=F" },
   { id: "rbob",   sym: "RBOB",   name: "RBOB Gasoline",      label: "RBOB",        kind: "product", color: "#a78bfa", unit: "$/gal", yahoo: "RB=F" },
-  { id: "gasoil", sym: "GASOIL", name: "ICE Gas Oil",        label: "Gas Oil",     kind: "product", color: "#f472b6", unit: "$/mt",  proxyOf: "ho", modeled: true, source: "derived", sourceNote: "Proxied from live NYMEX ULSD (HO=F), unit-converted to $/mt." },
+  { id: "gasoil", sym: "GASOIL", name: "ICE Gas Oil",        label: "Gas Oil",     kind: "product", color: "#f472b6", unit: "$/mt",  proxyOf: "ho", modeled: true, source: "derived", sourceNote: "Proxied from live NYMEX ULSD (HO=F), converted to $/mt and calibrated to the dataset's real ULSD↔Gas Oil ratio." },
 ];
 
 const MACRO_SPEC = [
@@ -37,6 +38,18 @@ const toBbl = (id, val) => {
 
 const ENERGY_SYMS = SPEC.filter((s) => s.yahoo).map((s) => s.yahoo);
 
+// Calibrate the Gas Oil proxy to the dataset's REAL ULSD↔Gas Oil relationship.
+// A pure unit-conversion of ULSD ($/gal → $/mt) overstates Gas Oil and collapses
+// the HO–Gas Oil spread to ~0; scaling by the last real Gas Oil / converted-HO
+// ratio from the dataset restores a realistic distillate spread. Falls back to 1
+// (pure conversion) if the dataset is unavailable.
+const GASOIL_CAL = (() => {
+  const ho = history.dailyCloses("ho").at(-1)?.close;
+  const go = history.dailyCloses("gasoil").at(-1)?.close;
+  const conv = ho ? ho * GAL_PER_BBL * BBL_PER_MT_GASOIL : 0;
+  return conv && go ? go / conv : 1;
+})();
+
 // ----------------------------------------------------------------------------
 // Build the live instrument array (HERO / HeroCards / INSTRUMENTS shape).
 // ----------------------------------------------------------------------------
@@ -46,8 +59,9 @@ export async function instruments() {
 
   return SPEC.map((s) => {
     if (s.proxyOf) {
-      // Gas Oil proxy: ULSD $/gal -> $/bbl (×42) -> $/mt (×7.45 bbl per tonne).
-      const galToMt = (gal) => gal * GAL_PER_BBL * BBL_PER_MT_GASOIL;
+      // Gas Oil proxy: ULSD $/gal -> $/bbl (×42) -> $/mt (×7.45 bbl per tonne),
+      // then calibrated to the dataset's real ULSD↔Gas Oil ratio (GASOIL_CAL).
+      const galToMt = (gal) => gal * GAL_PER_BBL * BBL_PER_MT_GASOIL * GASOIL_CAL;
       const base = bySym[s.proxyOf];
       if (!base?.price) return { ...meta(s), val: null };
       const mt = +galToMt(base.price).toFixed(1);
@@ -110,55 +124,41 @@ export function movers(instr) {
 }
 
 // ----------------------------------------------------------------------------
-// Normalized 90D series (indexed to 100) + correlation matrix from histories.
+// Historical daily price series + correlation matrix — sourced from the
+// proprietary dataset (server/data/history.json), NOT Yahoo. Covers the four
+// dataset instruments (WTI, Brent, Heating Oil, Gas Oil) over 2021→present at
+// daily resolution. The frontend re-indexes each line to 100 over the selected
+// window, so we hand back raw daily closes keyed by series name.
 // ----------------------------------------------------------------------------
+const SERIES_KEY = { brent: "Brent", wti: "WTI", ho: "HO", gasoil: "Gasoil" };
+const SERIES_LABEL = { brent: "Brent", wti: "WTI", ho: "HO", gasoil: "Gas Oil" };
+
 export async function seriesAndCorrelation() {
-  const q = await getQuotes(ENERGY_SYMS);
-  const keyMap = { brent: "Brent", wti: "WTI", ho: "HO", rbob: "RBOB", gasoil: "Gasoil" };
+  const ids = history.HISTORY_IDS; // wti, brent, ho, gasoil
 
-  // closes per instrument, keyed by date string
-  const closesById = {};
-  for (const s of SPEC) {
-    const src = s.proxyOf ? q[SPEC.find((x) => x.id === s.proxyOf).yahoo] : q[s.yahoo];
-    closesById[s.id] = src?.history || [];
-  }
+  // date(ISO) -> close, per instrument.
+  const maps = {};
+  for (const id of ids) maps[id] = new Map(history.dailyCloses(id).map((p) => [p.iso, p.close]));
 
-  // Align on dates present in every series.
-  const wti = closesById.wti;
-  const dateOf = (d) => `${d.getMonth() + 1}/${d.getDate()}`;
-  const rows = [];
-  const aligned = { brent: [], wti: [], ho: [], rbob: [], gasoil: [] };
-  for (const point of wti) {
-    const dstr = dateOf(point.date);
-    const vals = {};
-    let ok = true;
-    for (const id of Object.keys(closesById)) {
-      const match = closesById[id].find((p) => dateOf(p.date) === dstr);
-      if (!match) { ok = false; break; }
-      vals[id] = match.close;
-    }
-    if (!ok) continue;
-    rows.push({ date: dstr, ...vals });
-    for (const id of Object.keys(vals)) aligned[id].push(vals[id]);
-  }
+  // Align on the dates present in every series so every line is complete.
+  const dates = [...(maps[ids[0]]?.keys() ?? [])]
+    .filter((d) => ids.every((id) => maps[id].has(d)))
+    .sort();
 
-  // Normalize each to 100 at window start.
-  const series = rows.map((r) => {
-    const out = { date: r.date };
-    for (const id of Object.keys(keyMap)) {
-      const base = rows[0][id];
-      out[keyMap[id]] = base ? +((r[id] / base) * 100).toFixed(2) : 100;
-    }
-    return out;
+  const series = dates.map((iso) => {
+    const row = { date: iso };
+    for (const id of ids) row[SERIES_KEY[id]] = maps[id].get(iso);
+    return row;
   });
 
-  const correlation = correlationMatrix(aligned, Object.keys(keyMap).map((k) => keyMap[k]));
-  return { series, correlation };
+  const aligned = {};
+  for (const id of ids) aligned[id] = dates.map((iso) => maps[id].get(iso));
+  const correlation = correlationMatrix(aligned, ids);
+  return { series, correlation, asOf: dates.at(-1) ?? null };
 }
 
-function correlationMatrix(aligned, labels) {
-  const ids = ["brent", "wti", "ho", "rbob", "gasoil"];
-  // daily simple returns, last 30
+// 30-day rolling correlation of daily returns across the dataset instruments.
+function correlationMatrix(aligned, ids) {
   const rets = {};
   for (const id of ids) {
     const c = aligned[id];
@@ -178,6 +178,7 @@ function correlationMatrix(aligned, labels) {
     }
     return da && db ? num / Math.sqrt(da * db) : 0;
   };
+  const labels = ids.map((id) => SERIES_LABEL[id]);
   const matrix = ids.map((ra) => ids.map((rb) => +corr(rets[ra], rets[rb]).toFixed(2)));
   return { labels, matrix };
 }
@@ -213,6 +214,48 @@ export function cracks(instr) {
 }
 
 // ----------------------------------------------------------------------------
+// REAL daily crack-spread history (replaces the old synthetic 60-day series).
+// Builds a $/bbl daily price panel — WTI/Brent/HO/Gas Oil from the dataset, RBOB
+// from Yahoo daily (the one instrument not in the dataset) — then evaluates each
+// crack formula day by day. Distillate cracks span the full dataset; RBOB-based
+// cracks span the dataset∩Yahoo overlap. Returns the last ~1y per crack as
+// { [crackId]: { source, points:[{t,v}] } }. Cached 1h.
+// ----------------------------------------------------------------------------
+const HIST_WINDOW = 252; // ~1 trading year of daily points
+export async function crackHistory() {
+  return cached("crackhistory:all", 60 * 60_000, async () => {
+    // id -> Map(iso -> $/bbl)
+    const panel = {};
+    const factor = { ho: GAL_PER_BBL, gasoil: 1 / BBL_PER_MT_GASOIL, wti: 1, brent: 1 };
+    for (const id of history.HISTORY_IDS) {
+      panel[id] = new Map(history.dailyCloses(id).map((p) => [p.iso, +(p.close * factor[id]).toFixed(3)]));
+    }
+    // RBOB from Yahoo ($/gal → $/bbl); empty map if Yahoo is unavailable.
+    try {
+      const rb = await dailyCloses("RB=F", "2y");
+      panel.rbob = new Map(rb.map((p) => [p.iso, +(p.close * GAL_PER_BBL).toFixed(3)]));
+    } catch { panel.rbob = new Map(); }
+
+    const out = {};
+    for (const c of CRACK_DEFS) {
+      const ids = [...c.legs.map((l) => l[0]), c.crude];
+      const base = panel[ids[0]];
+      if (!base) continue;
+      const usesRbob = ids.includes("rbob");
+      const pts = [];
+      for (const iso of base.keys()) {
+        if (!ids.every((id) => panel[id]?.has(iso))) continue;
+        const prod = c.legs.reduce((s, [p, n]) => s + n * panel[p].get(iso), 0);
+        pts.push({ t: iso, v: +((prod - c.crudeC * panel[c.crude].get(iso)) / c.div).toFixed(2) });
+      }
+      pts.sort((a, b) => (a.t < b.t ? -1 : 1));
+      if (pts.length >= 20) out[c.id] = { source: usesRbob ? "derived" : "dataset", points: pts.slice(-HIST_WINDOW) };
+    }
+    return out;
+  });
+}
+
+// ----------------------------------------------------------------------------
 // Forward curves (MODELED). Front month is anchored to the LIVE quote; the
 // term structure uses a curated monthly slope (contango/backwardation shape)
 // because exchange settlement curves are paywalled. Flagged modeled:true.
@@ -238,22 +281,25 @@ export function curves(instr) {
 }
 
 // ----------------------------------------------------------------------------
-// Forward curves (REAL where a free dated-contract feed exists).
+// Forward curves.
 //
-// Yahoo serves individual NYMEX/ICE dated contracts for free as e.g. CLZ26.NYM
-// (WTI Dec-2026). Brent/WTI/HO/RBOB curves are therefore the *genuine* term
-// structure: M1..M12 = consecutive real contract settlements. ICE Gas Oil has
-// no free feed, so its curve is proxied from the real ULSD (HO) curve, scaled to
-// the live Gas Oil front. Anything that fails to resolve falls back to the
-// modeled straight-line curve above so a panel never blanks.
+//  • WTI / Brent / Heating Oil / Gas Oil — the dataset carries each instrument's
+//    genuine M1..M12 settlement curve. We keep that real shape (the month-to-
+//    month spreads) and parallel-shift it so M1 sits exactly on the live Yahoo
+//    front, so the curve reflects today's price while its structure
+//    (contango/backwardation, calendar spreads) is the real observed one.
+//  • RBOB — not in the dataset, so its curve is the REAL Yahoo dated-contract
+//    term structure (RBN26.NYM, RBQ26.NYM, …): M1..M12 are consecutive live
+//    settlements. Falls back to the modeled straight-line only if Yahoo can't
+//    resolve a full 12 months, so every curve the API serves is a full M1..M12.
 // ----------------------------------------------------------------------------
-const MONTH_CODE = ["F", "G", "H", "J", "K", "M", "N", "Q", "U", "V", "X", "Z"]; // Jan..Dec
-const CURVE_ROOT = { brent: "BZ", wti: "CL", ho: "HO", rbob: "RB" };
-const CURVE_HORIZON = 15; // probe a few extra so 12 land after the expired front drops out
-const FRESH_LAG = 30 * 3600; // s: an expiring front lags its freshest sibling by a session+
 const curveDp = (unit) => (unit === "$/gal" ? 4 : unit === "$/mt" ? 1 : 3);
 
-// Next `n` monthly contract symbols from `from`, e.g. CLN26.NYM, CLQ26.NYM, …
+// NYMEX/ICE month codes Jan..Dec, for building dated-contract symbols.
+const MONTH_CODE = ["F", "G", "H", "J", "K", "M", "N", "Q", "U", "V", "X", "Z"];
+const FRESH_LAG = 30 * 3600; // s: an expiring front lags its freshest sibling by a session+
+
+// Next `n` monthly contract symbols from `from`, e.g. RBN26.NYM, RBQ26.NYM, …
 function contractSymbols(root, n, from = new Date()) {
   const out = [];
   let y = from.getUTCFullYear();
@@ -265,69 +311,64 @@ function contractSymbols(root, n, from = new Date()) {
   return out;
 }
 
+// Real forward curve from individual Yahoo dated contracts. Probes a few extra
+// months, skips a STALE expiring front (an expiring contract that stopped
+// trading lags its freshest sibling by >FRESH_LAG), then keeps the first 12
+// consecutive live settlements. Returns a curve block or null if <12 resolve.
+// 10-min cached — dated contracts settle ~daily, so this stays well within
+// Yahoo's rate limits no matter how often panels poll.
+async function yahooDatedCurve(id, root) {
+  const s = SPEC.find((x) => x.id === id);
+  const syms = contractSymbols(root, 15);
+  const prices = await cached(`curve:${id}`, 10 * 60_000, () => getFrontPrices(syms)).catch(() => ({}));
+  const quotes = syms.map((sym) => prices[sym]).filter((q) => q && Number.isFinite(q.price));
+  if (!quotes.length) return null;
+  const maxTime = quotes.reduce((mx, q) => (q.time && q.time > mx ? q.time : mx), 0);
+  let started = false;
+  const pts = [];
+  for (const sym of syms) {
+    const q = prices[sym];
+    if (!q || !Number.isFinite(q.price)) continue;
+    if (!started && maxTime && q.time && maxTime - q.time > FRESH_LAG) continue; // skip stale front only
+    started = true;
+    pts.push(q.price);
+    if (pts.length === 12) break;
+  }
+  if (pts.length < 12) return null;
+  return {
+    id, label: s.label, color: s.color, unit: s.unit, modeled: false,
+    source: "yahoo",
+    sourceNote: "Live forward curve — individual Yahoo dated-contract settlements (M1–M12), the genuine term structure.",
+    data: pts.map((v, i) => ({ m: `M${i + 1}`, v: +v.toFixed(curveDp(s.unit)) })),
+  };
+}
+
 export async function forwardCurves(instr) {
   const modeled = curves(instr); // straight-line fallback, keyed by id
-  const blocks = Object.entries(CURVE_ROOT).map(([id, root]) => ({ id, syms: contractSymbols(root, CURVE_HORIZON) }));
+  const out = { modeled: false };
 
-  // One batched, 10-min-cached fetch of every dated contract: forward curves
-  // barely move intraday and deferred contracts settle ~daily, so this keeps us
-  // well clear of Yahoo's rate limits no matter how often panels poll.
-  const prices = await cached("curve:prices", 10 * 60_000, () =>
-    getFrontPrices(blocks.flatMap((b) => b.syms))
-  ).catch(() => ({}));
-
-  const out = { modeled: true };
-  const realPts = {}; // id -> raw contract prices (M1 first)
-  for (const { id, syms } of blocks) {
-    const s = SPEC.find((x) => x.id === id);
-    const quotes = syms.map((sym) => prices[sym]).filter((q) => q && Number.isFinite(q.price));
-    // The freshest last-trade among this instrument's contracts ≈ "now" for the
-    // active months; an expiring front that stopped trading lags it by a session+.
-    const maxTime = quotes.reduce((mx, q) => (q.time && q.time > mx ? q.time : mx), 0);
-    // Skip stale contracts only at the FRONT (an expiring/expired month that
-    // stopped trading early). Once the active front is found, keep every later
-    // month — back-month staleness is just illiquidity, not expiry, and its
-    // last settle is still the real curve point.
-    let started = false;
-    const pts = [];
-    for (const sym of syms) {
-      const q = prices[sym];
-      if (!q || !Number.isFinite(q.price)) continue;
-      if (!started && maxTime && q.time && maxTime - q.time > FRESH_LAG) continue;
-      started = true;
-      pts.push(q.price);
-      if (pts.length === 12) break;
-    }
-    // Require a full 12 months of real data; otherwise fall back to the modeled
-    // 12-point curve so every curve the API serves is exactly M1..M12.
-    if (pts.length === 12) {
-      realPts[id] = pts;
-      out[id] = {
-        id, label: s.label, color: s.color, unit: s.unit, modeled: false,
-        source: "yahoo",
-        sourceNote: "Live forward curve — individual Yahoo dated-contract settlements (M1..M12), the genuine term structure.",
-        data: pts.map((v, i) => ({ m: `M${i + 1}`, v: +v.toFixed(curveDp(s.unit)) })),
+  // WTI / Brent / HO / Gas Oil — dataset structure carried to the live front.
+  for (const s of SPEC) {
+    if (s.id === "rbob") continue; // RBOB has no dataset curve → real Yahoo curve below
+    const inst = byId(instr, s.id);
+    const front = inst?.val;
+    const csv = history.latestCurve(s.id); // [{ m, contract, v }] or null
+    if (front != null && csv && csv.length >= 2) {
+      const base = csv[0].v; // dataset front — shift the whole curve onto the live front
+      out[s.id] = {
+        id: s.id, label: s.label, color: s.color, unit: s.unit, modeled: false,
+        source: "dataset", structureAsOf: history.asOf(s.id),
+        sourceNote: "Live front month (Yahoo) carried along the real forward-curve structure from the historical dataset (M1–M12).",
+        data: csv.slice(0, 12).map((p, i) => ({ m: `M${i + 1}`, v: +(front + (p.v - base)).toFixed(curveDp(s.unit)) })),
       };
-    } else if (modeled[id]) {
-      out[id] = { ...modeled[id], modeled: true, source: "modeled" };
+    } else if (modeled[s.id]) {
+      out[s.id] = { ...modeled[s.id], modeled: true, source: "modeled" };
     }
   }
 
-  // Gas Oil: no free dated feed → proxy the real ULSD curve shape, anchored to
-  // the live Gas Oil front and kept in $/mt (consistent with the spot proxy).
-  const goSpec = SPEC.find((s) => s.id === "gasoil");
-  const go = byId(instr, "gasoil");
-  if (realPts.ho && go?.val && realPts.ho[0]) {
-    const ho = realPts.ho, base = ho[0];
-    out.gasoil = {
-      id: "gasoil", label: goSpec.label, color: goSpec.color, unit: goSpec.unit, modeled: true,
-      source: "derived",
-      sourceNote: "Proxied from the live NYMEX ULSD forward curve (HO), scaled to the live Gas Oil front — ICE Gas Oil has no free feed.",
-      data: ho.map((v, i) => ({ m: `M${i + 1}`, v: +(go.val * (v / base)).toFixed(1) })),
-    };
-  } else if (modeled.gasoil) {
-    out.gasoil = { ...modeled.gasoil, modeled: true, source: "modeled" };
-  }
+  // RBOB — real Yahoo dated-contract forward curve; modeled straight-line only
+  // if Yahoo can't resolve a full 12-month strip.
+  out.rbob = (await yahooDatedCurve("rbob", "RB")) ?? { ...modeled.rbob, modeled: true, source: "modeled" };
 
   return out;
 }

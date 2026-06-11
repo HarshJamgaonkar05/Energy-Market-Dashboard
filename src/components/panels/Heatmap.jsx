@@ -6,9 +6,9 @@ import { Sourced } from "../primitives/Sourced";
 import { CORR_LABELS, CORR_MATRIX } from "../../data/mock";
 import { useLive } from "../../lib/useLive";
 
-// 30D rolling correlation computed from live Yahoo daily returns
-// (server/compute/markets.js). Gas Oil is proxied from ULSD, so its row tracks
-// Heating Oil closely — see the modeled note on the instruments.
+// 30D rolling correlation computed from the historical dataset's daily returns
+// (server/compute/markets.js) across WTI, Brent, Heating Oil and Gas Oil — all
+// real front-month series from the dataset.
 export const Heatmap = ({ title = "Correlation Matrix", sub = "30D rolling" }) => {
   const { data, live } = useLive(
     "/api/correlation",
@@ -26,7 +26,7 @@ export const Heatmap = ({ title = "Correlation Matrix", sub = "30D rolling" }) =
   };
   return (
     <Card>
-      {title && <SectionTitle sub={sub} action={<SourceTag live={live} source="derived" note="30-day rolling correlation of daily returns, computed from live Yahoo closes. Gas Oil tracks Heating Oil (proxy)." />}>{title}</SectionTitle>}
+      {title && <SectionTitle sub={sub} action={<SourceTag source="dataset" label="Dataset" note="30-day rolling correlation of daily returns, computed from the historical dataset's real front-month closes (WTI · Brent · HO · Gas Oil)." />}>{title}</SectionTitle>}
       <div className="grid gap-px" style={{ gridTemplateColumns: `52px repeat(${labels.length}, 1fr)` }}>
         <div />
         {labels.map((l) => (
@@ -45,7 +45,7 @@ export const Heatmap = ({ title = "Correlation Matrix", sub = "30D rolling" }) =
                 className="aspect-square flex items-center justify-center text-[9px] font-mono text-zinc-100 transition-all hover:ring-1 hover:ring-amber-500/60 cursor-pointer"
                 style={{ background: colorFor(v) }}
               >
-                <Sourced source="derived" note={`${labels[i]} ↔ ${labels[j]} · 30D return correlation (Yahoo closes)`}>
+                <Sourced source="dataset" note={`${labels[i]} ↔ ${labels[j]} · 30D return correlation (dataset daily closes)`}>
                   {v.toFixed(2)}
                 </Sourced>
               </div>

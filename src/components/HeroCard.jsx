@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
-import { AreaChart, Area, ResponsiveContainer } from "recharts";
+import { AreaChart, Area } from "recharts";
+import { ResponsiveContainer } from "../lib/ResponsiveContainer";
 import { Circle, BellPlus } from "lucide-react";
 import { Delta } from "./primitives/Delta";
 import { Sourced } from "./primitives/Sourced";

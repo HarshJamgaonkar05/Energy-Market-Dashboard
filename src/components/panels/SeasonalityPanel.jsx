@@ -1,47 +1,49 @@
 import { useState } from "react";
-import { ComposedChart, Bar, Line, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from "recharts";
+import { ComposedChart, Bar, Line, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine } from "recharts";
+import { ResponsiveContainer } from "../../lib/ResponsiveContainer";
 import { Card } from "../primitives/Card";
 import { SectionTitle } from "../primitives/SectionTitle";
 import { SourceTag } from "../primitives/SourceTag";
+import { AsOf } from "../primitives/AsOf";
 import { Sourced } from "../primitives/Sourced";
 import { chartProps, ChartTooltip } from "../../lib/chart-theme";
 import { fmtSigned } from "../../lib/format";
 import { useLive } from "../../lib/useLive";
 
-// Seasonality — typical behaviour by calendar month from ~10y of Yahoo monthly
-// closes. PRICE series show average month-over-month return + a hit rate and a
-// cumulative "typical path"; CRACK series show the average crack level ($/bbl)
-// per month, with the latest value vs its monthly norm. See
-// server/compute/seasonality.js.
+// Seasonality — typical behaviour by calendar month from the historical dataset
+// (2021→present), collapsed to monthly closes. PRICE series show average
+// month-over-month return + a hit rate and a cumulative "typical path"; CRACK
+// series show the average crack level ($/bbl) per month, with the latest value
+// vs its monthly norm. See server/compute/seasonality.js.
 const M = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const nowM = new Date().getMonth();
 const mkPrice = (id, label, amp, phase) => ({
-  id, kind: "price", label, unit: "%", currentMonth: nowM, years: 9,
+  id, kind: "price", label, unit: "%", currentMonth: nowM, years: 5,
   months: M.map((m, i) => {
     const avgRet = +(Math.sin((i / 12) * 2 * Math.PI + phase) * amp).toFixed(2);
-    return { m, avgRet, hit: Math.max(20, Math.min(80, 50 + Math.round(avgRet * 6))), n: 9 };
+    return { m, avgRet, hit: Math.max(20, Math.min(80, 50 + Math.round(avgRet * 6))), n: 5 };
   }),
 });
 const mkCrack = (id, label, base, amp) => ({
-  id, kind: "crack", label, unit: "$/bbl", currentMonth: nowM, years: 9, current: +(base + amp * 0.4).toFixed(2),
-  months: M.map((m, i) => ({ m, avg: +(base + Math.sin((i / 12) * 2 * Math.PI - 1.6) * amp).toFixed(2), n: 9 })),
+  id, kind: "crack", label, unit: "$/bbl", currentMonth: nowM, years: 5, current: +(base + amp * 0.4).toFixed(2),
+  months: M.map((m, i) => ({ m, avg: +(base + Math.sin((i / 12) * 2 * Math.PI - 1.6) * amp).toFixed(2), n: 5 })),
 });
 const FALLBACK = {
   series: [
     mkPrice("WTI", "WTI Crude", 3.2, -1.2),
     mkPrice("BRENT", "Brent Crude", 2.9, -1.2),
-    mkPrice("RBOB", "RBOB Gasoline", 3.0, -1.6),
     mkPrice("HO", "Heating Oil", 2.4, -2.4),
-    mkCrack("RBOB-WTI", "RBOB Crack", 22, 8),
-    mkCrack("HO-WTI", "Heating Oil Crack", 26, 6),
-    mkCrack("321-WTI", "3:2:1 Crack", 24, 6),
+    mkPrice("GASOIL", "Gas Oil", 2.6, -2.4),
+    mkCrack("HO-WTI", "HO Crack · WTI", 26, 6),
+    mkCrack("HO-BRENT", "HO Crack · Brent", 22, 6),
+    mkCrack("GASOIL-BRENT", "Gas Oil Crack · Brent", 20, 6),
   ],
 };
 
 export const SeasonalityPanel = () => {
   const { data, live } = useLive("/api/seasonality", FALLBACK, useLive.REFRESH.slow);
   const series = data.series?.length ? data.series : FALLBACK.series;
-  const [id, setId] = useState("321-WTI");
+  const [id, setId] = useState("HO-WTI");
   const s = series.find((x) => x.id === id) || series[0];
   const isPrice = s.kind === "price";
   const cur = s.currentMonth ?? nowM;
@@ -73,7 +75,7 @@ export const SeasonalityPanel = () => {
   return (
     <Card padding={false}>
       <div className="p-4 pb-2 flex items-start justify-between flex-wrap gap-2">
-        <SectionTitle sub={`${s.years}-yr average by calendar month · ${isPrice ? "avg monthly return" : "avg crack ($/bbl)"}`} action={<SourceTag live={live} source="yahoo" note="Average by calendar month over ~10y of Yahoo monthly closes (cracks: product − crude, $/bbl)." />}>Seasonality</SectionTitle>
+        <SectionTitle sub={`${s.years}-yr average by calendar month · ${isPrice ? "avg monthly return" : "avg crack ($/bbl)"}`} action={<SourceTag source="dataset" label="Dataset" note="Average by calendar month over the historical dataset (2021→present), collapsed to monthly closes (cracks: product − crude, $/bbl)." />}>Seasonality</SectionTitle>
         <div className="flex flex-col items-end gap-1">
           <div className="flex items-center gap-1 flex-wrap justify-end">{priceSeries.map((x) => <Btn key={x.id} x={x} />)}</div>
           <div className="flex items-center gap-1 flex-wrap justify-end">{crackSeries.map((x) => <Btn key={x.id} x={x} />)}</div>
@@ -83,6 +85,7 @@ export const SeasonalityPanel = () => {
       {/* Current-month readout */}
       <div className="px-4 pb-2 flex items-baseline gap-3 flex-wrap">
         <span className="text-[10px] uppercase tracking-wider text-zinc-500">{cm.m} (now)</span>
+        <AsOf date={data.asOf} className="ml-auto" />
         {isPrice ? (
           <span className="font-mono text-sm">
             <span className={cm.avgRet >= 0 ? "text-emerald-400" : "text-red-400"}>

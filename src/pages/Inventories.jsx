@@ -1,9 +1,11 @@
 import {
-  Line, Area, ComposedChart, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  Line, Area, ComposedChart, XAxis, YAxis, CartesianGrid, Tooltip,
 } from "recharts";
+import { ResponsiveContainer } from "../lib/ResponsiveContainer";
 import { Card } from "../components/primitives/Card";
 import { SectionTitle } from "../components/primitives/SectionTitle";
 import { SourceTag } from "../components/primitives/SourceTag";
+import { AsOf } from "../components/primitives/AsOf";
 import { Sourced } from "../components/primitives/Sourced";
 import { InventorySnap } from "../components/panels/InventorySnap";
 import { chartProps, ChartTooltip } from "../lib/chart-theme";
@@ -44,7 +46,7 @@ export const PageInventories = () => {
         <div className="col-span-12 lg:col-span-8 space-y-3">
           <Card padding={false}>
             <div className="p-4 pb-2">
-              <SectionTitle sub="52W vs 5-yr seasonal range" action={<SourceTag live={live} source="eia" note="EIA weekly U.S. crude stocks excl. SPR (WCESTUS1). Shaded band is the min–max across the 5 prior years for each week-of-year; dashed line is the 5-yr average." />}>US Crude Stocks</SectionTitle>
+              <SectionTitle sub="52W vs 5-yr seasonal range" action={<div className="flex items-center gap-2"><AsOf date={data.asOf} /><SourceTag live={live} source="eia" note="EIA weekly U.S. crude stocks excl. SPR (WCESTUS1). Shaded band is the min–max across the 5 prior years for each week-of-year; dashed line is the 5-yr average." /></div>}>US Crude Stocks</SectionTitle>
               {/* Legend */}
               <div className="mt-2 flex items-center flex-wrap gap-x-4 gap-y-1 text-[9px] uppercase tracking-wider text-zinc-500">
                 <span className="flex items-center gap-1.5"><span className="w-3 h-1.5 bg-sky-500/20 border-y border-sky-500/30" /> 5-yr range</span>

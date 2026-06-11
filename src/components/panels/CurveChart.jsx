@@ -1,21 +1,24 @@
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
 } from "recharts";
+import { ResponsiveContainer } from "../../lib/ResponsiveContainer";
 import { Card } from "../primitives/Card";
 import { SectionTitle } from "../primitives/SectionTitle";
 import { SourceTag } from "../primitives/SourceTag";
+import { AsOf } from "../primitives/AsOf";
 import { Sourced } from "../primitives/Sourced";
 import { FWD_CURVES } from "../../data/mock";
 import { chartProps, ChartTooltip } from "../../lib/chart-theme";
 import { fmt, fmtSigned } from "../../lib/format";
 import { useLive } from "../../lib/useLive";
 
-const REAL_NOTE = "Live forward curve — individual Yahoo dated-contract settlements (e.g. CLZ26), the genuine term structure.";
-const MODEL_NOTE = "Front month anchored to the live Yahoo quote; the term structure uses a curated slope (exchange settlement curves are paywalled).";
+const REAL_NOTE = "Live front month (Yahoo) carried along the real forward-curve structure from the historical dataset (M1–M12).";
+const MODEL_NOTE = "Front month anchored to the live Yahoo quote; the term structure uses a curated slope (no dataset curve for this instrument).";
 
-// Forward curves are REAL where Yahoo serves free dated contracts (Brent/WTI):
-// M1..M12 are consecutive contract settlements. If the backend can't resolve a
-// full curve it falls back to a modeled slope, flagged via `modeled`.
+// Forward curves carry the live Yahoo front along the REAL term structure from
+// the dataset (Brent/WTI/HO/Gas Oil): M1..M12 preserve the observed calendar
+// spreads, parallel-shifted onto today's front. Anything without a dataset curve
+// falls back to a modeled slope, flagged via `modeled`.
 // Backend: server/compute/markets.js → forwardCurves().
 export const CurveChart = () => {
   const { data: curves } = useLive("/api/curves", FWD_CURVES, useLive.REFRESH.slow);
@@ -25,9 +28,9 @@ export const CurveChart = () => {
   const wti = wtiCurve.data;
   const data = brent.map((p, i) => ({ m: p.m, brent: p.v, wti: wti[i]?.v }));
 
-  // Real when the backend served live dated-contract curves (modeled === false).
+  // Real when the backend served a dataset-backed curve (modeled === false).
   const real = brentCurve.modeled === false && wtiCurve.modeled === false;
-  const src = real ? "yahoo" : "modeled";
+  const src = real ? "dataset" : "modeled";
   const note = real ? REAL_NOTE : MODEL_NOTE;
 
   const bSlope = brent[0].v - brent.at(-1).v;
@@ -37,9 +40,12 @@ export const CurveChart = () => {
   return (
     <Card padding={false}>
       <div className="p-4 pb-2">
-        <SectionTitle sub="Front 12 months" action={real
-          ? <SourceTag live label="Live curve" source="yahoo" note={REAL_NOTE} />
-          : <SourceTag modeled label="Modeled curve" source="modeled" note={MODEL_NOTE} />}>Forward Curve Structure</SectionTitle>
+        <SectionTitle sub="Front 12 months · M1 live, structure from dataset" action={<div className="flex items-center gap-2">
+          {real && <AsOf date={brentCurve.structureAsOf} prefix="structure" />}
+          {real
+            ? <SourceTag live label="Live + dataset" source="dataset" note={REAL_NOTE} />
+            : <SourceTag modeled label="Modeled curve" source="modeled" note={MODEL_NOTE} />}
+        </div>}>Forward Curve Structure</SectionTitle>
       </div>
       <div className="h-48 px-2 pb-2">
         <ResponsiveContainer>

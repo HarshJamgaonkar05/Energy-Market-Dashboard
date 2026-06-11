@@ -13,7 +13,7 @@ import cors from "cors";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: join(__dirname, ".env") });
 
-import { instruments, ticker, movers, seriesAndCorrelation, cracks, forwardCurves, interSpreads, macro } from "./compute/markets.js";
+import { instruments, ticker, movers, seriesAndCorrelation, cracks, crackHistory, forwardCurves, interSpreads, macro } from "./compute/markets.js";
 import { calendar, opec, freight, rigs, sentiment } from "./compute/derive.js";
 import * as eia from "./sources/eia.js";
 import { weather, tempForecast } from "./sources/openmeteo.js";
@@ -87,6 +87,7 @@ app.get("/api/movers", route(async () => movers(await instruments()), "/api/move
 app.get("/api/series", route(async () => (await seriesAndCorrelation()).series, "/api/series"));
 app.get("/api/correlation", route(async () => (await seriesAndCorrelation()).correlation, "/api/correlation"));
 app.get("/api/cracks", route(async () => cracks(await instruments()), "/api/cracks"));
+app.get("/api/crackhistory", route(() => crackHistory(), "/api/crackhistory"));
 app.get("/api/curves", route(async () => {
   const instr = await instruments();
   return { ...(await forwardCurves(instr)), inter: interSpreads(instr) };
@@ -114,7 +115,9 @@ app.get("/api/calendar", route(async () => {
   return calendar(enrich);
 }, "/api/calendar"));
 app.get("/api/freight", route(() => freight(), "/api/freight"));
-app.get("/api/rigs", route(() => rigs(), "/api/rigs"));
+// Real EIA monthly rig count; falls back to the modeled 52-week series if the
+// EIA key is missing or the fetch fails.
+app.get("/api/rigs", route(async () => (await eia.rigs().catch(() => null)) ?? rigs(), "/api/rigs"));
 app.get("/api/storms", route(() => storms(), "/api/storms"));
 app.get("/api/enso", route(() => enso(), "/api/enso"));
 app.get("/api/cot", route(() => cot(), "/api/cot"));

@@ -202,5 +202,35 @@ export async function weeklyChanges() {
 export async function spot() {
   if (!eiaEnabled()) return null;
   const [wti, brent] = await Promise.all([series("PET.RWTC.D", 5), series("PET.RBRTE.D", 5)]);
-  return { wti: latest(wti), brent: latest(brent) };
+  return { wti: latest(wti), brent: latest(brent), asOf: wti?.at(-1)?.period ?? brent?.at(-1)?.period ?? null };
+}
+
+// ----------------------------------------------------------------------------
+// Real U.S. rig count — EIA's "Crude Oil and Natural Gas Drilling Activity"
+// (the official monthly count; Baker Hughes is the weekly source but has no free
+// API). Oil + gas rotary rigs in operation, last ~36 months. Monthly cadence, so
+// it lags the weekly BH headline by a few months — surfaced via `asOf`.
+// ----------------------------------------------------------------------------
+const fmtMonth = (period) => {
+  const [y, m] = period.split("-");
+  return `${["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][+m - 1]} '${y.slice(-2)}`;
+};
+export async function rigs() {
+  if (!eiaEnabled()) return null;
+  const [oil, gas] = await Promise.all([
+    series("PET.E_ERTRRO_XR0_NUS_C.M", 36),
+    series("PET.E_ERTRRG_XR0_NUS_C.M", 36),
+  ]);
+  if (!oil?.length) return null;
+  const gasMap = new Map((gas || []).map((r) => [r.period, r.value]));
+  const hist = oil.map((r) => ({ w: fmtMonth(r.period), oil: r.value, gas: gasMap.get(r.period) ?? null }));
+  const lastOil = oil.at(-1).value;
+  const prevOil = oil.length > 1 ? oil.at(-2).value : lastOil;
+  return {
+    modeled: false,
+    source: "eia",
+    asOf: oil.at(-1).period,
+    hist,
+    hero: { sym: "US OIL RIGS", name: "EIA · Rotary Rigs", val: lastOil, chg: +(lastOil - prevOil).toFixed(0), unit: "rigs", source: "eia" },
+  };
 }

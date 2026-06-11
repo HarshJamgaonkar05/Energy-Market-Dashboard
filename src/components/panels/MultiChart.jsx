@@ -1,35 +1,39 @@
 import { useState, useRef, useEffect } from "react";
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
 } from "recharts";
+import { ResponsiveContainer } from "../../lib/ResponsiveContainer";
 import { ChevronDown, Check } from "lucide-react";
 import { Card } from "../primitives/Card";
 import { SourceTag } from "../primitives/SourceTag";
+import { AsOf } from "../primitives/AsOf";
 import { MULTI_SERIES } from "../../data/mock";
 import { useLive } from "../../lib/useLive";
 import { chartProps, ChartTooltip } from "../../lib/chart-theme";
 
+// The dataset universe — WTI, Brent, Heating Oil, Gas Oil (no RBOB in the sheets).
 const SERIES = [
   { k: "Brent", name: "Brent Crude", c: "#f59e0b" },
   { k: "WTI", name: "WTI Crude", c: "#38bdf8" },
   { k: "HO", name: "Heating Oil", c: "#10b981" },
-  { k: "RBOB", name: "RBOB Gasoline", c: "#a78bfa" },
-  { k: "Gasoil", name: "ICE Gas Oil", c: "#f472b6" },
+  { k: "Gasoil", name: "Gas Oil", c: "#f472b6" },
 ];
 
-// Dropdown options: compare all five, or isolate a single instrument.
+// Dropdown options: compare all four, or isolate a single instrument.
 const VIEWS = [
-  { v: "all", label: "Compare All 5", c: null },
+  { v: "all", label: "Compare All", c: null },
   ...SERIES.map((s) => ({ v: s.k, label: s.name, c: s.c })),
 ];
 
-// Trailing window per range. The series is daily; the backend only carries
-// ~90 days (3M) of history, so 3M shows the whole window.
-const RANGE_POINTS = { "1W": 7, "1M": 30, "3M": Infinity };
+// Trailing window per range, in trading days. The dataset is daily and spans
+// 2021→present, so MAX shows the full multi-year history.
+const RANGE_POINTS = { "1M": 22, "3M": 66, "1Y": 252, "MAX": Infinity };
+const RANGES = ["1M", "3M", "1Y", "MAX"];
+const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 export const MultiChart = () => {
   const [view, setView] = useState("all");
-  const [on, setOn] = useState({ Brent: true, WTI: true, HO: true, RBOB: true, Gasoil: true });
+  const [on, setOn] = useState({ Brent: true, WTI: true, HO: true, Gasoil: true });
   const [range, setRange] = useState("3M");
   const [open, setOpen] = useState(false);
   const menuRef = useRef(null);
@@ -72,12 +76,15 @@ export const MultiChart = () => {
           <div>
             <h3 className="text-[11px] font-semibold tracking-[0.12em] text-zinc-300 uppercase inline-flex items-center gap-2">
               Price Action — Normalized
-              <SourceTag live={live} source="yahoo" note="Yahoo Finance daily closes, indexed to 100 at the start of the window." />
+              <SourceTag source="dataset" label="Dataset" note="Daily front-month closes from the historical dataset (2021→present), indexed to 100 at the start of the window." />
             </h3>
-            <p className="text-[10px] text-zinc-600 mt-0.5">Indexed to 100 at start of window</p>
+            <p className="text-[10px] text-zinc-600 mt-0.5 flex items-center gap-2">
+              <span>Indexed to 100 at start of window · daily closes</span>
+              <AsOf date={series.at(-1)?.date} prefix="through" />
+            </p>
           </div>
           <div className="flex items-center gap-1">
-            {["1W", "1M", "3M"].map((r) => (
+            {RANGES.map((r) => (
               <button
                 key={r}
                 onClick={() => setRange(r)}
@@ -149,7 +156,18 @@ export const MultiChart = () => {
         <ResponsiveContainer>
           <LineChart data={windowed} margin={{ top: 8, right: 20, bottom: 6, left: 0 }}>
             <CartesianGrid {...chartProps.grid} />
-            <XAxis dataKey="date" {...chartProps.axis} interval={tickInterval} />
+            <XAxis
+              dataKey="date"
+              {...chartProps.axis}
+              interval={tickInterval}
+              tickFormatter={(iso) => {
+                const d = new Date(iso);
+                if (Number.isNaN(d.getTime())) return iso;
+                return range === "1M" || range === "3M"
+                  ? `${d.getUTCDate()} ${MON[d.getUTCMonth()]}`
+                  : `${MON[d.getUTCMonth()]} '${String(d.getUTCFullYear()).slice(-2)}`;
+              }}
+            />
             <YAxis {...chartProps.axis} domain={["auto", "auto"]} width={40} />
             <Tooltip content={<ChartTooltip source="yahoo" />} />
             {visible.map(({ k, c }) => (

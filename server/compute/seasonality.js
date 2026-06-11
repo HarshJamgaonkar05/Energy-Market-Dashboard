@@ -1,26 +1,38 @@
 // ============================================================================
-// Seasonality — average behaviour by calendar month, computed from ~10 years of
-// Yahoo monthly closes. Energy is the most seasonal commodity complex, so this
-// answers two questions traders ask constantly:
+// Seasonality — average behaviour by calendar month, computed from the
+// proprietary dataset's daily closes (server/data/history.json), collapsed to
+// monthly. Energy is the most seasonal commodity complex, so this answers two
+// questions traders ask constantly:
 //
-//   • PRICE:  what does WTI/Brent/RBOB/HO typically do each month, and where are
-//             we vs the "typical" seasonal path? → average month-over-month
+//   • PRICE:  what does WTI/Brent/HO/Gas Oil typically do each month, and where
+//             are we vs the "typical" seasonal path? → average month-over-month
 //             return per calendar month + a hit rate (% of years positive) + a
 //             cumulative seasonal path indexed to 100.
-//   • CRACK:  refining margins are strongly seasonal (gasoline crack peaks into
-//             summer driving season; heating-oil crack into winter). → average
-//             crack LEVEL ($/bbl) per calendar month, from aligned monthly
-//             product/crude closes, plus the latest value vs its monthly norm.
+//   • CRACK:  refining margins are strongly seasonal (heating-oil / gas-oil
+//             cracks firm into winter). → average crack LEVEL ($/bbl) per
+//             calendar month from aligned monthly product/crude closes, plus the
+//             latest value vs its monthly norm.
 //
-// This reuses the same "average across prior years per calendar period" idea as
-// the EIA 5-year inventory band, extended from weeks to months and to prices.
-// Cached 12h (monthly bars move slowly).
+// Dataset universe: WTI, Brent, Heating Oil, Gas Oil (no RBOB), 2021→present, so
+// the cracks shown are the distillate cracks. Cached 12h (monthly bars move
+// slowly).
 // ============================================================================
-import { monthlyCloses } from "../sources/yahoo.js";
 import { cached } from "../lib/cache.js";
+import * as history from "../lib/history.js";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-const GAL = 42; // $/gal → $/bbl for the refined products
+const GAL = 42;          // $/gal → $/bbl  (Heating Oil)
+const BBL_PER_MT = 7.45; // Gas Oil: $/mt → $/bbl is ÷ 7.45
+
+// Collapse chronological daily closes to one close per calendar month (the
+// month's last observation) → [{ date, close }].
+function monthlyFromDaily(daily) {
+  const byMonth = new Map();
+  for (const p of daily) {
+    byMonth.set(`${p.date.getUTCFullYear()}-${p.date.getUTCMonth()}`, { date: p.date, close: p.close });
+  }
+  return [...byMonth.values()].sort((a, b) => a.date - b.date);
+}
 
 // Average month-over-month % return per calendar month, with a hit rate and a
 // cumulative "typical path" indexed to 100 at the start of the year.
@@ -79,36 +91,35 @@ function crackMonths(rows, fn) {
 
 export async function seasonality() {
   return cached("seasonality:all", 12 * 60 * 60_000, async () => {
-    const [wti, brent, rbob, ho] = await Promise.all([
-      monthlyCloses("CL=F"),
-      monthlyCloses("BZ=F"),
-      monthlyCloses("RB=F"),
-      monthlyCloses("HO=F"),
-    ]);
+    const monthly = Object.fromEntries(
+      history.HISTORY_IDS.map((id) => [id, monthlyFromDaily(history.dailyCloses(id))])
+    );
+    const { wti, brent, ho, gasoil } = monthly;
     const nowM = new Date().getUTCMonth();
+    const yearsOf = (s) => Math.max(1, Math.round(s.length / 12));
 
     const price = (id, label, s) => ({
       id, kind: "price", label, unit: "%",
-      months: priceMonths(s), currentMonth: nowM, years: Math.round(s.length / 12),
+      months: priceMonths(s), currentMonth: nowM, years: yearsOf(s),
     });
 
-    // Cracks are vs WTI, products converted $/gal → $/bbl.
-    const rows = align({ wti, rbob, ho });
+    // Cracks: product − crude in $/bbl, from aligned monthly closes.
+    const rows = align({ wti, brent, ho, gasoil });
     const crack = (id, label, fn) => ({
       id, kind: "crack", label, unit: "$/bbl",
-      ...crackMonths(rows, fn), currentMonth: nowM, years: Math.round(rows.length / 12),
+      ...crackMonths(rows, fn), currentMonth: nowM, years: Math.max(1, Math.round(rows.length / 12)),
     });
 
     const series = [
       price("WTI", "WTI Crude", wti),
       price("BRENT", "Brent Crude", brent),
-      price("RBOB", "RBOB Gasoline", rbob),
       price("HO", "Heating Oil", ho),
-      crack("RBOB-WTI", "RBOB Crack", (r) => r.rbob * GAL - r.wti),
-      crack("HO-WTI", "Heating Oil Crack", (r) => r.ho * GAL - r.wti),
-      crack("321-WTI", "3:2:1 Crack", (r) => (2 * r.rbob * GAL + r.ho * GAL - 3 * r.wti) / 3),
+      price("GASOIL", "Gas Oil", gasoil),
+      crack("HO-WTI", "HO Crack · WTI", (r) => r.ho * GAL - r.wti),
+      crack("HO-BRENT", "HO Crack · Brent", (r) => r.ho * GAL - r.brent),
+      crack("GASOIL-BRENT", "Gas Oil Crack · Brent", (r) => r.gasoil / BBL_PER_MT - r.brent),
     ];
 
-    return { series, asOf: rows.at(-1)?.date?.toISOString?.().slice(0, 10) ?? null };
+    return { series, asOf: rows.at(-1)?.date?.toISOString?.().slice(0, 10) ?? history.historyMeta().asOf };
   });
 }

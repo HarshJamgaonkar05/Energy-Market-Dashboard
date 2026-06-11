@@ -1,16 +1,20 @@
-import { useState } from "react";
+import { useState, lazy, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Wifi, WifiOff } from "lucide-react";
 import { Sidebar } from "./components/layout/Sidebar";
 import { TopBar } from "./components/layout/TopBar";
-import { PageDashboard } from "./pages/Dashboard";
-import { PageAnalytics } from "./pages/Analytics";
-import { PageDrivers } from "./pages/Drivers";
-import { PageInventories } from "./pages/Inventories";
-import { PageNews } from "./pages/News";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import { AlertsProvider } from "./lib/alerts";
 import { ToastHost } from "./components/alerts/ToastHost";
 import { useLive } from "./lib/useLive";
+
+// Pages are code-split (lazy) so the initial load only ships the Dashboard +
+// shared chart vendor; the other views download on first visit.
+const PageDashboard = lazy(() => import("./pages/Dashboard").then((m) => ({ default: m.PageDashboard })));
+const PageAnalytics = lazy(() => import("./pages/Analytics").then((m) => ({ default: m.PageAnalytics })));
+const PageDrivers = lazy(() => import("./pages/Drivers").then((m) => ({ default: m.PageDrivers })));
+const PageInventories = lazy(() => import("./pages/Inventories").then((m) => ({ default: m.PageInventories })));
+const PageNews = lazy(() => import("./pages/News").then((m) => ({ default: m.PageNews })));
 
 const PAGES = {
   dashboard: { title: "Dashboard", el: PageDashboard },
@@ -19,6 +23,19 @@ const PAGES = {
   inventories: { title: "Inventories & Storage", el: PageInventories },
   news: { title: "News & Sentiment", el: PageNews },
 };
+
+// Lightweight loading skeleton shown while a page chunk loads.
+const PageSkeleton = () => (
+  <div className="space-y-3 animate-pulse">
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-px bg-[#1c1d22]">
+      {Array.from({ length: 5 }).map((_, i) => <div key={i} className="h-20 bg-[#0e0f12]" />)}
+    </div>
+    <div className="grid grid-cols-12 gap-3">
+      <div className="col-span-12 lg:col-span-8 h-72 bg-[#0e0f12] border border-[#1c1d22]" />
+      <div className="col-span-12 lg:col-span-4 h-72 bg-[#0e0f12] border border-[#1c1d22]" />
+    </div>
+  </div>
+);
 
 // ============================================================================
 // APP ROOT
@@ -63,7 +80,11 @@ export default function App() {
               exit={{ opacity: 0, y: -6 }}
               transition={{ duration: 0.18 }}
             >
-              <Page />
+              <ErrorBoundary resetKey={active}>
+                <Suspense fallback={<PageSkeleton />}>
+                  <Page />
+                </Suspense>
+              </ErrorBoundary>
             </motion.div>
           </AnimatePresence>
         </main>

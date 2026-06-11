@@ -44,6 +44,11 @@ export const SOURCES = {
     detail: "ProsusAI/finbert — a financial-language model scoring each headline positive/negative/neutral, run locally (Transformers.js).",
     kind: "derived",
   },
+  dataset: {
+    label: "Historical dataset",
+    detail: "Proprietary 1-minute term-structure history (2021→present), distilled to daily front-month closes & real forward curves.",
+    kind: "dataset",
+  },
   derived: {
     label: "Derived",
     detail: "Computed on the server from live feeds.",
@@ -70,6 +75,7 @@ export const SOURCES = {
 export const KIND_COLOR = {
   live: "#10b981",
   official: "#38bdf8",
+  dataset: "#e879f9",
   derived: "#a78bfa",
   modeled: "#f59e0b",
   curated: "#f59e0b",

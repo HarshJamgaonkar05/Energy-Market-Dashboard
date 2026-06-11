@@ -1,6 +1,7 @@
 import {
-  LineChart, Line, AreaChart, Area, Bar, ComposedChart, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine,
+  LineChart, Line, AreaChart, Area, Bar, ComposedChart, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine,
 } from "recharts";
+import { ResponsiveContainer } from "../lib/ResponsiveContainer";
 import { TrendingUp, Anchor, CloudSnow, Wind, Gauge, Activity } from "lucide-react";
 import { Card } from "../components/primitives/Card";
 import { Band } from "../components/primitives/Band";
@@ -63,6 +64,8 @@ export const PageDrivers = () => {
   const { data: weather } = useLive("/api/weather", WEATHER_FALLBACK, useLive.REFRESH.hourly);
   const { data: opecData } = useLive("/api/opec", OPEC_FALLBACK, useLive.REFRESH.slow);
   const { data: rigsData } = useLive("/api/rigs", RIGS_FALLBACK, useLive.REFRESH.slow);
+  const rigsReal = rigsData.modeled === false;
+  const rigSpark = (rigsData.hist || []).slice(-24).map((d, i) => ({ x: i, y: d.oil }));
   const { data: stockFlows } = useLive("/api/stockflows", STOCK_FLOWS, useLive.REFRESH.hourly);
   const { data: inv } = useLive("/api/inventories", { heroes: [] }, useLive.REFRESH.hourly);
   const { data: ensoData } = useLive("/api/enso", ENSO_FALLBACK, useLive.REFRESH.hourly);
@@ -142,7 +145,7 @@ export const PageDrivers = () => {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-[#1c1d22]">
           {[
             { sym: "OPEC+ COMP", name: "Quota Compliance", val: opecComp, chg: null, pct: null, spark: genSpark(81, 30, 1), unit: "%", source: "curated", sourceNote: "Quota ÷ output, from curated OPEC+ policy targets & recent output estimates. Week-over-week change has no free source." },
-            { sym: "US OIL RIGS", name: "Baker Hughes", val: rigsData.hero?.val ?? 497, chg: rigsData.hero?.chg ?? -3, pct: -0.6, spark: genSpark(82, 30, -1), unit: "rigs", modeled: true },
+            { sym: "US OIL RIGS", name: rigsData.hero?.name ?? "Baker Hughes", val: rigsData.hero?.val ?? 497, chg: rigsData.hero?.chg ?? -3, pct: null, spark: rigsReal && rigSpark.length ? rigSpark : genSpark(82, 30, -1), unit: "rigs", source: rigsReal ? "eia" : "modeled", modeled: !rigsReal, sourceNote: rigsReal ? `U.S. oil rotary rigs in operation — EIA monthly drilling-activity report${rigsData.asOf ? ` · as of ${rigsData.asOf}` : ""}.` : undefined },
             { sym: "US CRUDE STK", name: "EIA Commercial", val: crudeStk?.val ?? 429.1, chg: crudeStk?.chg ?? -4.2, pct: crudeStk?.pct ?? -0.97, spark: genSpark(83, 30, -1), unit: "MMbbl", source: "eia", sourceNote: "U.S. commercial crude stocks excl. SPR (WCESTUS1) · EIA weekly." },
             { sym: "OPEC+ SPARE", name: "Spare Capacity", val: 4.21, chg: -0.12, pct: -2.77, spark: genSpark(84, 30, -1), unit: "mb/d", modeled: true },
           ].map((d) => <HeroCard key={d.sym} d={d} />)}
@@ -171,7 +174,9 @@ export const PageDrivers = () => {
           </Card>
 
           <Card padding={false} className="col-span-12 lg:col-span-4">
-            <div className="p-4 pb-2"><SectionTitle sub="Baker Hughes · 52W" action={<SourceTag modeled label="Modeled" source="modeled" note="Baker Hughes publishes the rig count as Excel only (no API), so the 52-week series is modeled." />}>Rig Count</SectionTitle></div>
+            <div className="p-4 pb-2"><SectionTitle sub={rigsReal ? `EIA · monthly · oil & gas${rigsData.asOf ? ` · ${rigsData.asOf}` : ""}` : "Baker Hughes · 52W"} action={rigsReal
+              ? <SourceTag live label="EIA" source="eia" note={`U.S. oil & gas rotary rigs in operation — EIA monthly drilling-activity report (the official count; Baker Hughes is weekly but has no free API)${rigsData.asOf ? ` · as of ${rigsData.asOf}` : ""}.`} />
+              : <SourceTag modeled label="Modeled" source="modeled" note="Baker Hughes publishes the rig count as Excel only (no API), so the 52-week series is modeled." />}>Rig Count</SectionTitle></div>
             <div className="h-60 px-2 pb-2">
               <ResponsiveContainer>
                 <ComposedChart data={rigsData.hist || RIG_COUNT}>
@@ -185,7 +190,7 @@ export const PageDrivers = () => {
                   <XAxis dataKey="w" {...chartProps.axis} tick={false} />
                   <YAxis yAxisId="L" {...chartProps.axis} width={34} domain={["auto", "auto"]} />
                   <YAxis yAxisId="R" {...chartProps.axis} orientation="right" width={30} domain={["auto", "auto"]} />
-                  <Tooltip content={<ChartTooltip source="modeled" />} />
+                  <Tooltip content={<ChartTooltip source={rigsReal ? "eia" : "modeled"} />} />
                   <Area yAxisId="L" type="monotone" dataKey="oil" stroke="#f59e0b" strokeWidth={1.4} fill="url(#rigFill)" name="Oil" isAnimationActive={false} />
                   <Line yAxisId="R" type="monotone" dataKey="gas" stroke="#38bdf8" strokeWidth={1.2} dot={false} name="Gas" isAnimationActive={false} />
                 </ComposedChart>

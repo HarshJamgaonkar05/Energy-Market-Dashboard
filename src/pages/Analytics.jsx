@@ -1,7 +1,8 @@
 import { useState, useMemo } from "react";
 import {
-  AreaChart, Area, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine,
+  AreaChart, Area, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine,
 } from "recharts";
+import { ResponsiveContainer } from "../lib/ResponsiveContainer";
 import { GitBranch, Layers, Grid3x3, CalendarRange } from "lucide-react";
 import { Card } from "../components/primitives/Card";
 import { Band } from "../components/primitives/Band";
@@ -36,23 +37,35 @@ const CURVES_FALLBACK = { ...FWD_CURVES, inter: INTER_FALLBACK, modeled: false }
 const CrackSpreads = () => {
   const [id, setId] = useState("321-wti");
   const { data: cracks, live } = useLive("/api/cracks", CRACKS_FALLBACK);
+  const { data: chist } = useLive("/api/crackhistory", {}, useLive.REFRESH.slow);
 
   const crack = cracks.find((c) => c.id === id) || cracks[0];
   const idx = cracks.findIndex((c) => c.id === id);
   const value = crack.value;
 
+  // Real daily crack history where the backend has it; else the synthetic placeholder.
+  const real = chist[id]?.points;
+  const isReal = Array.isArray(real) && real.length > 1;
   const hist = useMemo(
-    () => genAround(900 + idx, 60, value, Math.max(1, Math.abs(value) * 0.07)),
-    [id, value]
+    () => (isReal
+      ? real.map((p, i) => ({ t: i, v: p.v, date: p.t }))
+      : genAround(900 + idx, 60, value, Math.max(1, Math.abs(value) * 0.07))),
+    [id, value, isReal, real]
   );
+  const histSrc = isReal ? (chist[id].source || "dataset") : "modeled";
+  const winLbl = isReal ? (hist.length >= 230 ? "1y" : `${hist.length}d`) : "60d";
 
-  const first = hist[0].v;
+  const vals = hist.map((p) => p.v);
+  const first = vals[0];
   const chg = value - first;
-  const pct = (chg / Math.abs(first)) * 100;
-  const lo = Math.min(...hist.map((p) => p.v));
-  const hi = Math.max(...hist.map((p) => p.v));
-  const avg = hist.reduce((s, p) => s + p.v, 0) / hist.length;
+  const lo = Math.min(...vals);
+  const hi = Math.max(...vals);
+  const avg = vals.reduce((s, v) => s + v, 0) / vals.length;
   const up = chg >= 0;
+  // Statistical context: where the live value sits within its own history.
+  const std = Math.sqrt(vals.reduce((s, v) => s + (v - avg) ** 2, 0) / vals.length) || 1;
+  const z = (value - avg) / std;
+  const pctile = Math.round((vals.filter((v) => v <= value).length / vals.length) * 100);
 
   const groups = ["Product Cracks", "Refining Margins"];
 
@@ -106,14 +119,25 @@ const CrackSpreads = () => {
                   $<Sourced source="derived" note={`${crack.legsLabel} · live crack value ($/bbl) from Yahoo quotes`} align="start">{fmt(value)}</Sourced>
                 </span>
                 <span className="text-[10px] text-zinc-600">/bbl</span>
-                <span className="font-mono text-[11px] text-zinc-600">
-                  <Sourced source="modeled" note="No free intraday crack-history source for the 60-day change." align="start" /> · 60d
+                <span className={`font-mono text-[11px] ${up ? "text-emerald-400" : "text-red-400"}`}>
+                  <Sourced source={histSrc} note={`Change over the ${winLbl} ${isReal ? "real" : "modeled"} history`} align="start">{fmtSigned(chg)}</Sourced>
+                  <span className="text-zinc-600"> · {winLbl}</span>
                 </span>
               </div>
             </div>
-            <span className="text-[9px] font-mono text-zinc-600 hidden sm:block">
-              {crack.legsLabel}
-            </span>
+            {/* Statistical context — where the live value sits in its own history */}
+            {isReal && (
+              <div className="text-right hidden sm:block">
+                <div className="text-[9px] uppercase tracking-wider text-zinc-600">vs {winLbl} range</div>
+                <div className="font-mono text-[12px]">
+                  <Sourced source={histSrc} note={`Live value's percentile within its ${winLbl} history`} align="end">
+                    <span className={pctile >= 80 ? "text-amber-400" : pctile <= 20 ? "text-sky-400" : "text-zinc-200"}>{pctile}ᵗʰ pct</span>
+                  </Sourced>
+                  <span className="text-zinc-600"> · </span>
+                  <span className={Math.abs(z) >= 1.5 ? "text-amber-400" : "text-zinc-400"}>{fmtSigned(z, 1)}σ</span>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="h-52">
@@ -126,9 +150,9 @@ const CrackSpreads = () => {
                   </linearGradient>
                 </defs>
                 <CartesianGrid {...chartProps.grid} />
-                <XAxis dataKey="t" {...chartProps.axis} />
+                <XAxis dataKey="t" {...chartProps.axis} tickFormatter={(i) => (isReal && hist[i]?.date ? hist[i].date.slice(5) : i)} minTickGap={28} />
                 <YAxis {...chartProps.axis} width={40} domain={["auto", "auto"]} />
-                <Tooltip content={<ChartTooltip unit=" $/bbl" />} />
+                <Tooltip content={<ChartTooltip unit=" $/bbl" source={histSrc} />} />
                 <ReferenceLine y={avg} stroke="#3a3b41" strokeDasharray="3 3" label={{ value: "avg", fill: "#71717a", fontSize: 9, position: "right" }} />
                 <Area type="monotone" dataKey="v" name={crack.label} stroke="#f59e0b" strokeWidth={1.5} fill="url(#crackFill)" isAnimationActive={false} />
               </AreaChart>
@@ -137,14 +161,14 @@ const CrackSpreads = () => {
 
           <div className="grid grid-cols-3 gap-3 mt-3 pt-3 border-t border-[#1c1d22]">
             {[
-              { l: "60d Low", v: `$${fmt(lo)}` },
-              { l: "60d Avg", v: `$${fmt(avg)}` },
-              { l: "60d High", v: `$${fmt(hi)}` },
+              { l: `${winLbl} Low`, v: `$${fmt(lo)}` },
+              { l: `${winLbl} Avg`, v: `$${fmt(avg)}` },
+              { l: `${winLbl} High`, v: `$${fmt(hi)}` },
             ].map((s) => (
               <div key={s.l}>
                 <div className="text-[9px] text-zinc-600 uppercase tracking-wider">{s.l}</div>
                 <div className="font-mono text-[13px] text-zinc-200">
-                  <Sourced source="modeled" note="60-day range is modeled around the live crack print" align="start">{s.v}</Sourced>
+                  <Sourced source={histSrc} note={isReal ? `${winLbl} range from the real daily crack history` : "Range modeled around the live crack print"} align="start">{s.v}</Sourced>
                 </div>
               </div>
             ))}
@@ -166,13 +190,13 @@ const FuturesSpreads = () => {
   const d = curve.data;
   const inter = curves.inter || INTER_FALLBACK;
 
-  // Provenance: Brent/WTI/HO/RBOB are real Yahoo dated-contract curves
-  // (modeled === false); Gas Oil is proxied (source "derived"); a failed fetch
-  // falls back to the modeled slope.
+  // Provenance: WTI/Brent/HO/Gas Oil curves carry the live Yahoo front along the
+  // real term structure from the dataset (modeled === false, source "dataset").
+  // RBOB has no dataset curve, so it falls back to the modeled slope.
   const isLive = curve.modeled === false;
   const src = curve.source || "modeled";
   const curveNote = curve.sourceNote
-    || (isLive ? "Live Yahoo dated-contract settlements (M1–M12)." : "Front month anchored to the live Yahoo quote; term structure uses a curated slope (settlement curves are paywalled).");
+    || (isLive ? "Live front month (Yahoo) carried along the real dataset forward-curve structure (M1–M12)." : "Front month anchored to the live Yahoo quote; term structure uses a curated slope (no dataset curve for this instrument).");
 
   const cal = [
     { lbl: "M1–M2", v: d[0].v - d[1].v },
@@ -190,8 +214,8 @@ const FuturesSpreads = () => {
           <div>
             <div className="text-[11px] font-semibold tracking-[0.12em] text-zinc-300 uppercase inline-flex items-center gap-2">
               Forward Curve {isLive
-                ? <SourceTag live label="Live curve" source="yahoo" note={curveNote} />
-                : <SourceTag modeled label={src === "derived" ? "Proxied" : "Modeled curve"} source={src} note={curveNote} />}
+                ? <SourceTag live label={src === "yahoo" ? "Live curve" : "Live + dataset"} source={src} note={curveNote} />
+                : <SourceTag modeled label="Modeled curve" source={src} note={curveNote} />}
             </div>
             <div className="text-[10px] text-zinc-600 mt-0.5">{curve.label} · M1–M12 · {curve.unit}</div>
           </div>
@@ -239,7 +263,7 @@ const FuturesSpreads = () => {
               <span className="text-[11px] text-zinc-300 font-mono">{s.lbl}</span>
               <div className="flex items-center gap-2">
                 <span className={`font-mono text-[11px] ${s.v >= 0 ? "text-emerald-400" : "text-sky-400"}`}>
-                  <Sourced source="modeled" note="Calendar spread off the modeled forward curve" align="end">{fmtSigned(s.v, curve.unit === "$/gal" ? 4 : 3)}</Sourced>
+                  <Sourced source={src} note={`Calendar spread (Mₐ−Mᵦ) computed from the ${isLive ? "real" : "modeled"} forward curve`} align="end">{fmtSigned(s.v, curve.unit === "$/gal" ? 4 : 3)}</Sourced>
                 </span>
                 <span className="text-[9px] uppercase tracking-wider text-zinc-600 w-16 text-right">{s.v >= 0 ? "Backwrd" : "Contango"}</span>
               </div>
@@ -294,7 +318,7 @@ const CorrelationInsight = () => {
           <div className="flex items-baseline justify-between">
             <span className="text-[12px] text-zinc-200">{strongest.a} · {strongest.b}</span>
             <span className="font-mono text-[13px] text-emerald-400">
-              <Sourced source="derived" note="Highest 30D return correlation in the matrix (Yahoo closes)" align="end">{strongest.v.toFixed(2)}</Sourced>
+              <Sourced source="dataset" note="Highest 30D return correlation in the matrix (dataset daily closes)" align="end">{strongest.v.toFixed(2)}</Sourced>
             </span>
           </div>
         </div>
@@ -303,14 +327,14 @@ const CorrelationInsight = () => {
           <div className="flex items-baseline justify-between">
             <span className="text-[12px] text-zinc-200">{weakest.a} · {weakest.b}</span>
             <span className="font-mono text-[13px] text-amber-400">
-              <Sourced source="derived" note="Lowest 30D return correlation in the matrix (Yahoo closes)" align="end">{weakest.v.toFixed(2)}</Sourced>
+              <Sourced source="dataset" note="Lowest 30D return correlation in the matrix (dataset daily closes)" align="end">{weakest.v.toFixed(2)}</Sourced>
             </span>
           </div>
         </div>
         <p className="text-[10px] text-zinc-500 leading-relaxed pt-2 border-t border-[#1c1d22]">
-          Crudes move near-lockstep; the two middle distillates (Heating Oil &amp; Gas Oil)
-          are the most correlated product pair. RBOB is the loosest fit — a light,
-          seasonally-driven product whose crack swings independently.
+          WTI and Brent move near-lockstep; the two middle distillates (Heating Oil &amp;
+          Gas Oil) are the most correlated product pair. Crude–distillate correlation
+          loosens whenever refining margins swing on their own.
         </p>
         <div className="flex items-center gap-3 pt-1 text-[9px] uppercase tracking-wider">
           <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 bg-emerald-500/70" /> <span className="text-zinc-400">Positive</span></span>
@@ -327,13 +351,13 @@ export const PageAnalytics = () => (
     <Band icon={Layers} title="Crack Spreads" sub="Refining margins across the five instruments" />
     <CrackSpreads />
 
-    <Band icon={CalendarRange} title="Seasonality" sub="Typical move by calendar month · ~10y · price & cracks" />
+    <Band icon={CalendarRange} title="Seasonality" sub="Typical move by calendar month · 2021→present · price & cracks" />
     <SeasonalityPanel />
 
     <Band icon={GitBranch} title="Futures Spreads" sub="Forward curves · calendar & inter-commodity" />
     <FuturesSpreads />
 
-    <Band icon={Grid3x3} title="Correlation Matrix" sub="30D rolling · Brent · WTI · HO · RBOB · Gas Oil" />
+    <Band icon={Grid3x3} title="Correlation Matrix" sub="30D rolling · WTI · Brent · HO · Gas Oil" />
     <div className="grid grid-cols-12 gap-3">
       <div className="col-span-12 lg:col-span-8">
         <Heatmap title={null} />

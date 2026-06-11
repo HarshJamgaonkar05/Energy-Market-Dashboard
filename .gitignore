@@ -15,6 +15,11 @@ dist-ssr
 .env
 server/.env
 
+# Raw 1-min CSV history (multi-GB) — distilled into server/data/history.json.
+# Anchored to repo root so it does NOT also ignore server/data/ on
+# case-insensitive filesystems (Windows/macOS).
+/Data/
+
 # Editor
 .vscode/*
 !.vscode/extensions.json
