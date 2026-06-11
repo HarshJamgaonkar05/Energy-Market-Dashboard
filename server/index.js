@@ -6,6 +6,7 @@
 // ============================================================================
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
+import { existsSync } from "node:fs";
 import dotenv from "dotenv";
 import express from "express";
 import cors from "cors";
@@ -129,6 +130,17 @@ app.get("/api/sentiment", route(async () => {
 
 // JSON 404 for any other /api path (so the SPA proxy never gets HTML back).
 app.use("/api", (_req, res) => res.status(404).json({ error: "unknown endpoint" }));
+
+// In production we serve the built frontend (Vite `dist/`) from this same server,
+// so the whole app is one origin (no CORS, one URL). In dev there is no `dist/`
+// and Vite serves the UI on :5173 + proxies /api here — so this block is skipped.
+const distDir = join(__dirname, "..", "dist");
+if (existsSync(distDir)) {
+  app.use(express.static(distDir));
+  // SPA fallback: any non-/api route returns index.html.
+  app.get("*", (_req, res) => res.sendFile(join(distDir, "index.html")));
+  console.log("  Serving built frontend from /dist");
+}
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {

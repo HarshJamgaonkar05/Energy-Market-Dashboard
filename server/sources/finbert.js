@@ -21,7 +21,10 @@ const scoreCache = new Map();
 const MAX_CACHE = 2000;
 
 let classifierPromise = null; // singleton; null until first use, then a Promise
-let disabled = false; // set true if the model fails to load — stop retrying
+// Set FINBERT_DISABLE=1 to skip the ML model entirely (e.g. on a small free host
+// that can't fit it) — news sentiment then uses the keyword fallback. Also set
+// automatically if the model fails to load, to stop retrying.
+let disabled = ["1", "true", "yes"].includes((process.env.FINBERT_DISABLE || "").toLowerCase());
 
 // Lazily build the text-classification pipeline exactly once. We import
 // @huggingface/transformers dynamically so a missing/broken install can't crash
