@@ -46,6 +46,10 @@ async function getClassifier() {
     // Go straight to the HF hub on first run (skip the local-model probe that
     // otherwise logs a warning), then rely on the on-disk cache.
     env.allowLocalModels = false;
+    // In a container the default cache dir may be read-only; point it at a
+    // writable path when TRANSFORMERS_CACHE is set (see Dockerfile). No effect
+    // locally where the var is unset.
+    if (process.env.TRANSFORMERS_CACHE) env.cacheDir = process.env.TRANSFORMERS_CACHE;
     // Try the small quantized weights first; fall back to default precision.
     try {
       return await pipeline("text-classification", MODEL, { dtype: "q8" });

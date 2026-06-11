@@ -1,3 +1,13 @@
+---
+title: Voltaire Energy Terminal
+emoji: ⚡
+colorFrom: yellow
+colorTo: red
+sdk: docker
+app_port: 7860
+pinned: false
+---
+
 # VOLTAIRE Terminal
 
 Institutional-grade Energy Markets Intelligence Dashboard, wired to **live, free, open data sources** through a lightweight Node backend.

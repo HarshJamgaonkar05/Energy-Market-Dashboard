@@ -1,0 +1,9 @@
+# Keep the Docker build context small and secret-free.
+node_modules
+dist
+Data
+server/.env
+.env
+.git
+*.log
+npm-debug.log*
