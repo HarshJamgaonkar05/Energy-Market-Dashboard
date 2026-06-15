@@ -1,0 +1,11 @@
+# Phase 2 analytics batch layer. Install into a venv:
+#   python -m venv analytics/.venv
+#   analytics/.venv/Scripts/pip install -r analytics/requirements.txt   (Windows)
+#   analytics/.venv/bin/pip   install -r analytics/requirements.txt      (macOS/Linux)
+pandas>=2.1
+numpy>=1.26
+requests>=2.31
+pyarrow>=14.0       # parquet I/O for the intermediate feature panel
+scikit-learn>=1.4   # ridge / lasso / k-means (P2.2+)
+statsmodels>=0.14   # OLS, rolling regression diagnostics (P2.2+)
+hmmlearn>=0.3       # HMM regime cross-check (P2.4)

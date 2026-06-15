@@ -8,13 +8,18 @@ import { useLive } from "../../lib/useLive";
 
 // Live financial newswire — Financial Juice RSS (see server/sources/financialjuice.js).
 // Falls back to the seeded NEWS headlines if the backend or feed is unreachable.
-export const NewsPanel = ({ compact = false }) => {
+// In `compact` mode (side rails) we cap the list to the freshest few. In `fill`
+// mode (the Dashboard right rail) the panel stretches to fill the column height
+// and scrolls through the whole wire, so no blank space is left below it.
+export const NewsPanel = ({ compact = false, fill = false, limit }) => {
   const { data: news, live } = useLive("/api/news", NEWS, useLive.REFRESH.slow);
+  const max = limit ?? (fill ? Infinity : compact ? 5 : Infinity);
+  const items = Number.isFinite(max) ? news.slice(0, max) : news;
 
   return (
-    <Card padding={false} className="flex flex-col">
+    <Card padding={false} className={`flex flex-col ${fill ? "flex-1 min-h-0" : ""}`}>
       <div className="p-4 pb-2 flex-shrink-0">
-        <SectionTitle sub="Live wire">
+        <SectionTitle sub={compact ? "Live wire" : `Live wire · ${news.length} headlines`}>
           <span className="inline-flex items-center gap-1.5">
             Breaking News
             <Circle size={5} fill={live ? "#10b981" : "#ef4444"} className="animate-pulse" />
@@ -38,7 +43,7 @@ export const NewsPanel = ({ compact = false }) => {
         )}
       </div>
       <div className="flex-1 overflow-y-auto px-1 pb-1">
-        {news.map((n, i) => (
+        {items.map((n, i) => (
           <motion.a
             key={i}
             href={n.url || undefined}

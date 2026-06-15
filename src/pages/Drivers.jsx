@@ -8,6 +8,7 @@ import { Band } from "../components/primitives/Band";
 import { SectionTitle } from "../components/primitives/SectionTitle";
 import { SourceTag } from "../components/primitives/SourceTag";
 import { Sourced } from "../components/primitives/Sourced";
+import { SimulatedBanner } from "../components/primitives/SimulatedBanner";
 import { HeroCard } from "../components/HeroCard";
 import { ShippingPanel } from "../components/panels/ShippingPanel";
 import { WeatherRisk } from "../components/panels/WeatherRisk";
@@ -254,6 +255,7 @@ export const PageDrivers = () => {
       {/* ========================= FREIGHT & SHIPPING ========================= */}
       <section className="space-y-3">
         <Band icon={Anchor} title="Freight & Shipping" sub="Tanker rates & port congestion" />
+        <SimulatedBanner>Baltic Exchange tanker indices, route rates and port congestion are paywalled — the values below are modeled illustrative shapes, not a live feed.</SimulatedBanner>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-[#1c1d22]">
           {(freight.heroes || FREIGHT_FALLBACK.heroes).map((d, i) => (

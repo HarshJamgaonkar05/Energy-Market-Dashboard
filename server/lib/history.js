@@ -45,6 +45,15 @@ export function dailyCloses(id) {
   return inst.daily.map(([iso, close]) => ({ iso, date: new Date(`${iso}T00:00:00Z`), close }));
 }
 
+/** Daily term strip: [{ iso:"YYYY-MM-DD", date:Date, mids:[m1..mK] }]. mids may
+ *  contain nulls for deferred months with no print that day. Empty if the
+ *  history.json predates the term-strip build (run build-history.js to add it). */
+export function termCloses(id) {
+  const inst = load().instruments[id];
+  if (!inst?.term) return [];
+  return inst.term.map(([iso, mids]) => ({ iso, date: new Date(`${iso}T00:00:00Z`), mids }));
+}
+
 /** Latest real forward curve for an instrument: [{ m:"M1", contract, v }] or null. */
 export function latestCurve(id) {
   return load().instruments[id]?.curve ?? null;

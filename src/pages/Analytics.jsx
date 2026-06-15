@@ -3,7 +3,7 @@ import {
   AreaChart, Area, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine,
 } from "recharts";
 import { ResponsiveContainer } from "../lib/ResponsiveContainer";
-import { GitBranch, Layers, Grid3x3, CalendarRange } from "lucide-react";
+import { GitBranch, Layers, Grid3x3, CalendarRange, Gauge } from "lucide-react";
 import { Card } from "../components/primitives/Card";
 import { Band } from "../components/primitives/Band";
 import { SourceTag } from "../components/primitives/SourceTag";
@@ -34,10 +34,22 @@ const CURVES_FALLBACK = { ...FWD_CURVES, inter: INTER_FALLBACK, modeled: false }
 // ----------------------------------------------------------------------------
 // Crack spreads — pick any of the cracks available across the five instruments
 // ----------------------------------------------------------------------------
+// Map the Analytics crack ids to the regime engine's spread keys (where one exists).
+const CRACK_TO_SPREAD = {
+  "321-wti": "crack_321_wti", "ho-wti": "ho_wti", "ho-brent": "ho_brent", "gasoil-brent": "gasoil_brent",
+};
+
 const CrackSpreads = () => {
   const [id, setId] = useState("321-wti");
   const { data: cracks, live } = useLive("/api/cracks", CRACKS_FALLBACK);
   const { data: chist } = useLive("/api/crackhistory", {}, useLive.REFRESH.slow);
+  const { data: regCur } = useLive("/api/regime/current", {}, useLive.REFRESH.slow);
+  const { data: regCat } = useLive("/api/regime/catalog", { catalog: [] }, useLive.REFRESH.slow);
+
+  // Regime context for the selected crack: where it sits vs its CURRENT-regime norm.
+  const regId = regCur.current?.regimeId;
+  const regLabel = regCur.current?.label;
+  const regSpread = (regCat.catalog || []).find((c) => c.regimeId === regId)?.spreads?.[CRACK_TO_SPREAD[id]];
 
   const crack = cracks.find((c) => c.id === id) || cracks[0];
   const idx = cracks.findIndex((c) => c.id === id);
@@ -125,19 +137,33 @@ const CrackSpreads = () => {
                 </span>
               </div>
             </div>
-            {/* Statistical context — where the live value sits in its own history */}
-            {isReal && (
-              <div className="text-right hidden sm:block">
-                <div className="text-[9px] uppercase tracking-wider text-zinc-600">vs {winLbl} range</div>
-                <div className="font-mono text-[12px]">
-                  <Sourced source={histSrc} note={`Live value's percentile within its ${winLbl} history`} align="end">
-                    <span className={pctile >= 80 ? "text-amber-400" : pctile <= 20 ? "text-sky-400" : "text-zinc-200"}>{pctile}ᵗʰ pct</span>
-                  </Sourced>
-                  <span className="text-zinc-600"> · </span>
-                  <span className={Math.abs(z) >= 1.5 ? "text-amber-400" : "text-zinc-400"}>{fmtSigned(z, 1)}σ</span>
+            {/* Statistical context — vs own history AND vs the current regime's norm */}
+            <div className="flex items-start gap-4">
+              {regSpread && (
+                <div className="text-right hidden md:block">
+                  <div className="text-[9px] uppercase tracking-wider text-zinc-600">vs current regime</div>
+                  <div className="font-mono text-[12px]">
+                    <Sourced source="regime" note={`Live crack vs its mean in the current regime (${regLabel}); n=${regSpread.n} obs`} align="end">
+                      <span className={Math.abs(regSpread.z) >= 1.5 ? "text-amber-400" : "text-zinc-200"}>{fmtSigned(regSpread.z, 1)}σ</span>
+                    </Sourced>
+                    <span className="text-zinc-600"> · avg ${fmt(regSpread.mean)}</span>
+                  </div>
+                  <div className="text-[8px] text-zinc-600 truncate max-w-[130px]">{regLabel}</div>
                 </div>
-              </div>
-            )}
+              )}
+              {isReal && (
+                <div className="text-right hidden sm:block">
+                  <div className="text-[9px] uppercase tracking-wider text-zinc-600">vs {winLbl} range</div>
+                  <div className="font-mono text-[12px]">
+                    <Sourced source={histSrc} note={`Live value's percentile within its ${winLbl} history`} align="end">
+                      <span className={pctile >= 80 ? "text-amber-400" : pctile <= 20 ? "text-sky-400" : "text-zinc-200"}>{pctile}ᵗʰ pct</span>
+                    </Sourced>
+                    <span className="text-zinc-600"> · </span>
+                    <span className={Math.abs(z) >= 1.5 ? "text-amber-400" : "text-zinc-400"}>{fmtSigned(z, 1)}σ</span>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="h-52">
@@ -190,9 +216,9 @@ const FuturesSpreads = () => {
   const d = curve.data;
   const inter = curves.inter || INTER_FALLBACK;
 
-  // Provenance: WTI/Brent/HO/Gas Oil curves carry the live Yahoo front along the
-  // real term structure from the dataset (modeled === false, source "dataset").
-  // RBOB has no dataset curve, so it falls back to the modeled slope.
+  // Provenance: WTI/Brent/HO/RBOB curves are live Yahoo dated-contract strips
+  // (source "yahoo"); Gas Oil carries the live front along the dataset's real
+  // term structure (source "dataset"). Both fall back to the modeled slope.
   const isLive = curve.modeled === false;
   const src = curve.source || "modeled";
   const curveNote = curve.sourceNote
@@ -295,63 +321,83 @@ const FuturesSpreads = () => {
 // ----------------------------------------------------------------------------
 // Correlation insight — strongest / weakest pair pulled from the matrix
 // ----------------------------------------------------------------------------
+const pairsFrom = (m) => {
+  if (!m?.labels || !m?.matrix) return null;
+  const out = [];
+  for (let i = 0; i < m.labels.length; i++)
+    for (let j = i + 1; j < m.labels.length; j++)
+      out.push({ a: m.labels[i], b: m.labels[j], v: m.matrix[i][j] });
+  const sorted = [...out].sort((x, y) => y.v - x.v);
+  return { strongest: sorted[0], weakest: sorted[sorted.length - 1] };
+};
+
 const CorrelationInsight = () => {
   const { data } = useLive("/api/correlation", { labels: CORR_LABELS, matrix: CORR_MATRIX }, useLive.REFRESH.slow);
-  const labels = data.labels || CORR_LABELS;
-  const matrix = data.matrix || CORR_MATRIX;
-  const pairs = [];
-  for (let i = 0; i < labels.length; i++) {
-    for (let j = i + 1; j < labels.length; j++) {
-      pairs.push({ a: labels[i], b: labels[j], v: matrix[i][j] });
-    }
-  }
-  const sorted = [...pairs].sort((x, y) => y.v - x.v);
-  const strongest = sorted[0];
-  const weakest = sorted[sorted.length - 1];
+  const { data: regCur } = useLive("/api/regime/current", {}, useLive.REFRESH.slow);
+  const all = pairsFrom({ labels: data.labels || CORR_LABELS, matrix: data.matrix || CORR_MATRIX });
+
+  // Regime-conditioned correlation — how the complex moves together RIGHT NOW.
+  const regMat = regCur.correlation?.regime;
+  const reg = pairsFrom(regMat);
+  const regLabel = regCur.correlation?.regimeLabel;
+
+  const Row = ({ label, pair, color, note }) => (
+    <div className="flex items-baseline justify-between">
+      <span className="text-[11px] text-zinc-300">{label}: {pair.a} · {pair.b}</span>
+      <span className={`font-mono text-[12px] ${color}`}>
+        <Sourced source="dataset" note={note} align="end">{pair.v.toFixed(2)}</Sourced>
+      </span>
+    </div>
+  );
 
   return (
     <Card className="col-span-12 lg:col-span-4">
       <div className="text-[11px] font-semibold tracking-[0.12em] text-zinc-300 uppercase mb-3">Read</div>
       <div className="space-y-3">
-        <div>
-          <div className="text-[9px] text-zinc-600 uppercase tracking-wider">Tightest pair</div>
-          <div className="flex items-baseline justify-between">
-            <span className="text-[12px] text-zinc-200">{strongest.a} · {strongest.b}</span>
-            <span className="font-mono text-[13px] text-emerald-400">
-              <Sourced source="dataset" note="Highest 30D return correlation in the matrix (dataset daily closes)" align="end">{strongest.v.toFixed(2)}</Sourced>
-            </span>
-          </div>
+        <div className="space-y-1.5">
+          <div className="text-[9px] text-zinc-600 uppercase tracking-wider">30-day rolling</div>
+          <Row label="Tightest" pair={all.strongest} color="text-emerald-400" note="Highest 30D return correlation (dataset daily closes)" />
+          <Row label="Loosest" pair={all.weakest} color="text-amber-400" note="Lowest 30D return correlation (dataset daily closes)" />
         </div>
-        <div>
-          <div className="text-[9px] text-zinc-600 uppercase tracking-wider">Loosest pair</div>
-          <div className="flex items-baseline justify-between">
-            <span className="text-[12px] text-zinc-200">{weakest.a} · {weakest.b}</span>
-            <span className="font-mono text-[13px] text-amber-400">
-              <Sourced source="dataset" note="Lowest 30D return correlation in the matrix (dataset daily closes)" align="end">{weakest.v.toFixed(2)}</Sourced>
-            </span>
+        {reg && (
+          <div className="space-y-1.5 pt-2 border-t border-[#1c1d22]">
+            <div className="text-[9px] text-zinc-600 uppercase tracking-wider flex items-center gap-1.5">
+              Current regime
+              <SourceTag live source="regime" note={`Correlation computed only on days in the current regime (${regLabel}, n=${regMat.n})`} />
+            </div>
+            <Row label="Tightest" pair={reg.strongest} color="text-emerald-400" note={`Tightest pair within the ${regLabel} regime (n=${regMat.n} days)`} />
+            <Row label="Loosest" pair={reg.weakest} color="text-amber-400" note={`Loosest pair within the ${regLabel} regime (n=${regMat.n} days)`} />
           </div>
-        </div>
+        )}
         <p className="text-[10px] text-zinc-500 leading-relaxed pt-2 border-t border-[#1c1d22]">
-          WTI and Brent move near-lockstep; the two middle distillates (Heating Oil &amp;
-          Gas Oil) are the most correlated product pair. Crude–distillate correlation
-          loosens whenever refining margins swing on their own.
+          WTI–Brent move near-lockstep; the two middle distillates are the most correlated product pair.
+          Crude–distillate correlation loosens when refining margins swing on their own — and shifts with the regime.
         </p>
-        <div className="flex items-center gap-3 pt-1 text-[9px] uppercase tracking-wider">
-          <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 bg-emerald-500/70" /> <span className="text-zinc-400">Positive</span></span>
-          <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 bg-red-500/70" /> <span className="text-zinc-400">Negative</span></span>
-        </div>
       </div>
     </Card>
+  );
+};
+
+// Small badge showing the prevailing regime — ties the seasonal/crack views to
+// the current market state (the regime conditions which seasonal norm applies).
+const RegimeBadge = () => {
+  const { data } = useLive("/api/regime/current", {}, useLive.REFRESH.slow);
+  const label = data.current?.label;
+  if (!label) return null;
+  return (
+    <span className="text-[9px] uppercase tracking-wider text-zinc-500 flex items-center gap-1.5 whitespace-nowrap">
+      <Gauge size={11} className="text-amber-400" /> Regime: <span className="text-zinc-300 normal-case">{label}</span>
+    </span>
   );
 };
 
 // ----------------------------------------------------------------------------
 export const PageAnalytics = () => (
   <div className="space-y-3">
-    <Band icon={Layers} title="Crack Spreads" sub="Refining margins across the five instruments" />
+    <Band icon={Layers} title="Crack Spreads" sub="Refining margins across the five instruments" right={<RegimeBadge />} />
     <CrackSpreads />
 
-    <Band icon={CalendarRange} title="Seasonality" sub="Typical move by calendar month · 2021→present · price & cracks" />
+    <Band icon={CalendarRange} title="Seasonality" sub="Typical move by calendar month · 2021→present · price & cracks" right={<RegimeBadge />} />
     <SeasonalityPanel />
 
     <Band icon={GitBranch} title="Futures Spreads" sub="Forward curves · calendar & inter-commodity" />

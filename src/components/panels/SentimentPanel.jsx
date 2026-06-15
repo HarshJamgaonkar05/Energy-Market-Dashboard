@@ -45,11 +45,14 @@ export const SentimentPanel = () => {
                   <Sourced source="derived" note="0–100 composite from price momentum + news balance" align="end">{s.value} · {s.lbl}</Sourced>
                 </span>
               </div>
-              <div className="h-1.5 bg-[#15161a] relative">
+              {/* Center-anchored gauge: each half is 50% of the track, so the
+                  bar width is the deviation from 50 (0–50), capped so extreme
+                  readings (e.g. 21) never spill outside the panel. */}
+              <div className="h-1.5 bg-[#15161a] relative overflow-hidden">
                 <div className="absolute inset-y-0 left-1/2 w-px bg-[#2a2b31]" />
                 <motion.div
                   initial={{ width: 0 }}
-                  animate={{ width: `${Math.abs(s.value - 50) * 2}%` }}
+                  animate={{ width: `${Math.min(50, Math.abs(s.value - 50))}%` }}
                   transition={{ duration: 0.6, ease: "easeOut" }}
                   className={`absolute inset-y-0 ${bull ? "bg-emerald-500/70 left-1/2" : "bg-red-500/70 right-1/2"}`}
                 />

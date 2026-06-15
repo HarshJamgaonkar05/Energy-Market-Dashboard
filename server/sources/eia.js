@@ -197,6 +197,58 @@ export async function weeklyChanges() {
 }
 
 // ----------------------------------------------------------------------------
+// U.S. crude SUPPLY / DEMAND BALANCE — assembles the weekly flow components
+// (field production + imports on the supply side; refinery inputs + exports on
+// the disposition side) into the implied balance, plus days-of-supply and the
+// year-on-year stock comparison. This answers "where did the build/draw come
+// from?" rather than just showing the net number. All flows in million bbl/day.
+//   PET.WCRFPUS2.W  field production (kbd)
+//   PET.WCEIMUS2.W  crude imports (kbd)
+//   PET.WCREXUS2.W  crude exports (kbd)
+//   PET.WCRRIUS2.W  refinery crude inputs / throughput (kbd)
+// ----------------------------------------------------------------------------
+export async function supplyDemand() {
+  if (!eiaEnabled()) return null;
+  const [prod, imp, exp, refin, crude] = await Promise.all([
+    series("PET.WCRFPUS2.W", 60),
+    series("PET.WCEIMUS2.W", 60),
+    series("PET.WCREXUS2.W", 60),
+    series("PET.WCRRIUS2.W", 60),
+    series("PET.WCESTUS1.W", 60),
+  ]);
+  if (!prod?.length || !refin?.length) return null;
+
+  const mbd = (arr) => (arr?.length ? +(latest(arr) / 1000).toFixed(2) : null);     // kbd -> mb/d
+  const wow = (arr) => (arr?.length > 1 ? +((latest(arr) - prior(arr)) / 1000).toFixed(2) : null);
+
+  const production = mbd(prod), imports = mbd(imp), exportsV = mbd(exp), refinery = mbd(refin);
+  const supply = production != null && imports != null ? +(production + imports).toFixed(2) : null;
+  const disposition = refinery != null && exportsV != null ? +(refinery + exportsV).toFixed(2) : null;
+  const implied = supply != null && disposition != null ? +(supply - disposition).toFixed(2) : null;
+
+  // Days of supply = crude stocks (kbbl) / refinery throughput (kbd).
+  const stockK = latest(crude), refK = latest(refin);
+  const daysOfSupply = stockK && refK ? +(stockK / refK).toFixed(1) : null;
+
+  // Year-on-year stock comparison (52 weeks back).
+  const stockNow = toMM(latest(crude));
+  const stockYrAgo = crude?.length >= 53 ? toMM(crude.at(-53).value) : null;
+  const yoyPct = stockNow != null && stockYrAgo ? +(((stockNow - stockYrAgo) / stockYrAgo) * 100).toFixed(1) : null;
+
+  return {
+    asOf: prod.at(-1).period,
+    flows: [
+      { label: "Field production", val: production, chg: wow(prod), side: "supply" },
+      { label: "Imports", val: imports, chg: wow(imp), side: "supply" },
+      { label: "Refinery inputs", val: refinery, chg: wow(refin), side: "demand" },
+      { label: "Exports", val: exportsV, chg: wow(exp), side: "demand" },
+    ],
+    supply, disposition, implied,
+    daysOfSupply, stockNow, stockYrAgo, yoyPct,
+  };
+}
+
+// ----------------------------------------------------------------------------
 // Official daily spot prices (used as a settlement cross-check vs Yahoo).
 // ----------------------------------------------------------------------------
 export async function spot() {

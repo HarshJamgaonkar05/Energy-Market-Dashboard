@@ -28,6 +28,66 @@ const INV_FALLBACK = {
   refineryUtil: 91.2,
 };
 
+// EIA weekly crude balance — flow attribution behind the build/draw. Falls back
+// to representative US values when no EIA key is set.
+const BAL_FALLBACK = {
+  asOf: null,
+  flows: [
+    { label: "Field production", val: 13.4, chg: 0.1, side: "supply" },
+    { label: "Imports", val: 6.2, chg: -0.3, side: "supply" },
+    { label: "Refinery inputs", val: 16.3, chg: 0.2, side: "demand" },
+    { label: "Exports", val: 4.1, chg: 0.4, side: "demand" },
+  ],
+  supply: 19.6, disposition: 20.4, implied: -0.8,
+  daysOfSupply: 27.1, yoyPct: -3.2,
+};
+
+const SupplyDemandBalance = () => {
+  const { data, live } = useLive("/api/balance", BAL_FALLBACK, useLive.REFRESH.hourly);
+  const flows = data.flows?.length ? data.flows : BAL_FALLBACK.flows;
+  const implied = data.implied ?? BAL_FALLBACK.implied;
+  const build = implied >= 0;
+  return (
+    <Card padding={false}>
+      <div className="p-4 pb-2">
+        <SectionTitle sub="Weekly crude flows · mb/d" action={<div className="flex items-center gap-2"><AsOf date={data.asOf} /><SourceTag live={live} source="eia" note="EIA weekly crude balance: field production + imports (supply) vs refinery inputs + exports (disposition). Implied = supply − disposition; an EIA adjustment term means it won't exactly match the observed stock change." /></div>}>Supply / Demand Balance</SectionTitle>
+      </div>
+      <div className="grid grid-cols-2 gap-px bg-[#1c1d22] border-t border-[#1c1d22]">
+        {flows.map((f) => (
+          <div key={f.label} className="bg-[#0e0f12] p-3">
+            <span className="text-[10px] uppercase tracking-wider text-zinc-500 flex items-center gap-1.5">
+              <span className={`w-1.5 h-1.5 rounded-sm ${f.side === "supply" ? "bg-emerald-500" : "bg-red-500"}`} />{f.label}
+            </span>
+            <div className="flex items-baseline gap-2 mt-1">
+              <span className="font-mono text-lg text-zinc-100">
+                <Sourced source="eia" note={`${f.label} — EIA weekly (million bbl/day)`}>{fmt(f.val, 1)}</Sourced>
+              </span>
+              <span className={`font-mono text-[10px] ${f.chg >= 0 ? "text-emerald-400" : "text-red-400"}`}>{fmtSigned(f.chg, 1)}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="p-4 border-t border-[#1c1d22] grid grid-cols-3 gap-3 text-center">
+        <div>
+          <div className="text-[9px] text-zinc-600 uppercase tracking-wider">Implied balance</div>
+          <div className={`font-mono text-xl ${build ? "text-sky-400" : "text-amber-400"}`}>{fmtSigned(implied, 1)}</div>
+          <div className="text-[9px] text-zinc-600">{build ? "build" : "draw"} · mb/d</div>
+        </div>
+        <div>
+          <div className="text-[9px] text-zinc-600 uppercase tracking-wider">Days of supply</div>
+          <div className="font-mono text-xl text-zinc-200">{fmt(data.daysOfSupply, 1)}</div>
+          <div className="text-[9px] text-zinc-600">stocks ÷ runs</div>
+        </div>
+        <div>
+          <div className="text-[9px] text-zinc-600 uppercase tracking-wider">Stocks YoY</div>
+          <div className={`font-mono text-xl ${(data.yoyPct ?? 0) >= 0 ? "text-sky-400" : "text-amber-400"}`}>{fmtSigned(data.yoyPct, 1)}%</div>
+          <div className="text-[9px] text-zinc-600">vs 1y ago</div>
+        </div>
+      </div>
+    </Card>
+  );
+};
+
 export const PageInventories = () => {
   const { data, live } = useLive("/api/inventories", INV_FALLBACK, useLive.REFRESH.hourly);
   const heroes = data.heroes?.length ? data.heroes : INV_FALLBACK.heroes;
@@ -112,6 +172,8 @@ export const PageInventories = () => {
               </div>
             </Card>
           </div>
+
+          <SupplyDemandBalance />
         </div>
 
         <div className="col-span-12 lg:col-span-4 space-y-3">

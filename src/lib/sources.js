@@ -54,6 +54,11 @@ export const SOURCES = {
     detail: "Computed on the server from live feeds.",
     kind: "derived",
   },
+  regime: {
+    label: "Regime engine",
+    detail: "Phase 2 analytics — regimes, regressions & signals computed offline from the historical dataset + EIA fundamentals.",
+    kind: "derived",
+  },
   modeled: {
     label: "No free source",
     detail: "No free or open data source for this value — shown as “—” rather than an assumed figure.",

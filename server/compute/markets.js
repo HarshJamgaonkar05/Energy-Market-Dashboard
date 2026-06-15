@@ -283,15 +283,16 @@ export function curves(instr) {
 // ----------------------------------------------------------------------------
 // Forward curves.
 //
-//  • WTI / Brent / Heating Oil / Gas Oil — the dataset carries each instrument's
-//    genuine M1..M12 settlement curve. We keep that real shape (the month-to-
-//    month spreads) and parallel-shift it so M1 sits exactly on the live Yahoo
-//    front, so the curve reflects today's price while its structure
-//    (contango/backwardation, calendar spreads) is the real observed one.
-//  • RBOB — not in the dataset, so its curve is the REAL Yahoo dated-contract
-//    term structure (RBN26.NYM, RBQ26.NYM, …): M1..M12 are consecutive live
-//    settlements. Falls back to the modeled straight-line only if Yahoo can't
-//    resolve a full 12 months, so every curve the API serves is a full M1..M12.
+//  • WTI / Brent / Heating Oil / Gas Oil — built from the HISTORICAL DATASET's
+//    genuine M1..M12 term structure (the real month-to-month calendar spreads),
+//    parallel-shifted so M1 sits exactly on the LIVE Yahoo front month. So the
+//    LEVEL is live and reactive to today's market, while the SHAPE
+//    (contango/backwardation, calendar spreads) is the real observed structure
+//    from the dataset — not a third-party guess. Falls back to a modeled straight
+//    line only if the dataset curve is somehow missing.
+//  • RBOB — the ONE instrument not in the dataset (the CSVs are CL/LCO/HO/LGO),
+//    so it is the only curve sourced from Yahoo: the real dated-contract strip
+//    (RBN26.NYM, …), live M1..M12, with the modeled straight line as a last resort.
 // ----------------------------------------------------------------------------
 const curveDp = (unit) => (unit === "$/gal" ? 4 : unit === "$/mt" ? 1 : 3);
 
@@ -347,12 +348,14 @@ export async function forwardCurves(instr) {
   const modeled = curves(instr); // straight-line fallback, keyed by id
   const out = { modeled: false };
 
-  // WTI / Brent / HO / Gas Oil — dataset structure carried to the live front.
+  // WTI / Brent / HO / Gas Oil — the dataset's real term structure carried onto
+  // the live Yahoo front: level is live, shape is the genuine observed dataset
+  // curve. RBOB is handled separately (it isn't in the dataset).
   for (const s of SPEC) {
-    if (s.id === "rbob") continue; // RBOB has no dataset curve → real Yahoo curve below
+    if (s.id === "rbob") continue;
     const inst = byId(instr, s.id);
-    const front = inst?.val;
-    const csv = history.latestCurve(s.id); // [{ m, contract, v }] or null
+    const front = inst?.val;                  // live Yahoo front (the latest value)
+    const csv = history.latestCurve(s.id);    // dataset M1..M12: [{ m, contract, v }] or null
     if (front != null && csv && csv.length >= 2) {
       const base = csv[0].v; // dataset front — shift the whole curve onto the live front
       out[s.id] = {
@@ -366,8 +369,8 @@ export async function forwardCurves(instr) {
     }
   }
 
-  // RBOB — real Yahoo dated-contract forward curve; modeled straight-line only
-  // if Yahoo can't resolve a full 12-month strip.
+  // RBOB — not in the dataset, so the genuine Yahoo dated-contract strip; modeled
+  // straight line only if Yahoo can't resolve a full 12-month curve.
   out.rbob = (await yahooDatedCurve("rbob", "RB")) ?? { ...modeled.rbob, modeled: true, source: "modeled" };
 
   return out;
