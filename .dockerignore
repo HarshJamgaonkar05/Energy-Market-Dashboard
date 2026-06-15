@@ -7,3 +7,10 @@ server/.env
 .git
 *.log
 npm-debug.log*
+
+# Build-time / offline only — the runtime serves the precomputed JSON in
+# server/data/, so the Python analytics layer and notes aren't needed in the image.
+analytics
+memory
+*.pdf
+PHASE2_PLAN.md

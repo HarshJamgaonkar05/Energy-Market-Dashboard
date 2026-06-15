@@ -15,6 +15,9 @@ dist-ssr
 .env
 server/.env
 
+# Internal assistant working notes — not part of the deployable product.
+memory/
+
 # Raw 1-min CSV history (multi-GB) — distilled into server/data/history.json.
 # Anchored to repo root so it does NOT also ignore server/data/ on
 # case-insensitive filesystems (Windows/macOS).
