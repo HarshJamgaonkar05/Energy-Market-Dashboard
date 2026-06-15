@@ -1,0 +1,9 @@
+# Generated backtest artifacts (re-create with: python BackTesting/backtest.py)
+out/
+
+# SQLite transient files
+*.db-wal
+*.db-shm
+
+__pycache__/
+*.pyc

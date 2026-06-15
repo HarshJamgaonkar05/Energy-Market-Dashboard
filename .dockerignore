@@ -9,8 +9,9 @@ server/.env
 npm-debug.log*
 
 # Build-time / offline only — the runtime serves the precomputed JSON in
-# server/data/, so the Python analytics layer and notes aren't needed in the image.
+# server/data/, so the Python analytics/backtest layers and notes aren't needed.
 analytics
+BackTesting
 memory
 *.pdf
 PHASE2_PLAN.md

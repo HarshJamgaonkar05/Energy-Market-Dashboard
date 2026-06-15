@@ -59,6 +59,11 @@ export const SOURCES = {
     detail: "Phase 2 analytics — regimes, regressions & signals computed offline from the historical dataset + EIA fundamentals.",
     kind: "derived",
   },
+  backtest: {
+    label: "Strategy backtest",
+    detail: "Phase 3 — the Phase-2 mean-reversion strategy backtested offline on real 15-min crude-futures spread data. Gross basis.",
+    kind: "derived",
+  },
   modeled: {
     label: "No free source",
     detail: "No free or open data source for this value — shown as “—” rather than an assumed figure.",

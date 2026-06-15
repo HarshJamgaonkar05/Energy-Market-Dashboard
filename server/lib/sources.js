@@ -81,6 +81,12 @@ export const SOURCES = {
     detail: "Phase 2 analytics — market regimes, regressions & signals computed offline (Python) from the historical dataset + EIA fundamentals, refreshed on a batch schedule.",
     kind: "derived",
   },
+  backtest: {
+    id: "backtest",
+    label: "Strategy backtest",
+    detail: "Phase 3 — the Phase-2 mean-reversion strategy backtested offline on real 15-min crude-futures spread data (BackTesting/backtest.py). Gross basis.",
+    kind: "derived",
+  },
   modeled: {
     id: "modeled",
     label: "No free source",
@@ -119,6 +125,7 @@ export const ENDPOINT_SOURCES = {
   "/api/regression": { source: "regime", mixed: ["dataset", "eia"] },
   "/api/signals": { source: "regime", mixed: ["dataset", "eia"] },
   "/api/narrative": { source: "regime", mixed: ["yahoo", "dataset"] },
+  "/api/backtest": { source: "backtest", mixed: ["dataset"] },
   "/api/inventories": { source: "eia" },
   "/api/balance": { source: "eia", mixed: ["derived"] },
   "/api/stockflows": { source: "eia" },

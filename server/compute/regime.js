@@ -91,6 +91,15 @@ export function signals() {
   return d;
 }
 
+// ---- Intraday strategy backtest (Phase 3) ----------------------------------
+/** Full intraday backtest of the Phase-2 strategy (BackTesting/backtest.py):
+ *  summary, per-structure bifurcation, equity curve and the complete trade log. */
+export function intradayBacktest() {
+  const d = loadJson("intraday_backtest.json");
+  if (!d) return null;
+  return d;
+}
+
 // ---- Narrative -------------------------------------------------------------
 /** Synthesize a one-line market briefing from the regime, the top signal and the
  *  biggest live mover — the Dashboard's headline. Pure: live movers are passed in
