@@ -16,7 +16,7 @@ dotenv.config({ path: join(__dirname, ".env") });
 
 import { instruments, ticker, movers, seriesAndCorrelation, cracks, crackHistory, forwardCurves, interSpreads, macro } from "./compute/markets.js";
 import { calendar, opec, freight, rigs, sentiment } from "./compute/derive.js";
-import { currentRegime, regimeCatalog, regimeHistory, regressionList, regression, signals, buildNarrative, intradayBacktest } from "./compute/regime.js";
+import { currentRegime, regimeCatalog, regimeHistory, regressionList, regression, signals, buildNarrative } from "./compute/regime.js";
 import * as eia from "./sources/eia.js";
 import { weather, tempForecast } from "./sources/openmeteo.js";
 import { storms, enso } from "./sources/noaa.js";
@@ -106,7 +106,6 @@ app.get("/api/signals", route(() => signals(), "/api/signals"));
 // Market-narrative briefing — fuses the regime, the top signal and the biggest
 // live mover into one headline for the Dashboard.
 app.get("/api/narrative", route(async () => buildNarrative(movers(await instruments())), "/api/narrative"));
-app.get("/api/backtest", route(() => intradayBacktest(), "/api/backtest"));
 
 // ---- Fundamentals (EIA-backed; 503 -> frontend mock fallback if no key) ----
 app.get("/api/inventories", route(() => eia.inventories(), "/api/inventories"));

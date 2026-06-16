@@ -34,7 +34,6 @@ const lazyRetry = (importer) =>
 const PageDashboard = lazyRetry(() => import("./pages/Dashboard").then((m) => ({ default: m.PageDashboard })));
 const PageAnalytics = lazyRetry(() => import("./pages/Analytics").then((m) => ({ default: m.PageAnalytics })));
 const PageRegime = lazyRetry(() => import("./pages/Regime").then((m) => ({ default: m.PageRegime })));
-const PageBackTesting = lazyRetry(() => import("./pages/BackTesting").then((m) => ({ default: m.PageBackTesting })));
 const PageDrivers = lazyRetry(() => import("./pages/Drivers").then((m) => ({ default: m.PageDrivers })));
 const PageInventories = lazyRetry(() => import("./pages/Inventories").then((m) => ({ default: m.PageInventories })));
 const PageNews = lazyRetry(() => import("./pages/News").then((m) => ({ default: m.PageNews })));
@@ -43,7 +42,6 @@ const PAGES = {
   dashboard: { title: "Dashboard", el: PageDashboard },
   analytics: { title: "Analytics", el: PageAnalytics },
   regime: { title: "Regime & Signals", el: PageRegime },
-  backtesting: { title: "Live Signal Engine", el: PageBackTesting },
   drivers: { title: "Market Drivers", el: PageDrivers },
   inventories: { title: "Inventories & Storage", el: PageInventories },
   news: { title: "News & Sentiment", el: PageNews },
