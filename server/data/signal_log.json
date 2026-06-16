@@ -1,7 +1,151 @@
 {
- "generatedAt": "2026-06-16T02:24:23Z",
- "count": 67,
+ "generatedAt": "2026-06-16T07:29:29Z",
+ "count": 75,
  "signals": [
+  {
+   "id": "WTI_M2M3@2026-06-16 06:45",
+   "timestamp": "2026-06-16 06:45",
+   "regime": "Balanced \u00b7 High Vol",
+   "instrument": "WTI_M2M3",
+   "label": "WTI Aug/Sep (M2-M3)",
+   "direction": "LONG",
+   "rationale": "Faded a 1.51sigma cheap dislocation from rolling fair value in the Balanced \u00b7 High Vol regime. Historical reversion edge ~60% (open).",
+   "confidence": 70,
+   "status": "OPEN",
+   "performance": 0.0,
+   "outcome": "open",
+   "exitReason": null,
+   "entryZ": -1.51,
+   "histHitRate": null,
+   "loggedAt": "2026-06-16T07:00:46Z",
+   "updatedAt": "2026-06-16T07:29:29Z"
+  },
+  {
+   "id": "WTI_FLY@2026-06-16 06:00",
+   "timestamp": "2026-06-16 06:00",
+   "regime": "Balanced \u00b7 High Vol",
+   "instrument": "WTI_FLY",
+   "label": "WTI Jul/Aug/Sep fly",
+   "direction": "SHORT",
+   "rationale": "Faded a 1.50sigma rich dislocation from rolling fair value in the Balanced \u00b7 High Vol regime. Historical reversion edge ~60% (open).",
+   "confidence": 74,
+   "status": "OPEN",
+   "performance": -10.0,
+   "outcome": "open",
+   "exitReason": null,
+   "entryZ": 1.5,
+   "histHitRate": null,
+   "loggedAt": "2026-06-16T06:15:39Z",
+   "updatedAt": "2026-06-16T07:29:29Z"
+  },
+  {
+   "id": "WTI_M2M3@2026-06-16 05:45",
+   "timestamp": "2026-06-16 05:45",
+   "regime": "Balanced \u00b7 High Vol",
+   "instrument": "WTI_M2M3",
+   "label": "WTI Aug/Sep (M2-M3)",
+   "direction": "LONG",
+   "rationale": "Faded a 1.51sigma cheap dislocation from rolling fair value in the Balanced \u00b7 High Vol regime. Historical reversion edge ~75% (validated (Phase-2 daily)).",
+   "confidence": 70,
+   "status": "CLOSED",
+   "performance": 40.0,
+   "outcome": "reverted-win",
+   "exitReason": "target",
+   "entryZ": -1.51,
+   "histHitRate": 0.752,
+   "loggedAt": "2026-06-16T06:00:16Z",
+   "updatedAt": "2026-06-16T07:29:29Z"
+  },
+  {
+   "id": "BRENT_M1M2@2026-06-16 04:15",
+   "timestamp": "2026-06-16 04:15",
+   "regime": "Balanced \u00b7 High Vol",
+   "instrument": "BRENT_M1M2",
+   "label": "Brent Aug/Sep (M1-M2)",
+   "direction": "LONG",
+   "rationale": "Faded a 1.63sigma cheap dislocation from rolling fair value in the Balanced \u00b7 High Vol regime. Historical reversion edge ~60% (open).",
+   "confidence": 69,
+   "status": "OPEN",
+   "performance": 0.0,
+   "outcome": "open",
+   "exitReason": null,
+   "entryZ": -1.63,
+   "histHitRate": null,
+   "loggedAt": "2026-06-16T04:56:33Z",
+   "updatedAt": "2026-06-16T07:29:29Z"
+  },
+  {
+   "id": "BRENT_WTI@2026-06-16 02:30",
+   "timestamp": "2026-06-16 02:30",
+   "regime": "Balanced \u00b7 High Vol",
+   "instrument": "BRENT_WTI",
+   "label": "Brent-WTI arb (Aug)",
+   "direction": "LONG",
+   "rationale": "Faded a 1.99sigma cheap dislocation from rolling fair value in the Balanced \u00b7 High Vol regime. Historical reversion edge ~83% (validated (Phase-2 daily)).",
+   "confidence": 82,
+   "status": "CLOSED",
+   "performance": -60.0,
+   "outcome": "stopped-loss",
+   "exitReason": "target",
+   "entryZ": -1.99,
+   "histHitRate": 0.833,
+   "loggedAt": "2026-06-16T04:56:33Z",
+   "updatedAt": "2026-06-16T07:29:29Z"
+  },
+  {
+   "id": "WTI_FLY@2026-06-16 01:45",
+   "timestamp": "2026-06-16 01:45",
+   "regime": "Balanced \u00b7 High Vol",
+   "instrument": "WTI_FLY",
+   "label": "WTI Jul/Aug/Sep fly",
+   "direction": "SHORT",
+   "rationale": "Faded a 2.56sigma rich dislocation from rolling fair value in the Balanced \u00b7 High Vol regime. Historical reversion edge ~82% (validated (Phase-2 daily)).",
+   "confidence": 88,
+   "status": "CLOSED",
+   "performance": 160.0,
+   "outcome": "reverted-win",
+   "exitReason": "target",
+   "entryZ": 2.56,
+   "histHitRate": 0.816,
+   "loggedAt": "2026-06-16T04:56:33Z",
+   "updatedAt": "2026-06-16T07:29:29Z"
+  },
+  {
+   "id": "BRENT_M2M3@2026-06-16 01:30",
+   "timestamp": "2026-06-16 01:30",
+   "regime": "Balanced \u00b7 High Vol",
+   "instrument": "BRENT_M2M3",
+   "label": "Brent Sep/Oct (M2-M3)",
+   "direction": "LONG",
+   "rationale": "Faded a 1.97sigma cheap dislocation from rolling fair value in the Balanced \u00b7 High Vol regime. Historical reversion edge ~60% (open).",
+   "confidence": 74,
+   "status": "OPEN",
+   "performance": -90.0,
+   "outcome": "open",
+   "exitReason": null,
+   "entryZ": -1.97,
+   "histHitRate": null,
+   "loggedAt": "2026-06-16T04:56:33Z",
+   "updatedAt": "2026-06-16T07:29:29Z"
+  },
+  {
+   "id": "WTI_M2M3@2026-06-16 01:00",
+   "timestamp": "2026-06-16 01:00",
+   "regime": "Balanced \u00b7 High Vol",
+   "instrument": "WTI_M2M3",
+   "label": "WTI Aug/Sep (M2-M3)",
+   "direction": "SHORT",
+   "rationale": "Faded a 1.71sigma rich dislocation from rolling fair value in the Balanced \u00b7 High Vol regime. Historical reversion edge ~75% (validated (Phase-2 daily)).",
+   "confidence": 73,
+   "status": "CLOSED",
+   "performance": 110.0,
+   "outcome": "reverted-win",
+   "exitReason": "target",
+   "entryZ": 1.71,
+   "histHitRate": 0.752,
+   "loggedAt": "2026-06-16T04:56:33Z",
+   "updatedAt": "2026-06-16T07:29:29Z"
+  },
   {
    "id": "BRENT_FLY@2026-06-16 00:15",
    "timestamp": "2026-06-16 00:15",
@@ -18,7 +162,7 @@
    "entryZ": -1.51,
    "histHitRate": 0.816,
    "loggedAt": "2026-06-16T02:24:23Z",
-   "updatedAt": "2026-06-16T02:24:23Z"
+   "updatedAt": "2026-06-16T07:29:29Z"
   },
   {
    "id": "BRENT_M2M3@2026-06-16 00:00",
@@ -27,16 +171,16 @@
    "instrument": "BRENT_M2M3",
    "label": "Brent Sep/Oct (M2-M3)",
    "direction": "SHORT",
-   "rationale": "Faded a 2.19sigma rich dislocation from rolling fair value in the Balanced \u00b7 High Vol regime. Historical reversion edge ~60% (open).",
+   "rationale": "Faded a 2.19sigma rich dislocation from rolling fair value in the Balanced \u00b7 High Vol regime. Historical reversion edge ~72% (validated (Phase-2 daily)).",
    "confidence": 77,
-   "status": "OPEN",
-   "performance": 50.0,
-   "outcome": "open",
-   "exitReason": null,
+   "status": "CLOSED",
+   "performance": 40.0,
+   "outcome": "reverted-win",
+   "exitReason": "target",
    "entryZ": 2.19,
-   "histHitRate": null,
+   "histHitRate": 0.717,
    "loggedAt": "2026-06-16T02:24:23Z",
-   "updatedAt": "2026-06-16T02:24:23Z"
+   "updatedAt": "2026-06-16T07:29:29Z"
   },
   {
    "id": "WTI_M1M2@2026-06-15 23:15",
@@ -45,16 +189,16 @@
    "instrument": "WTI_M1M2",
    "label": "WTI Jul/Aug (M1-M2)",
    "direction": "SHORT",
-   "rationale": "Faded a 1.75sigma rich dislocation from rolling fair value in the Balanced \u00b7 High Vol regime. Historical reversion edge ~60% (open).",
+   "rationale": "Faded a 1.75sigma rich dislocation from rolling fair value in the Balanced \u00b7 High Vol regime. Historical reversion edge ~75% (validated (Phase-2 daily)).",
    "confidence": 73,
-   "status": "OPEN",
-   "performance": 90.0,
-   "outcome": "open",
-   "exitReason": null,
+   "status": "CLOSED",
+   "performance": 120.0,
+   "outcome": "reverted-win",
+   "exitReason": "target",
    "entryZ": 1.75,
-   "histHitRate": null,
+   "histHitRate": 0.752,
    "loggedAt": "2026-06-16T02:24:23Z",
-   "updatedAt": "2026-06-16T02:24:23Z"
+   "updatedAt": "2026-06-16T07:29:29Z"
   },
   {
    "id": "WTI_M2M3@2026-06-15 22:00",
@@ -72,7 +216,7 @@
    "entryZ": 2.36,
    "histHitRate": 0.752,
    "loggedAt": "2026-06-16T02:24:23Z",
-   "updatedAt": "2026-06-16T02:24:23Z"
+   "updatedAt": "2026-06-16T07:29:29Z"
   },
   {
    "id": "WTI_FLY@2026-06-15 22:00",
@@ -90,7 +234,7 @@
    "entryZ": -2.27,
    "histHitRate": 0.816,
    "loggedAt": "2026-06-16T02:24:23Z",
-   "updatedAt": "2026-06-16T02:24:23Z"
+   "updatedAt": "2026-06-16T07:29:29Z"
   },
   {
    "id": "BRENT_M1M2@2026-06-15 21:15",
@@ -108,7 +252,7 @@
    "entryZ": 1.9,
    "histHitRate": 0.717,
    "loggedAt": "2026-06-16T02:24:23Z",
-   "updatedAt": "2026-06-16T02:24:23Z"
+   "updatedAt": "2026-06-16T07:29:29Z"
   },
   {
    "id": "BRENT_FLY@2026-06-15 21:15",
@@ -126,7 +270,7 @@
    "entryZ": 1.72,
    "histHitRate": 0.816,
    "loggedAt": "2026-06-16T02:24:23Z",
-   "updatedAt": "2026-06-16T02:24:23Z"
+   "updatedAt": "2026-06-16T07:29:29Z"
   },
   {
    "id": "BRENT_M2M3@2026-06-15 20:45",
@@ -144,7 +288,7 @@
    "entryZ": -1.58,
    "histHitRate": 0.717,
    "loggedAt": "2026-06-16T02:24:23Z",
-   "updatedAt": "2026-06-16T02:24:23Z"
+   "updatedAt": "2026-06-16T07:29:29Z"
   },
   {
    "id": "WTI_M2M3@2026-06-15 19:45",
@@ -162,7 +306,7 @@
    "entryZ": 1.76,
    "histHitRate": 0.752,
    "loggedAt": "2026-06-16T02:24:23Z",
-   "updatedAt": "2026-06-16T02:24:23Z"
+   "updatedAt": "2026-06-16T07:29:29Z"
   },
   {
    "id": "BRENT_FLY@2026-06-15 19:45",
@@ -180,7 +324,7 @@
    "entryZ": -2.13,
    "histHitRate": 0.816,
    "loggedAt": "2026-06-16T02:24:23Z",
-   "updatedAt": "2026-06-16T02:24:23Z"
+   "updatedAt": "2026-06-16T07:29:29Z"
   },
   {
    "id": "WTI_M1M2@2026-06-15 18:45",
@@ -198,7 +342,7 @@
    "entryZ": -1.84,
    "histHitRate": 0.752,
    "loggedAt": "2026-06-16T02:24:23Z",
-   "updatedAt": "2026-06-16T02:24:23Z"
+   "updatedAt": "2026-06-16T07:29:29Z"
   },
   {
    "id": "WTI_M2M3@2026-06-15 18:15",
@@ -216,7 +360,7 @@
    "entryZ": 1.93,
    "histHitRate": 0.752,
    "loggedAt": "2026-06-16T02:24:23Z",
-   "updatedAt": "2026-06-16T02:24:23Z"
+   "updatedAt": "2026-06-16T07:29:29Z"
   },
   {
    "id": "WTI_FLY@2026-06-15 18:15",
@@ -234,7 +378,7 @@
    "entryZ": -2.04,
    "histHitRate": 0.816,
    "loggedAt": "2026-06-16T02:24:23Z",
-   "updatedAt": "2026-06-16T02:24:23Z"
+   "updatedAt": "2026-06-16T07:29:29Z"
   },
   {
    "id": "BRENT_WTI@2026-06-15 18:15",
@@ -252,7 +396,7 @@
    "entryZ": -2.77,
    "histHitRate": 0.833,
    "loggedAt": "2026-06-16T02:24:23Z",
-   "updatedAt": "2026-06-16T02:24:23Z"
+   "updatedAt": "2026-06-16T07:29:29Z"
   },
   {
    "id": "BRENT_FLY@2026-06-15 17:30",
@@ -270,7 +414,7 @@
    "entryZ": -2.39,
    "histHitRate": 0.816,
    "loggedAt": "2026-06-16T02:24:23Z",
-   "updatedAt": "2026-06-16T02:24:23Z"
+   "updatedAt": "2026-06-16T07:29:29Z"
   },
   {
    "id": "BRENT_M2M3@2026-06-15 16:30",
@@ -288,7 +432,7 @@
    "entryZ": 1.94,
    "histHitRate": 0.717,
    "loggedAt": "2026-06-16T02:24:23Z",
-   "updatedAt": "2026-06-16T02:24:23Z"
+   "updatedAt": "2026-06-16T07:29:29Z"
   },
   {
    "id": "WTI_FLY@2026-06-15 15:30",
@@ -306,7 +450,7 @@
    "entryZ": -1.7,
    "histHitRate": 0.816,
    "loggedAt": "2026-06-16T02:24:23Z",
-   "updatedAt": "2026-06-16T02:24:23Z"
+   "updatedAt": "2026-06-16T07:29:29Z"
   },
   {
    "id": "BRENT_WTI@2026-06-15 15:30",
@@ -324,7 +468,7 @@
    "entryZ": -1.58,
    "histHitRate": 0.833,
    "loggedAt": "2026-06-16T02:24:23Z",
-   "updatedAt": "2026-06-16T02:24:23Z"
+   "updatedAt": "2026-06-16T07:29:29Z"
   },
   {
    "id": "BRENT_M1M2@2026-06-15 14:45",
@@ -342,7 +486,7 @@
    "entryZ": 2.88,
    "histHitRate": 0.717,
    "loggedAt": "2026-06-16T02:24:23Z",
-   "updatedAt": "2026-06-16T02:24:23Z"
+   "updatedAt": "2026-06-16T07:29:29Z"
   },
   {
    "id": "BRENT_M2M3@2026-06-15 14:45",
@@ -360,7 +504,7 @@
    "entryZ": 2.32,
    "histHitRate": 0.717,
    "loggedAt": "2026-06-16T02:24:23Z",
-   "updatedAt": "2026-06-16T02:24:23Z"
+   "updatedAt": "2026-06-16T07:29:29Z"
   },
   {
    "id": "BRENT_FLY@2026-06-15 14:30",
@@ -378,7 +522,7 @@
    "entryZ": -1.65,
    "histHitRate": 0.816,
    "loggedAt": "2026-06-16T02:24:23Z",
-   "updatedAt": "2026-06-16T02:24:23Z"
+   "updatedAt": "2026-06-16T07:29:29Z"
   },
   {
    "id": "BRENT_FLY@2026-06-15 14:00",
@@ -396,7 +540,7 @@
    "entryZ": 2.2,
    "histHitRate": 0.816,
    "loggedAt": "2026-06-16T02:24:23Z",
-   "updatedAt": "2026-06-16T02:24:23Z"
+   "updatedAt": "2026-06-16T07:29:29Z"
   },
   {
    "id": "BRENT_M2M3@2026-06-15 13:15",
@@ -414,7 +558,7 @@
    "entryZ": 1.63,
    "histHitRate": 0.717,
    "loggedAt": "2026-06-16T02:24:23Z",
-   "updatedAt": "2026-06-16T02:24:23Z"
+   "updatedAt": "2026-06-16T07:29:29Z"
   },
   {
    "id": "WTI_M2M3@2026-06-15 12:45",
@@ -432,7 +576,7 @@
    "entryZ": 1.85,
    "histHitRate": 0.752,
    "loggedAt": "2026-06-16T02:24:23Z",
-   "updatedAt": "2026-06-16T02:24:23Z"
+   "updatedAt": "2026-06-16T07:29:29Z"
   },
   {
    "id": "BRENT_M1M2@2026-06-15 12:45",
@@ -450,7 +594,7 @@
    "entryZ": 1.56,
    "histHitRate": 0.717,
    "loggedAt": "2026-06-16T02:24:23Z",
-   "updatedAt": "2026-06-16T02:24:23Z"
+   "updatedAt": "2026-06-16T07:29:29Z"
   },
   {
    "id": "BRENT_WTI@2026-06-15 12:30",
@@ -468,7 +612,7 @@
    "entryZ": 1.56,
    "histHitRate": 0.833,
    "loggedAt": "2026-06-16T02:24:23Z",
-   "updatedAt": "2026-06-16T02:24:23Z"
+   "updatedAt": "2026-06-16T07:29:29Z"
   },
   {
    "id": "WTI_FLY@2026-06-15 12:00",
@@ -486,7 +630,7 @@
    "entryZ": -1.5,
    "histHitRate": 0.816,
    "loggedAt": "2026-06-16T02:24:23Z",
-   "updatedAt": "2026-06-16T02:24:23Z"
+   "updatedAt": "2026-06-16T07:29:29Z"
   },
   {
    "id": "WTI_M1M2@2026-06-15 11:00",
@@ -504,7 +648,7 @@
    "entryZ": -1.91,
    "histHitRate": 0.752,
    "loggedAt": "2026-06-16T02:24:23Z",
-   "updatedAt": "2026-06-16T02:24:23Z"
+   "updatedAt": "2026-06-16T07:29:29Z"
   },
   {
    "id": "WTI_M2M3@2026-06-15 09:00",
@@ -522,7 +666,7 @@
    "entryZ": -1.55,
    "histHitRate": 0.752,
    "loggedAt": "2026-06-16T02:24:23Z",
-   "updatedAt": "2026-06-16T02:24:23Z"
+   "updatedAt": "2026-06-16T07:29:29Z"
   },
   {
    "id": "BRENT_M1M2@2026-06-15 09:00",
@@ -540,7 +684,7 @@
    "entryZ": -2.91,
    "histHitRate": 0.717,
    "loggedAt": "2026-06-16T02:24:23Z",
-   "updatedAt": "2026-06-16T02:24:23Z"
+   "updatedAt": "2026-06-16T07:29:29Z"
   },
   {
    "id": "BRENT_WTI@2026-06-15 08:45",
@@ -558,7 +702,7 @@
    "entryZ": -2.06,
    "histHitRate": 0.833,
    "loggedAt": "2026-06-16T02:24:23Z",
-   "updatedAt": "2026-06-16T02:24:23Z"
+   "updatedAt": "2026-06-16T07:29:29Z"
   },
   {
    "id": "BRENT_M2M3@2026-06-15 08:15",
@@ -576,7 +720,7 @@
    "entryZ": -2.28,
    "histHitRate": 0.717,
    "loggedAt": "2026-06-16T02:24:23Z",
-   "updatedAt": "2026-06-16T02:24:23Z"
+   "updatedAt": "2026-06-16T07:29:29Z"
   },
   {
    "id": "BRENT_FLY@2026-06-15 08:00",
@@ -594,7 +738,7 @@
    "entryZ": -2.22,
    "histHitRate": 0.816,
    "loggedAt": "2026-06-16T02:24:23Z",
-   "updatedAt": "2026-06-16T02:24:23Z"
+   "updatedAt": "2026-06-16T07:29:29Z"
   },
   {
    "id": "WTI_M1M2@2026-06-15 07:45",
@@ -612,7 +756,7 @@
    "entryZ": 2.15,
    "histHitRate": 0.752,
    "loggedAt": "2026-06-16T02:24:23Z",
-   "updatedAt": "2026-06-16T02:24:23Z"
+   "updatedAt": "2026-06-16T07:29:29Z"
   },
   {
    "id": "WTI_FLY@2026-06-15 07:15",
@@ -630,7 +774,7 @@
    "entryZ": 1.93,
    "histHitRate": 0.816,
    "loggedAt": "2026-06-16T02:24:23Z",
-   "updatedAt": "2026-06-16T02:24:23Z"
+   "updatedAt": "2026-06-16T07:29:29Z"
   },
   {
    "id": "BRENT_M1M2@2026-06-15 07:15",
@@ -648,7 +792,7 @@
    "entryZ": -2.02,
    "histHitRate": 0.717,
    "loggedAt": "2026-06-16T02:24:23Z",
-   "updatedAt": "2026-06-16T02:24:23Z"
+   "updatedAt": "2026-06-16T07:29:29Z"
   },
   {
    "id": "WTI_M2M3@2026-06-15 06:45",
@@ -666,7 +810,7 @@
    "entryZ": -1.75,
    "histHitRate": 0.752,
    "loggedAt": "2026-06-16T02:24:23Z",
-   "updatedAt": "2026-06-16T02:24:23Z"
+   "updatedAt": "2026-06-16T07:29:29Z"
   },
   {
    "id": "BRENT_M2M3@2026-06-15 06:45",
@@ -684,7 +828,7 @@
    "entryZ": -1.54,
    "histHitRate": 0.717,
    "loggedAt": "2026-06-16T02:24:23Z",
-   "updatedAt": "2026-06-16T02:24:23Z"
+   "updatedAt": "2026-06-16T07:29:29Z"
   },
   {
    "id": "WTI_M2M3@2026-06-15 05:00",
@@ -702,7 +846,7 @@
    "entryZ": 2.26,
    "histHitRate": 0.752,
    "loggedAt": "2026-06-16T02:24:23Z",
-   "updatedAt": "2026-06-16T02:24:23Z"
+   "updatedAt": "2026-06-16T07:29:29Z"
   },
   {
    "id": "BRENT_M2M3@2026-06-15 04:00",
@@ -720,7 +864,7 @@
    "entryZ": -1.51,
    "histHitRate": 0.717,
    "loggedAt": "2026-06-16T02:24:23Z",
-   "updatedAt": "2026-06-16T02:24:23Z"
+   "updatedAt": "2026-06-16T07:29:29Z"
   },
   {
    "id": "BRENT_FLY@2026-06-15 03:15",
@@ -738,7 +882,7 @@
    "entryZ": -1.78,
    "histHitRate": 0.816,
    "loggedAt": "2026-06-16T02:24:23Z",
-   "updatedAt": "2026-06-16T02:24:23Z"
+   "updatedAt": "2026-06-16T07:29:29Z"
   },
   {
    "id": "WTI_FLY@2026-06-15 02:30",
@@ -756,7 +900,7 @@
    "entryZ": -1.56,
    "histHitRate": 0.816,
    "loggedAt": "2026-06-16T02:24:23Z",
-   "updatedAt": "2026-06-16T02:24:23Z"
+   "updatedAt": "2026-06-16T07:29:29Z"
   },
   {
    "id": "BRENT_FLY@2026-06-15 01:15",
@@ -774,7 +918,7 @@
    "entryZ": 1.98,
    "histHitRate": 0.816,
    "loggedAt": "2026-06-16T02:24:23Z",
-   "updatedAt": "2026-06-16T02:24:23Z"
+   "updatedAt": "2026-06-16T07:29:29Z"
   },
   {
    "id": "WTI_FLY@2026-06-15 01:00",
@@ -792,7 +936,7 @@
    "entryZ": 1.78,
    "histHitRate": 0.816,
    "loggedAt": "2026-06-16T02:24:23Z",
-   "updatedAt": "2026-06-16T02:24:23Z"
+   "updatedAt": "2026-06-16T07:29:29Z"
   },
   {
    "id": "BRENT_M1M2@2026-06-15 00:15",
@@ -810,7 +954,7 @@
    "entryZ": -2.43,
    "histHitRate": 0.717,
    "loggedAt": "2026-06-16T02:24:23Z",
-   "updatedAt": "2026-06-16T02:24:23Z"
+   "updatedAt": "2026-06-16T07:29:29Z"
   },
   {
    "id": "WTI_FLY@2026-06-15 00:00",
@@ -828,7 +972,7 @@
    "entryZ": 1.76,
    "histHitRate": 0.816,
    "loggedAt": "2026-06-16T02:24:23Z",
-   "updatedAt": "2026-06-16T02:24:23Z"
+   "updatedAt": "2026-06-16T07:29:29Z"
   },
   {
    "id": "BRENT_M2M3@2026-06-15 00:00",
@@ -846,7 +990,7 @@
    "entryZ": -3.39,
    "histHitRate": 0.717,
    "loggedAt": "2026-06-16T02:24:23Z",
-   "updatedAt": "2026-06-16T02:24:23Z"
+   "updatedAt": "2026-06-16T07:29:29Z"
   },
   {
    "id": "BRENT_WTI@2026-06-15 00:00",
@@ -864,7 +1008,7 @@
    "entryZ": 3.22,
    "histHitRate": 0.833,
    "loggedAt": "2026-06-16T02:24:23Z",
-   "updatedAt": "2026-06-16T02:24:23Z"
+   "updatedAt": "2026-06-16T07:29:29Z"
   },
   {
    "id": "WTI_M1M2@2026-06-14 22:00",
@@ -882,7 +1026,7 @@
    "entryZ": -3.32,
    "histHitRate": 0.752,
    "loggedAt": "2026-06-16T02:24:23Z",
-   "updatedAt": "2026-06-16T02:24:23Z"
+   "updatedAt": "2026-06-16T07:29:29Z"
   },
   {
    "id": "BRENT_M1M2@2026-06-12 21:45",
@@ -900,7 +1044,7 @@
    "entryZ": 2.17,
    "histHitRate": 0.717,
    "loggedAt": "2026-06-16T02:24:23Z",
-   "updatedAt": "2026-06-16T02:24:23Z"
+   "updatedAt": "2026-06-16T07:29:29Z"
   },
   {
    "id": "BRENT_FLY@2026-06-12 21:45",
@@ -918,7 +1062,7 @@
    "entryZ": 1.95,
    "histHitRate": 0.816,
    "loggedAt": "2026-06-16T02:24:23Z",
-   "updatedAt": "2026-06-16T02:24:23Z"
+   "updatedAt": "2026-06-16T07:29:29Z"
   },
   {
    "id": "WTI_M2M3@2026-06-12 20:45",
@@ -936,7 +1080,7 @@
    "entryZ": -1.95,
    "histHitRate": 0.752,
    "loggedAt": "2026-06-16T02:24:23Z",
-   "updatedAt": "2026-06-16T02:24:23Z"
+   "updatedAt": "2026-06-16T07:29:29Z"
   },
   {
    "id": "WTI_M1M2@2026-06-12 20:30",
@@ -954,7 +1098,7 @@
    "entryZ": -1.55,
    "histHitRate": 0.752,
    "loggedAt": "2026-06-16T02:24:23Z",
-   "updatedAt": "2026-06-16T02:24:23Z"
+   "updatedAt": "2026-06-16T07:29:29Z"
   },
   {
    "id": "WTI_M2M3@2026-06-12 19:45",
@@ -972,7 +1116,7 @@
    "entryZ": -1.67,
    "histHitRate": 0.752,
    "loggedAt": "2026-06-16T02:24:23Z",
-   "updatedAt": "2026-06-16T02:24:23Z"
+   "updatedAt": "2026-06-16T07:29:29Z"
   },
   {
    "id": "BRENT_M1M2@2026-06-12 19:45",
@@ -990,7 +1134,7 @@
    "entryZ": -1.91,
    "histHitRate": 0.717,
    "loggedAt": "2026-06-16T02:24:23Z",
-   "updatedAt": "2026-06-16T02:24:23Z"
+   "updatedAt": "2026-06-16T07:29:29Z"
   },
   {
    "id": "WTI_M1M2@2026-06-12 19:00",
@@ -1008,7 +1152,7 @@
    "entryZ": 2.04,
    "histHitRate": 0.752,
    "loggedAt": "2026-06-16T02:24:23Z",
-   "updatedAt": "2026-06-16T02:24:23Z"
+   "updatedAt": "2026-06-16T07:29:29Z"
   },
   {
    "id": "WTI_FLY@2026-06-12 19:00",
@@ -1026,7 +1170,7 @@
    "entryZ": 1.53,
    "histHitRate": 0.816,
    "loggedAt": "2026-06-16T02:24:23Z",
-   "updatedAt": "2026-06-16T02:24:23Z"
+   "updatedAt": "2026-06-16T07:29:29Z"
   },
   {
    "id": "BRENT_M2M3@2026-06-12 18:30",
@@ -1044,7 +1188,7 @@
    "entryZ": -1.65,
    "histHitRate": 0.717,
    "loggedAt": "2026-06-16T02:24:23Z",
-   "updatedAt": "2026-06-16T02:24:23Z"
+   "updatedAt": "2026-06-16T07:29:29Z"
   },
   {
    "id": "WTI_M2M3@2026-06-12 18:00",
@@ -1062,7 +1206,7 @@
    "entryZ": 1.77,
    "histHitRate": 0.752,
    "loggedAt": "2026-06-16T02:24:23Z",
-   "updatedAt": "2026-06-16T02:24:23Z"
+   "updatedAt": "2026-06-16T07:29:29Z"
   },
   {
    "id": "BRENT_M1M2@2026-06-12 15:45",
@@ -1080,7 +1224,7 @@
    "entryZ": -1.67,
    "histHitRate": 0.717,
    "loggedAt": "2026-06-16T02:24:23Z",
-   "updatedAt": "2026-06-16T02:24:23Z"
+   "updatedAt": "2026-06-16T07:29:29Z"
   },
   {
    "id": "BRENT_WTI@2026-06-12 14:45",
@@ -1098,7 +1242,7 @@
    "entryZ": -2.06,
    "histHitRate": 0.833,
    "loggedAt": "2026-06-16T02:24:23Z",
-   "updatedAt": "2026-06-16T02:24:23Z"
+   "updatedAt": "2026-06-16T07:29:29Z"
   },
   {
    "id": "BRENT_FLY@2026-06-12 14:15",
@@ -1116,7 +1260,7 @@
    "entryZ": -1.9,
    "histHitRate": 0.816,
    "loggedAt": "2026-06-16T02:24:23Z",
-   "updatedAt": "2026-06-16T02:24:23Z"
+   "updatedAt": "2026-06-16T07:29:29Z"
   },
   {
    "id": "WTI_M1M2@2026-06-12 13:45",
@@ -1134,7 +1278,7 @@
    "entryZ": 2.1,
    "histHitRate": 0.752,
    "loggedAt": "2026-06-16T02:24:23Z",
-   "updatedAt": "2026-06-16T02:24:23Z"
+   "updatedAt": "2026-06-16T07:29:29Z"
   },
   {
    "id": "WTI_M2M3@2026-06-12 13:45",
@@ -1152,7 +1296,7 @@
    "entryZ": 3.15,
    "histHitRate": 0.752,
    "loggedAt": "2026-06-16T02:24:23Z",
-   "updatedAt": "2026-06-16T02:24:23Z"
+   "updatedAt": "2026-06-16T07:29:29Z"
   },
   {
    "id": "WTI_FLY@2026-06-12 13:45",
@@ -1170,7 +1314,7 @@
    "entryZ": -1.69,
    "histHitRate": 0.816,
    "loggedAt": "2026-06-16T02:24:23Z",
-   "updatedAt": "2026-06-16T02:24:23Z"
+   "updatedAt": "2026-06-16T07:29:29Z"
   },
   {
    "id": "BRENT_M1M2@2026-06-12 13:45",
@@ -1188,7 +1332,7 @@
    "entryZ": 2.78,
    "histHitRate": 0.717,
    "loggedAt": "2026-06-16T02:24:23Z",
-   "updatedAt": "2026-06-16T02:24:23Z"
+   "updatedAt": "2026-06-16T07:29:29Z"
   },
   {
    "id": "BRENT_M2M3@2026-06-12 13:45",
@@ -1206,7 +1350,7 @@
    "entryZ": 2.1,
    "histHitRate": 0.717,
    "loggedAt": "2026-06-16T02:24:23Z",
-   "updatedAt": "2026-06-16T02:24:23Z"
+   "updatedAt": "2026-06-16T07:29:29Z"
   }
  ]
 }

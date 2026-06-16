@@ -23,6 +23,13 @@ memory/
 # case-insensitive filesystems (Windows/macOS).
 /Data/
 
+# Transient SQLite sidecar files — the committed .db is self-contained
+# (checkpointed). These are recreated at runtime and must never be tracked.
+*.db-wal
+*.db-shm
+*.db-shm.txt
+*.db-journal
+
 # Editor
 .vscode/*
 !.vscode/extensions.json

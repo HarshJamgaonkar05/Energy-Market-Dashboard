@@ -20,9 +20,11 @@ freshest bars live in the **write-ahead log (WAL)**, so the engine snapshots
 - **Crude-only**, so we backtest the Phase-2 *crude* relative-value structures
   (calendars, flies, Brent-WTI); the product cracks (HO/RBOB/Gas Oil) aren't here.
 
-If the live feed (`I:\Public\Siddharth Raj\lightstreamer_data\`) is reachable and
-holds *more* bars than the local copy, the engine uses it instead — so the same
-backtest becomes live as new bars arrive. The feed records `mode: local` vs `live`.
+If the mentor's live company feed (`I:\Public\Summer Interns Energy\DB\`) is
+reachable and holds *more* bars than the local copy, the engine uses it instead —
+so the same backtest runs on the freshest data as new 15-min bars arrive. The feed
+records `mode: live` vs `local`. (The local `Data/` copy is only the offline
+fallback.)
 
 ---
 

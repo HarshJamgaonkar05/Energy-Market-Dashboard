@@ -39,8 +39,8 @@ import pandas as pd
 
 # ---- Paths -----------------------------------------------------------------
 HERE = Path(__file__).resolve().parent
-LOCAL_DIR = HERE / "Data"                                  # the provided data
-LIVE_DIR = Path(r"I:\Public\Siddharth Raj\lightstreamer_data")  # live feed if up
+LOCAL_DIR = HERE / "Data"                                  # the provided snapshot (fallback)
+LIVE_DIR = Path(r"I:\Public\Summer Interns Energy\DB")     # mentor's live company feed
 OUT_DIR = HERE / "out"
 SERVER_DATA = HERE.parent / "server" / "data"
 REGIMES_JSON = SERVER_DATA / "regimes.json"
