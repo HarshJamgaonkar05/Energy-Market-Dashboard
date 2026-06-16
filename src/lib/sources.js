@@ -59,6 +59,11 @@ export const SOURCES = {
     detail: "Phase 2 analytics — regimes, regressions & signals computed offline from the historical dataset + EIA fundamentals.",
     kind: "derived",
   },
+  signalEngine: {
+    label: "Live Signal Engine",
+    detail: "Phase-3 engine — the Phase-2 relative-value framework run on the live 15-min crude futures feed. Generates the trade log & signal log, refreshed each live pass.",
+    kind: "derived",
+  },
   modeled: {
     label: "No free source",
     detail: "No free or open data source for this value — shown as “—” rather than an assumed figure.",

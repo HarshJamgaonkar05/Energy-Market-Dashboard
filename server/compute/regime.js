@@ -91,6 +91,15 @@ export function signals() {
   return d;
 }
 
+// ---- Live Signal Engine (Phase 3) ------------------------------------------
+/** The live signal-engine feed: trade log, signal log, open positions, live
+ *  dislocation board and portfolio stats. Written by Backtesting/engine.py and
+ *  hot-reloaded here on mtime change (so a fresh `--live` pass shows with no
+ *  server restart). Returns null until the engine has been run at least once. */
+export function signalEngine() {
+  return loadJson("signal_engine.json");
+}
+
 // ---- Narrative -------------------------------------------------------------
 /** Synthesize a one-line market briefing from the regime, the top signal and the
  *  biggest live mover — the Dashboard's headline. Pure: live movers are passed in

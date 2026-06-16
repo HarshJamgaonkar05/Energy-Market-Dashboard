@@ -16,7 +16,7 @@ dotenv.config({ path: join(__dirname, ".env") });
 
 import { instruments, ticker, movers, seriesAndCorrelation, cracks, crackHistory, forwardCurves, interSpreads, macro } from "./compute/markets.js";
 import { calendar, opec, freight, rigs, sentiment } from "./compute/derive.js";
-import { currentRegime, regimeCatalog, regimeHistory, regressionList, regression, signals, buildNarrative } from "./compute/regime.js";
+import { currentRegime, regimeCatalog, regimeHistory, regressionList, regression, signals, buildNarrative, signalEngine } from "./compute/regime.js";
 import * as eia from "./sources/eia.js";
 import { weather, tempForecast } from "./sources/openmeteo.js";
 import { storms, enso } from "./sources/noaa.js";
@@ -103,6 +103,9 @@ app.get("/api/regime/history", route(() => regimeHistory(), "/api/regime/history
 app.get("/api/regression", route(() => regressionList(), "/api/regression"));
 app.get("/api/regression/:spread", route((req) => regression(req.params.spread), "/api/regression"));
 app.get("/api/signals", route(() => signals(), "/api/signals"));
+// Live Signal Engine — the Phase-2 framework run on the live intraday feed:
+// trade log, persistent signal/opportunity log, open positions and live stats.
+app.get("/api/signal-engine", route(() => signalEngine(), "/api/signal-engine"));
 // Market-narrative briefing — fuses the regime, the top signal and the biggest
 // live mover into one headline for the Dashboard.
 app.get("/api/narrative", route(async () => buildNarrative(movers(await instruments())), "/api/narrative"));
