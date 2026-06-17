@@ -46,9 +46,14 @@ Run intraday over this data:
   Phase-2's 4.6, pure basis — so the reversion reference must be estimated from the data
   being traded. (Set `--no-robust` to fall back to mean/std.)
 - **Signal** = robust z-score `z = (spread − median) / (1.4826 · MAD)`.
-- **Entry** = fade when `|z| ≥ 1.5` (rich → short the spread, cheap → long it),
-  **if the daily fundamentals model agrees** on the sign of the dislocation (see §5a)
-  and, in NET mode, the expected reversion clears its trading cost (§4).
+- **Entry** = fade when `1.5 ≤ |z| ≤ 2.1` (rich → short the spread, cheap → long it),
+  **if the daily fundamentals model agrees** on the sign of the dislocation (see §5a),
+  the **reward:risk is favorable** (≥ `MIN_RR = 1.5`, see §4a) and, in NET mode, the
+  expected reversion clears its trading cost (§4). The upper `|z| ≤ 2.1` band excludes
+  near-stop extremes whose R:R looks great but whose odds are poor.
+- **Position size** = the **1% rule**: units chosen so a stop-out loses at most
+  `RISK_PCT = 1%` of capital — `units = ⌊(0.01 · $250k) / (price-distance-to-stop · 1000)⌋`,
+  capped at `MAX_UNITS = 200` (see §4a).
 - **Exit** (improved geometry) = reversion **through to fair** (`|z| ≤ 0.1`, directional —
   capture the whole reversion, not just the first quarter); a **tighter `|z| ≥ 2.5` stop**
   (positive reward:risk vs the 1.5σ entry, was 3.0); an **OU half-life time stop** (bail
@@ -93,15 +98,36 @@ drawdown and stats are portfolio-level.
   (default 2×) its round-turn cost** — so the engine stops paying to harvest moves
   smaller than the spread it crosses. Reports gross *and* net PnL / PF / win rate.
 - **Multiplier** 1,000 bbl → $1.00/bbl = **$1,000 per contract**.
-- **Size** fixed 1 spread unit per signal. `INITIAL_CAPITAL = $250,000`.
+- **Size** by the **1% rule** (§4a), not a fixed unit. `INITIAL_CAPITAL = $250,000`.
 
 Why NET matters: the old exit took profit at `|z|≤0.25` against a far `3σ` stop —
 a **high win rate but tiny average wins**, profit driven by frequency. Those wins do
 not survive realistic transaction costs: on this data, `--slip 0.01` turns a +$2.7k
-gross book **net-negative**, while adding the fundamentals gate (§5a) cuts to ~28
-high-conviction trades that stay **net-positive with a fraction of the drawdown**.
-The improved exit geometry (§2) and the cost/conviction gates trade win rate for
-expectancy — the honest edge metric.
+gross book **net-negative**, while adding the fundamentals gate (§5a) cuts to a
+handful of high-conviction trades that stay **net-positive with a fraction of the
+drawdown**. The improved exit geometry (§2) and the cost/conviction gates trade win
+rate for expectancy — the honest edge metric.
+
+### 4a. Risk management — favorable R:R + the 1% rule
+
+Two textbook risk controls govern *which* trades to take and *how large*:
+
+- **Favorable risk:reward.** At entry, `reward = |z|−Z_TARGET` and `risk = Z_STOP−|z|`
+  (both in σ). A trade is taken only if `reward/risk ≥ MIN_RR = 1.5`. Because that ratio
+  rises as `|z|` approaches the stop, a naïve gate would select near-stop entries with
+  great paper R:R but coin-flip odds — so entries are also **capped at `|z| ≤ 2.1`**. The
+  result is a clean ~2.5 average R:R from the *sweet-spot band*, not gamed extremes.
+- **The 1% rule (position sizing).** Size each trade so a stop-out costs at most
+  `RISK_PCT = 1%` of capital: `units = ⌊(0.01·$250k) / (Δ$-to-stop)⌋`, where
+  `Δ$-to-stop = (Z_STOP−|z|)·scale·1000`, capped at `MAX_UNITS = 200`. Risk per trade is
+  thus held ≈ constant ($2,500) regardless of the spread or its volatility; tame setups get
+  more size, jumpy ones less. Tune with `--risk`, `--min-rr`, `--z-entry-max`, `--max-units`.
+
+> **Honest caveat (portfolio risk ≠ per-trade risk).** The 1% rule bounds *each trade*. But
+> the seven structures are highly correlated (all crude term structure), so concurrent
+> positions stack — portfolio drawdown runs well above 1% (≈20%+ on this data). A
+> portfolio-level concurrent-risk cap is the natural next control; it needs a chronological
+> cross-structure simulation the current per-structure engine doesn't yet do.
 
 ---
 
@@ -143,9 +169,10 @@ read-outs corroborate and drops the ones only the noise supports.
   (timestamp · regime · instrument · rationale · confidence · performance).
 
 ```
-python Backtesting/engine.py                       # one GROSS pass (default)
+python Backtesting/engine.py                       # one GROSS pass (default: 1% rule + R:R gate)
 python Backtesting/engine.py --slip 0.01           # NET: cost + expected-edge gate
 python Backtesting/engine.py --slip 0.01 --fund-gate  # NET + fundamentals agreement gate
+python Backtesting/engine.py --risk 0.005 --min-rr 2  # risk 0.5%/trade, demand 2:1 reward:risk
 python Backtesting/engine.py --no-robust           # mean/std fair value (old reference)
 python Backtesting/engine.py --live                # re-run every 60s on the freshest data
 ```

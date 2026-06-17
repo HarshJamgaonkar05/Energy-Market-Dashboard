@@ -81,7 +81,15 @@ the gap looks rich or cheap. We only trade when **both** the fast read and this 
 point the **same way**. If only the fast, twitchy signal says "stretched" but the big-picture
 model disagrees, we walk away. Two opinions that agree are much safer than one.
 
-**(c) The move is worth the cost (when we count costs).** Trading isn't free — there's a small
+**(c) The reward must beat the risk (favorable R:R).** Before entering, we compare the
+*reward* (how far the gap can snap back to normal) against the *risk* (how far it could go
+against us before we cut it). We only take the trade if the reward is comfortably bigger than
+the risk — by default at least **1.5 times**. A trade where we'd risk as much as we hope to
+make isn't worth it. We also **don't chase gaps that are stretched too far**, because those
+sit right next to our cut-out point — great reward on paper, but they get knocked out too
+easily. We fade the sweet spot, not the extremes.
+
+**(d) The move is worth the cost (when we count costs).** Trading isn't free — there's a small
 cost every time you buy and sell. So we only take a trade if the expected snap-back is at
 least **twice** what it costs to make the trade. No point chasing a tiny move that the trading
 cost would eat. (This check is on only when we run the "with real costs" version — see §9.)
@@ -123,13 +131,37 @@ honest way to measure a strategy is the money it keeps, not how often it wins.
 
 ---
 
-## 8. How big are the trades, and how do we keep score?
+## 8. How big should each trade be? The 1% Rule
 
-- We trade **one unit** of each gap at a time — small and steady.
-- One contract covers 1,000 barrels, so a **$1 move** in a gap is worth **$1,000**.
-- We start with a pretend **$250,000** and track the running profit/loss.
-- For every trade we record: which gap, buy or sell, in/out prices and times, why we exited,
-  how long we held, the profit or loss, and the worst and best point it passed through.
+Instead of always trading the same amount, we size each trade by **how much we could lose**.
+The rule is simple and is what professional traders use:
+
+> **Never risk more than 1% of your money on a single trade.**
+
+We start with a pretend **$250,000**, so 1% is **$2,500**. Before each trade we work out: *"if
+this hits my cut-out (stop) point, how much would I lose per unit?"* Then we buy exactly
+enough units that the loss, if we're wrong, is about **$2,500 — no more**.
+
+The neat result: every trade risks the **same small slice** of the account, no matter which
+gap it is or how jumpy it is. A calm, safe-looking setup gets a bigger position; a riskier one
+gets a smaller position. Win or lose, one bad trade can't seriously dent the account. (We also
+cap the maximum size, as a seatbelt.)
+
+How we keep score:
+
+- One contract covers 1,000 barrels, so a **$1 move** in a gap is worth **$1,000** per unit.
+- We track the running profit/loss as an equity curve.
+- For every trade we record: which gap, buy or sell, in/out prices and times, **how many units
+  and how many dollars were at risk**, the reward-to-risk ratio, why we exited, how long we
+  held, the profit or loss, and the worst/best point it passed through.
+
+The scores we care about: **profit factor** (dollars won per dollar lost), **average profit per
+trade**, and the **biggest dip (drawdown)** — how much pain along the way.
+
+> **One honest warning about the 1% rule here.** It limits the risk of *each trade on its own*.
+> But our seven gaps are close cousins (all crude oil), so they often move together. When
+> several are in play at once, their risks **add up** — so the account can swing more than 1%
+> at a time. Capping the *combined* risk of all open trades is the natural next improvement.
 
 The headline scores we care about:
 
@@ -163,6 +195,8 @@ picky, not by trading a lot.**
 | **Getting out** | grab a sliver of profit, allow a big loss | wait for the full snap-back, cut losses tighter and sooner | bigger wins, smaller losses, fewer dead trades |
 | **Counting costs** | ignored costs completely | can run with real costs + skip trades that aren't worth it | shows the truth: over-trading loses money |
 | **Finding "normal"** | plain average (easily fooled by spikes) | the middle value + a "big-picture must agree" filter | a cleaner normal, and only well-supported trades |
+| **Trade size** | always one unit (arbitrary) | the **1% rule** — size so a loss is at most 1% of the account | controlled, consistent risk on every trade |
+| **Picking trades** | any stretched gap | only **favorable reward-vs-risk** setups, and not the extremes | skips trades that aren't worth the risk |
 
 In numbers, on the test data: **before costs** the strategy looks great. **After costs**, the
 trade-everything version turns *negative*. Add the agreement filter and it goes back to
@@ -191,8 +225,12 @@ can and can't claim.
 python Backtesting/engine.py                          # before costs (the pure signal)
 python Backtesting/engine.py --slip 0.01              # with real costs + only-worth-it trades
 python Backtesting/engine.py --slip 0.01 --fund-gate  # with costs + big-picture must agree
+python Backtesting/engine.py --risk 0.005 --min-rr 2  # risk only 0.5% per trade, demand 2:1 reward
 python Backtesting/engine.py --live                   # keep re-running on the latest data
 ```
+
+The risk dials: `--risk` sets the slice of the account risked per trade (default 1% = `0.01`),
+`--min-rr` the minimum reward-to-risk (default `1.5`), `--max-units` the size seatbelt.
 
 The results land in `out/trades_log.md` (every trade in words), `out/trades.csv` (a
 spreadsheet), and feed the dashboard. The plain-English project overview is in

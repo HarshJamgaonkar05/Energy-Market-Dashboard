@@ -67,6 +67,12 @@ SLIP_PER_LEG = 0.0     # price units per leg per side; 0 = GROSS (brief). Set vi
 COST_EXP_MULT = 2.0    # NET mode only: enter only if expected reversion >= this x round-turn cost
 ROBUST = True          # fair value via rolling median/MAD (resists the dislocation bar) vs mean/std
 FUND_GATE = False      # hard-skip fades that disagree with the daily fundamentals fair value
+# ---- Risk management -------------------------------------------------------
+RISK_PCT = 0.01        # the 1% RULE: risk at most this fraction of capital per trade
+MIN_RR = 1.5           # FAVORABLE R:R: only take trades whose reward:risk >= this
+Z_ENTRY_MAX = 2.1      # don't chase dislocations this deep — too close to the stop (poor odds,
+                       # and distance-to-stop sizing would over-size them); keeps R:R honest
+MAX_UNITS = 200        # safety cap on the size the 1% rule can produce
 LIVE_REFRESH_SEC = 60
 
 # ---- Tradeable structures (crude-only — what the feed contains) -------------
@@ -280,24 +286,45 @@ def backtest_structure(name, meta, closes, regime, edges, views):
     for i, (ts, row) in enumerate(df.iterrows()):
         z, sp, scale = row["z"], row["spread"], row["scale"]
         if pos is None:
-            if abs(z) < Z_ENTRY:
+            abs_z = abs(z)
+            if abs_z < Z_ENTRY or abs_z > Z_ENTRY_MAX:       # fade the band, not near-stop extremes
                 continue
             agree = fund_agree(fund_z, z)
             # (3) Fundamentals anchor: skip a fade the daily model contradicts (gate only).
             if FUND_GATE and agree is False:
                 continue
+            # (R:R) FAVORABLE RISK:REWARD — reward = room to the target (revert to fair),
+            # risk = room to the stop, both in sigma. Only fade when reward:risk clears MIN_RR.
+            reward_sigma = abs_z - Z_TARGET
+            risk_sigma = Z_STOP - abs_z
+            if risk_sigma <= 0:                              # already at/through the stop — no room
+                continue
+            rr = reward_sigma / risk_sigma
+            if rr < MIN_RR:
+                continue
+            # (1%) POSITION SIZING — size so a stop-out loses at most RISK_PCT of capital.
+            # Dollar risk per unit = (price distance to the stop) x contract multiplier.
+            risk_per_unit = risk_sigma * scale * MULT
+            if risk_per_unit <= 0:
+                continue
+            units = int((RISK_PCT * INITIAL_CAPITAL) // risk_per_unit)
+            units = min(units, MAX_UNITS)
+            if units < 1:                                    # can't take even 1 unit within the 1% rule
+                continue
             # (2) Cost-aware: in NET mode, only enter if the expected reversion to fair
             # clears a multiple of the round-turn cost. No-op at slippage 0 (GROSS).
-            exp_move = max(0.0, abs(z) - Z_TARGET) * scale * MULT
+            exp_move = reward_sigma * scale * MULT
             if round_turn_cost > 0 and exp_move < COST_EXP_MULT * round_turn_cost:
                 continue
             pos = {"dir": "LONG" if z <= -Z_ENTRY else "SHORT", "i": i, "t": ts,
                    "sp": sp, "z": float(z), "legs": legs_at(ts), "mae": 0.0, "mfe": 0.0,
-                   "agree": agree}
+                   "agree": agree, "units": units, "rr": rr,
+                   "riskDollars": units * risk_per_unit}
             continue
         sign = 1.0 if pos["dir"] == "LONG" else -1.0
         entry_sign = -sign                                   # +1 if SHORT (entered rich), -1 if LONG
-        upnl = sign * (sp - pos["sp"]) * MULT
+        units = pos["units"]
+        upnl = sign * (sp - pos["sp"]) * MULT * units
         pos["mae"], pos["mfe"] = min(pos["mae"], upnl), max(pos["mfe"], upnl)
         held = i - pos["i"]
         # (1) Exit geometry: revert THROUGH fair (directional), a tighter symmetric stop,
@@ -309,8 +336,10 @@ def backtest_structure(name, meta, closes, regime, edges, views):
         if hit_t or hit_s or hit_time or forced:
             reason = ("target" if hit_t else "stop" if hit_s
                       else "time_stop" if hit_time else "session_end")
-            gross = sign * (sp - pos["sp"]) * MULT
-            net = gross - round_turn_cost
+            units = pos["units"]
+            cost = round_turn_cost * units
+            gross = sign * (sp - pos["sp"]) * MULT * units
+            net = gross - cost
             abs_z = abs(pos["z"])
             trades.append({
                 "structure": name, "label": meta["label"],
@@ -323,8 +352,10 @@ def backtest_structure(name, meta, closes, regime, edges, views):
                 "entryLegs": pos["legs"], "exitLegs": legs_at(ts),
                 "holdBars": held,
                 "holdMin": int((ts - pos["t"]).total_seconds() // 60),
-                "contracts": contracts, "pnl": round(gross, 2),
-                "cost": round(round_turn_cost, 2), "netPnl": round(net, 2),
+                "contracts": contracts, "units": units,
+                "rrRatio": round(pos["rr"], 2), "riskDollars": round(pos["riskDollars"], 2),
+                "pnl": round(gross, 2),
+                "cost": round(cost, 2), "netPnl": round(net, 2),
                 "mae": round(pos["mae"], 2), "mfe": round(pos["mfe"], 2),
                 "exitReason": reason, "histHitRate": round(edge, 3),
                 "edgeSource": edge_src, "halfLifeBars": round(hl, 1) if hl else None,
@@ -344,7 +375,9 @@ def backtest_structure(name, meta, closes, regime, edges, views):
             "entrySpread": round(pos["sp"], 4), "curSpread": round(sp, 4),
             "entryZ": round(pos["z"], 2), "curZ": round(z, 2),
             "holdBars": int(len(df) - 1 - pos["i"]),
-            "unrealizedPnl": round(sign * (sp - pos["sp"]) * MULT, 2),
+            "units": pos["units"], "rrRatio": round(pos["rr"], 2),
+            "riskDollars": round(pos["riskDollars"], 2),
+            "unrealizedPnl": round(sign * (sp - pos["sp"]) * MULT * pos["units"], 2),
             "fundZ": fund_z, "fundAgree": pos["agree"],
             "regime": regime, "confidence": confidence_score(edge, abs(pos["z"]), pos["agree"]),
         }
@@ -398,6 +431,10 @@ def summarize(all_trades, curve):
         "expectancy": round(pnl / n, 2) if n else 0.0,
         "netExpectancy": round(net / n, 2) if n else 0.0,
         "perTradeSharpe": round(sharpe, 3),
+        "avgRR": round(float(np.mean([t["rrRatio"] for t in all_trades])), 2) if n else 0.0,
+        "avgUnits": round(float(np.mean([t["units"] for t in all_trades])), 1) if n else 0.0,
+        "avgRiskDollars": round(float(np.mean([t["riskDollars"] for t in all_trades])), 0) if n else 0.0,
+        "riskPctPerTrade": RISK_PCT,
         "avgHoldMin": round(float(np.mean([t["holdMin"] for t in all_trades])), 1) if n else 0.0,
         "maxDrawdown": max_drawdown(curve),
         "endingEquity": round(INITIAL_CAPITAL + pnl, 2), "initialCapital": INITIAL_CAPITAL,
@@ -497,7 +534,8 @@ def write_trade_csv(all_trades):
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     cols = ["structure", "label", "strategy", "phase2Key", "regime", "direction",
             "entryTime", "exitTime", "holdBars", "holdMin", "entrySpread", "exitSpread",
-            "entryZ", "exitZ", "contracts", "pnl", "cost", "netPnl", "mae", "mfe",
+            "entryZ", "exitZ", "contracts", "units", "rrRatio", "riskDollars",
+            "pnl", "cost", "netPnl", "mae", "mfe",
             "exitReason", "halfLifeBars", "fundZ", "fundAgree", "histHitRate",
             "confidence", "equityAfter"]
     try:
@@ -531,7 +569,7 @@ def write_trade_md(all_trades, summary, mode, regime):
         lines += [
             f"### {i}. {t['label']} — {t['direction']}  ({t['pnl']:+,.0f} USD)",
             f"- **Strategy:** {t['strategy']} · regime {t['regime']} · hist. edge {t['histHitRate']*100:.0f}% · confidence {t['confidence']}/100",
-            f"- **Setup:** dislocated to {t['entryZ']:+.2f}sigma ({'cheap' if t['direction']=='LONG' else 'rich'}) -> fade",
+            f"- **Setup:** dislocated to {t['entryZ']:+.2f}sigma ({'cheap' if t['direction']=='LONG' else 'rich'}) -> fade · R:R {t['rrRatio']:.2f} · size {t['units']}u (risk ${t['riskDollars']:,.0f})",
             f"- **Legs (entry->exit):** {legs}",
             f"- **In:** {t['entryTime']} @ {t['entrySpread']}   **Out:** {t['exitTime']} @ {t['exitSpread']} (z {t['exitZ']:+.2f}, {t['exitReason']})",
             f"- **Held:** {t['holdBars']} bars ({t['holdMin']} min)   **MAE/MFE:** {t['mae']:+,.0f} / {t['mfe']:+,.0f}",
@@ -584,6 +622,8 @@ def run_once(generated_at):
                      "params": {"lookback": LOOKBACK, "zEntry": Z_ENTRY, "zTarget": Z_TARGET,
                                 "zStop": Z_STOP, "maxHoldHalfLives": MAX_HOLD_HL,
                                 "robustFairValue": ROBUST, "fundamentalGate": FUND_GATE,
+                                "riskPct": RISK_PCT, "minRR": MIN_RR, "zEntryMax": Z_ENTRY_MAX,
+                                "maxUnits": MAX_UNITS,
                                 "mult": MULT, "slipPerLeg": SLIP_PER_LEG,
                                 "costExpMult": COST_EXP_MULT}},
         "summary": summary, "byStructure": by_structure, "equityCurve": curve,
@@ -596,12 +636,13 @@ def run_once(generated_at):
     print(f"[{generated_at}] mode={mode} {first_bar}->{last_bar} ({len(closes)} bars) | "
           f"trades {summary['trades']} | gross ${summary['grossPnl']:,.0f} | "
           f"win {summary['winRate']*100:.0f}% | PF {summary['profitFactor']}{net_tag} | "
+          f"R:R {summary['avgRR']} | avg {summary['avgUnits']}u (risk ${summary['avgRiskDollars']:,.0f}/{RISK_PCT*100:.0f}%) | "
           f"DD ${summary['maxDrawdown']:,.0f} | open {len(open_positions)}")
     return feed
 
 
 def main():
-    global SLIP_PER_LEG, COST_EXP_MULT, ROBUST, FUND_GATE
+    global SLIP_PER_LEG, COST_EXP_MULT, ROBUST, FUND_GATE, RISK_PCT, MIN_RR, MAX_UNITS, Z_ENTRY_MAX
     ap = argparse.ArgumentParser()
     ap.add_argument("--live", action="store_true")
     ap.add_argument("--interval", type=int, default=LIVE_REFRESH_SEC)
@@ -612,9 +653,18 @@ def main():
     ap.add_argument("--no-robust", action="store_true", help="use mean/std fair value, not median/MAD")
     ap.add_argument("--fund-gate", action="store_true",
                     help="hard-skip fades the daily fundamentals model contradicts")
+    ap.add_argument("--risk", type=float, default=RISK_PCT,
+                    help="the 1%% rule: fraction of capital risked per trade (default 0.01)")
+    ap.add_argument("--min-rr", type=float, default=MIN_RR,
+                    help="favorable risk:reward — minimum reward:risk to take a trade (default 1.5)")
+    ap.add_argument("--z-entry-max", type=float, default=Z_ENTRY_MAX,
+                    help="don't fade dislocations deeper than this (too close to stop; default 2.1)")
+    ap.add_argument("--max-units", type=int, default=MAX_UNITS,
+                    help="cap on position size from the 1%% rule (default 200)")
     args = ap.parse_args()
     SLIP_PER_LEG, COST_EXP_MULT = args.slip, args.cost_mult
     ROBUST, FUND_GATE = not args.no_robust, args.fund_gate
+    RISK_PCT, MIN_RR, MAX_UNITS, Z_ENTRY_MAX = args.risk, args.min_rr, args.max_units, args.z_entry_max
     stamp = lambda: datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     if args.live:
         print(f"Live mode — re-running every {args.interval}s. Ctrl-C to stop.")

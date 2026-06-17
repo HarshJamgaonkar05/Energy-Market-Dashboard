@@ -2,7 +2,7 @@
 
 _Strategy: Regime-conditioned RV mean-reversion (Phase 2). Data: **live**. Regime: **Balanced · High Vol**. Gross basis (slippage 0)._
 
-**208 trades · gross $6,380 · win 65% · PF 2.724 · max DD $-650**
+**219 trades · gross $6,970 · win 66% · PF 2.82 · max DD $-650**
 
 Each trade names the strategy, the setup, the legs with fills, the signal, the exit and the gross PnL.
 
@@ -1436,30 +1436,107 @@ Each trade names the strategy, the setup, the legs with fills, the signal, the e
 - **In:** 2026-06-17 04:15 @ 0.63   **Out:** 2026-06-17 04:30 @ 0.58 (z -3.78, stop)
 - **Held:** 1 bars (15 min)   **MAE/MFE:** -50 / +0
 
-### 205. WTI Jul/Aug (M1-M2) — LONG  (+80 USD)
+### 205. Brent-WTI arb (Aug) — LONG  (+60 USD)
+- **Strategy:** Regime-conditioned RV mean-reversion (Phase 2) · regime Balanced · High Vol · hist. edge 83% · confidence 66/100
+- **Setup:** dislocated to -1.69sigma (cheap) -> fade
+- **Legs (entry->exit):** CO_Q26 78.57->78.43, CL_Q26 74.99->74.79
+- **In:** 2026-06-17 04:30 @ 3.58   **Out:** 2026-06-17 06:45 @ 3.64 (z +1.21, target)
+- **Held:** 9 bars (135 min)   **MAE/MFE:** -40 / +60
+
+### 206. WTI Jul/Aug (M1-M2) — LONG  (+80 USD)
 - **Strategy:** Regime-conditioned RV mean-reversion (Phase 2) · regime Balanced · High Vol · hist. edge 75% · confidence 72/100
 - **Setup:** dislocated to -2.59sigma (cheap) -> fade
 - **Legs (entry->exit):** CL_N26 75.49->76.14, CL_Q26 74.89->75.46
 - **In:** 2026-06-17 04:45 @ 0.6   **Out:** 2026-06-17 05:45 @ 0.68 (z +0.67, target)
 - **Held:** 4 bars (60 min)   **MAE/MFE:** -70 / +80
 
-### 206. Brent Aug/Sep (M1-M2) — LONG  (-40 USD)
+### 207. Brent Aug/Sep (M1-M2) — LONG  (-40 USD)
 - **Strategy:** Regime-conditioned RV mean-reversion (Phase 2) · regime Balanced · High Vol · hist. edge 72% · confidence 70/100
 - **Setup:** dislocated to -2.70sigma (cheap) -> fade
 - **Legs (entry->exit):** CO_Q26 78.13->78.5, CO_U26 77.98->78.39
 - **In:** 2026-06-17 05:15 @ 0.15   **Out:** 2026-06-17 05:30 @ 0.11 (z -4.50, stop)
 - **Held:** 1 bars (15 min)   **MAE/MFE:** -40 / +0
 
-### 207. WTI Jul/Aug/Sep fly — LONG  (+170 USD)
+### 208. WTI Jul/Aug/Sep fly — LONG  (+170 USD)
 - **Strategy:** Regime-conditioned RV mean-reversion (Phase 2) · regime Balanced · High Vol · hist. edge 82% · confidence 69/100
 - **Setup:** dislocated to -2.02sigma (cheap) -> fade
 - **Legs (entry->exit):** CL_N26 75.47->76.14, CL_Q26 74.94->75.46, CL_U26 74.3->74.84
 - **In:** 2026-06-17 05:30 @ -0.11   **Out:** 2026-06-17 05:45 @ 0.06 (z +0.67, target)
 - **Held:** 1 bars (15 min)   **MAE/MFE:** +0 / +170
 
-### 208. Brent Aug/Sep (M1-M2) — LONG  (-20 USD)
+### 209. Brent Aug/Sep/Oct fly — LONG  (+100 USD)
+- **Strategy:** Regime-conditioned RV mean-reversion (Phase 2) · regime Balanced · High Vol · hist. edge 82% · confidence 69/100
+- **Setup:** dislocated to -2.02sigma (cheap) -> fade
+- **Legs (entry->exit):** CO_Q26 78.5->78.43, CO_U26 78.39->78.31, CO_V26 77.93->77.94
+- **In:** 2026-06-17 05:30 @ -0.35   **Out:** 2026-06-17 06:45 @ -0.25 (z +0.90, target)
+- **Held:** 5 bars (75 min)   **MAE/MFE:** -0 / +100
+
+### 210. Brent Aug/Sep (M1-M2) — LONG  (-20 USD)
 - **Strategy:** Regime-conditioned RV mean-reversion (Phase 2) · regime Balanced · High Vol · hist. edge 72% · confidence 63/100
 - **Setup:** dislocated to -2.02sigma (cheap) -> fade
 - **Legs (entry->exit):** CO_Q26 79.05->78.81, CO_U26 78.9->78.68
 - **In:** 2026-06-17 05:45 @ 0.15   **Out:** 2026-06-17 06:15 @ 0.13 (z -2.53, stop)
 - **Held:** 2 bars (30 min)   **MAE/MFE:** -20 / +10
+
+### 211. Brent Sep/Oct (M2-M3) — LONG  (-40 USD)
+- **Strategy:** Regime-conditioned RV mean-reversion (Phase 2) · regime Balanced · High Vol · hist. edge 72% · confidence 70/100
+- **Setup:** dislocated to -2.70sigma (cheap) -> fade
+- **Legs (entry->exit):** CO_U26 78.68->78.32, CO_V26 78.26->77.94
+- **In:** 2026-06-17 06:15 @ 0.42   **Out:** 2026-06-17 06:30 @ 0.38 (z -3.37, stop)
+- **Held:** 1 bars (15 min)   **MAE/MFE:** -40 / +0
+
+### 212. WTI Aug/Sep (M2-M3) — LONG  (+20 USD)
+- **Strategy:** Regime-conditioned RV mean-reversion (Phase 2) · regime Balanced · High Vol · hist. edge 75% · confidence 72/100
+- **Setup:** dislocated to -4.05sigma (cheap) -> fade
+- **Legs (entry->exit):** CL_Q26 74.76->74.79, CL_U26 74.24->74.25
+- **In:** 2026-06-17 06:30 @ 0.52   **Out:** 2026-06-17 06:45 @ 0.54 (z -4.27, stop)
+- **Held:** 1 bars (15 min)   **MAE/MFE:** +0 / +20
+
+### 213. Brent Aug/Sep (M1-M2) — LONG  (+120 USD)
+- **Strategy:** Regime-conditioned RV mean-reversion (Phase 2) · regime Balanced · High Vol · hist. edge 72% · confidence 70/100
+- **Setup:** dislocated to -4.59sigma (cheap) -> fade
+- **Legs (entry->exit):** CO_Q26 78.35->78.71, CO_U26 78.32->78.56
+- **In:** 2026-06-17 06:30 @ 0.03   **Out:** 2026-06-17 07:15 @ 0.15 (z -0.08, target)
+- **Held:** 3 bars (45 min)   **MAE/MFE:** +0 / +120
+
+### 214. WTI Jul/Aug (M1-M2) — LONG  (-90 USD)
+- **Strategy:** Regime-conditioned RV mean-reversion (Phase 2) · regime Balanced · High Vol · hist. edge 75% · confidence 60/100
+- **Setup:** dislocated to -1.64sigma (cheap) -> fade
+- **Legs (entry->exit):** CL_N26 75.33->74.73, CL_Q26 74.79->74.28
+- **In:** 2026-06-17 06:45 @ 0.54   **Out:** 2026-06-17 07:00 @ 0.45 (z -2.87, stop)
+- **Held:** 1 bars (15 min)   **MAE/MFE:** -90 / +0
+
+### 215. Brent Sep/Oct (M2-M3) — LONG  (+10 USD)
+- **Strategy:** Regime-conditioned RV mean-reversion (Phase 2) · regime Balanced · High Vol · hist. edge 72% · confidence 70/100
+- **Setup:** dislocated to -3.54sigma (cheap) -> fade
+- **Legs (entry->exit):** CO_U26 78.31->77.82, CO_V26 77.94->77.44
+- **In:** 2026-06-17 06:45 @ 0.37   **Out:** 2026-06-17 07:00 @ 0.38 (z -2.87, stop)
+- **Held:** 1 bars (15 min)   **MAE/MFE:** +0 / +10
+
+### 216. WTI Aug/Sep (M2-M3) — LONG  (+100 USD)
+- **Strategy:** Regime-conditioned RV mean-reversion (Phase 2) · regime Balanced · High Vol · hist. edge 75% · confidence 72/100
+- **Setup:** dislocated to -3.82sigma (cheap) -> fade
+- **Legs (entry->exit):** CL_Q26 74.28->75.0, CL_U26 73.74->74.36
+- **In:** 2026-06-17 07:00 @ 0.54   **Out:** 2026-06-17 07:45 @ 0.64 (z +0.45, target)
+- **Held:** 3 bars (45 min)   **MAE/MFE:** +0 / +100
+
+### 217. WTI Jul/Aug/Sep fly — LONG  (+110 USD)
+- **Strategy:** Regime-conditioned RV mean-reversion (Phase 2) · regime Balanced · High Vol · hist. edge 82% · confidence 63/100
+- **Setup:** dislocated to -1.60sigma (cheap) -> fade
+- **Legs (entry->exit):** CL_N26 74.73->75.28, CL_Q26 74.28->74.69, CL_U26 73.74->74.12
+- **In:** 2026-06-17 07:00 @ -0.09   **Out:** 2026-06-17 07:30 @ 0.02 (z +0.28, target)
+- **Held:** 2 bars (30 min)   **MAE/MFE:** +0 / +110
+
+### 218. Brent-WTI arb (Aug) — SHORT  (+110 USD)
+- **Strategy:** Regime-conditioned RV mean-reversion (Phase 2) · regime Balanced · High Vol · hist. edge 83% · confidence 89/100
+- **Setup:** dislocated to +1.91sigma (rich) -> fade
+- **Legs (entry->exit):** CO_Q26 77.96->78.26, CL_Q26 74.28->74.69
+- **In:** 2026-06-17 07:00 @ 3.68   **Out:** 2026-06-17 07:30 @ 3.57 (z -0.54, target)
+- **Held:** 2 bars (30 min)   **MAE/MFE:** +0 / +110
+
+### 219. WTI Jul/Aug (M1-M2) — LONG  (+90 USD)
+- **Strategy:** Regime-conditioned RV mean-reversion (Phase 2) · regime Balanced · High Vol · hist. edge 75% · confidence 63/100
+- **Setup:** dislocated to -1.85sigma (cheap) -> fade
+- **Legs (entry->exit):** CL_N26 75.56->75.59, CL_Q26 75.06->75.0
+- **In:** 2026-06-17 07:15 @ 0.5   **Out:** 2026-06-17 07:45 @ 0.59 (z -0.10, target)
+- **Held:** 2 bars (30 min)   **MAE/MFE:** +0 / +90
