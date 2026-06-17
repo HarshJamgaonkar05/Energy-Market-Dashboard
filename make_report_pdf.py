@@ -1,10 +1,15 @@
 # ============================================================================
-# Build PROJECT_REPORT.pdf from PROJECT_REPORT.md
+# Build a styled PDF from a markdown file.
 # ----------------------------------------------------------------------------
 # Renders the markdown to styled, print-ready HTML and prints it to PDF with
 # headless Chrome. Chrome writes to a temp folder first and we copy the result
 # into place, because writing a binary straight into a OneDrive-synced folder can
 # race with the sync client.
+#
+# Usage:
+#   python make_report_pdf.py                       # builds PROJECT_REPORT.pdf (default)
+#   python make_report_pdf.py Backtesting/STRATEGY.md  # builds Backtesting/STRATEGY.pdf
+#   python make_report_pdf.py a.md b.md ...         # builds each alongside its .md
 # ============================================================================
 import shutil
 import subprocess
@@ -15,8 +20,7 @@ from pathlib import Path
 import markdown
 
 HERE = Path(__file__).resolve().parent
-MD = HERE / "PROJECT_REPORT.md"
-PDF = HERE / "PROJECT_REPORT.pdf"
+DEFAULT_MD = HERE / "PROJECT_REPORT.md"
 
 CHROME = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
 
@@ -60,15 +64,15 @@ HTML = """<!doctype html><html><head><meta charset="utf-8">
 <style>{css}</style></head><body>{body}</body></html>"""
 
 
-def main():
-    if not MD.exists():
-        sys.exit(f"missing {MD}")
+def build(md_path: Path):
+    md_path = md_path if md_path.is_absolute() else (HERE / md_path)
+    if not md_path.exists():
+        sys.exit(f"missing {md_path}")
+    pdf_path = md_path.with_suffix(".pdf")
     body = markdown.markdown(
-        MD.read_text(encoding="utf8"),
+        md_path.read_text(encoding="utf8"),
         extensions=["tables", "fenced_code", "sane_lists", "attr_list"],
     )
-    if not Path(CHROME).exists():
-        sys.exit(f"Chrome not found at {CHROME}")
 
     tmp = Path(tempfile.mkdtemp())
     html_path = tmp / "report.html"
@@ -83,9 +87,17 @@ def main():
 
     if not pdf_tmp.exists() or pdf_tmp.stat().st_size == 0:
         sys.exit("Chrome produced no PDF")
-    shutil.copy(pdf_tmp, PDF)
+    shutil.copy(pdf_tmp, pdf_path)
     shutil.rmtree(tmp, ignore_errors=True)
-    print(f"OK -> {PDF}  ({PDF.stat().st_size/1024:.0f} KB)")
+    print(f"OK -> {pdf_path}  ({pdf_path.stat().st_size/1024:.0f} KB)")
+
+
+def main():
+    if not Path(CHROME).exists():
+        sys.exit(f"Chrome not found at {CHROME}")
+    targets = [Path(a) for a in sys.argv[1:]] or [DEFAULT_MD]
+    for md in targets:
+        build(md)
 
 
 if __name__ == "__main__":

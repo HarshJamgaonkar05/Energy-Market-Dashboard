@@ -37,16 +37,25 @@ reversion. The Phase-2 daily backtest validated this — 1.5σ dislocations reve
 
 Run intraday over this data:
 
-- **Fair value** = a rolling mean of the spread over `LOOKBACK = 16` bars (~4h).
-  *Why a rolling mean and not Phase-2's stored fair value:* Phase-2's levels are
-  daily and the contracts have since re-priced — live WTI M1-M2 sits ~1.3 vs
-  Phase-2's 4.6, pure basis — so the reversion reference must be estimated from the
-  data being traded. The **regime label and the validated per-structure edge are
-  carried in from Phase 2**, so each trade is tied back to the framework.
-- **Signal** = rolling z-score `z = (spread − mean) / std`.
-- **Entry** = fade when `|z| ≥ 1.5` (rich → short the spread, cheap → long it).
-- **Exit** = reversion to `|z| ≤ 0.25` (target), `|z| ≥ 3.0` (stop), or a
-  session/weekend break (>90-min gap to the next bar) — no weekend holds.
+- **Fair value** = a **robust** rolling center of the spread over `LOOKBACK = 16`
+  bars (~4h): the rolling **median**, scaled by the **MAD** (×1.4826 → σ-equivalent).
+  *Why robust and not a plain mean/std:* the mean and std are pulled by the very
+  dislocation bar we want to fade, biasing the reference toward the move; the median/MAD
+  are not. *Why estimated from the data and not Phase-2's stored fair value:* Phase-2's
+  levels are daily and the contracts have since re-priced — live WTI M1-M2 sits ~1.3 vs
+  Phase-2's 4.6, pure basis — so the reversion reference must be estimated from the data
+  being traded. (Set `--no-robust` to fall back to mean/std.)
+- **Signal** = robust z-score `z = (spread − median) / (1.4826 · MAD)`.
+- **Entry** = fade when `|z| ≥ 1.5` (rich → short the spread, cheap → long it),
+  **if the daily fundamentals model agrees** on the sign of the dislocation (see §5a)
+  and, in NET mode, the expected reversion clears its trading cost (§4).
+- **Exit** (improved geometry) = reversion **through to fair** (`|z| ≤ 0.1`, directional —
+  capture the whole reversion, not just the first quarter); a **tighter `|z| ≥ 2.5` stop**
+  (positive reward:risk vs the 1.5σ entry, was 3.0); an **OU half-life time stop** (bail
+  after `3 ×` the spread's estimated mean-reversion half-life if unsettled — cuts the
+  left tail of positions drifting toward the stop); or a session/weekend break
+  (>90-min gap). The **regime label and validated per-structure edge are carried in from
+  Phase 2**, so each trade still ties back to the framework.
 
 A position still on at the **last bar** is reported as a live **open position**
 (unrealised PnL), not a closed trade.
@@ -75,17 +84,24 @@ drawdown and stats are portfolio-level.
 
 ---
 
-## 4. Execution model — GROSS (slippage 0)
+## 4. Execution model — GROSS by default, NET on demand
 
-- **Slippage = 0, commission = 0**, per the brief — isolates the raw signal edge.
-  Fills at the bar close.
+- **GROSS (default):** slippage 0, commission 0, per the brief — isolates the raw
+  signal edge. Fills at the bar close.
+- **NET (`--slip <price/leg>`):** charges `slip × 2 × legs × 1,000` per round turn and,
+  critically, **only takes a signal whose expected reversion to fair ≥ `--cost-mult`
+  (default 2×) its round-turn cost** — so the engine stops paying to harvest moves
+  smaller than the spread it crosses. Reports gross *and* net PnL / PF / win rate.
 - **Multiplier** 1,000 bbl → $1.00/bbl = **$1,000 per contract**.
 - **Size** fixed 1 spread unit per signal. `INITIAL_CAPITAL = $250,000`.
 
-A note on the numbers: the take-profit (|z|≤0.25) is near and the stop (|z|≥3.0) is
-far, which produces a **high win rate but small average wins** — so total PnL is
-modest and driven by frequency, not size. The win rate is partly a function of that
-exit geometry; expectancy and profit factor are the honest edge metrics.
+Why NET matters: the old exit took profit at `|z|≤0.25` against a far `3σ` stop —
+a **high win rate but tiny average wins**, profit driven by frequency. Those wins do
+not survive realistic transaction costs: on this data, `--slip 0.01` turns a +$2.7k
+gross book **net-negative**, while adding the fundamentals gate (§5a) cuts to ~28
+high-conviction trades that stay **net-positive with a fraction of the drawdown**.
+The improved exit geometry (§2) and the cost/conviction gates trade win rate for
+expectancy — the honest edge metric.
 
 ---
 
@@ -99,7 +115,20 @@ edge       = the structure's Phase-2 reversion hit-rate (backtest.json), else 0.
 confidence = 100 × ( 0.65 · edge  +  0.35 · min(1, |z| / 2.5) )
 ```
 
-Mostly the proven historical edge, lifted by how far the spread is dislocated.
+Mostly the proven historical edge, lifted by how far the spread is dislocated, and
+adjusted ±for the fundamentals agreement below.
+
+### 5a. Fundamentals anchor (reconnecting the two fair-value engines)
+
+The intraday rolling z says *"dislocated vs its own recent history"*; the Phase-2
+**regression fair value** (`models.json`, drivers: inventories, refinery utilization,
+vol, momentum, DXY/VIX/UST10Y, seasonality) says *"rich or cheap vs fundamentals"*.
+We read the **sign** of the daily residual-z for each structure and require the
+intraday fade to **agree** with it — the absolute daily *level* does not transfer
+across the re-pricing, but the *direction* (rich/cheap) does. Agreement lifts
+confidence; disagreement cuts it, and `--fund-gate` hard-skips contradicted fades.
+This is the lever that turns the net book positive: it keeps the dislocations both
+read-outs corroborate and drops the ones only the noise supports.
 
 ---
 
@@ -114,8 +143,11 @@ Mostly the proven historical edge, lifted by how far the spread is dislocated.
   (timestamp · regime · instrument · rationale · confidence · performance).
 
 ```
-python Backtesting/engine.py            # one backtest pass
-python Backtesting/engine.py --live      # re-run every 60s on the freshest data
+python Backtesting/engine.py                       # one GROSS pass (default)
+python Backtesting/engine.py --slip 0.01           # NET: cost + expected-edge gate
+python Backtesting/engine.py --slip 0.01 --fund-gate  # NET + fundamentals agreement gate
+python Backtesting/engine.py --no-robust           # mean/std fair value (old reference)
+python Backtesting/engine.py --live                # re-run every 60s on the freshest data
 ```
 
 ---
