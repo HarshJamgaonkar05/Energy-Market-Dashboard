@@ -1,14 +1,15 @@
 import { motion } from "framer-motion";
 import {
   LayoutDashboard, LineChart as LineIcon, Gauge, FlaskConical, Globe2, Warehouse, Newspaper,
-  ChevronLeft, ChevronRight, Circle, Zap,
+  ChevronLeft, ChevronRight, Circle, Zap, History,
 } from "lucide-react";
 
 export const NAV = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { id: "analytics", label: "Analytics", icon: LineIcon },
   { id: "regime", label: "Regime & Signals", icon: Gauge },
-  { id: "signalengine", label: "Backtest", icon: FlaskConical },
+  { id: "signalengine", label: "Backtest (live)", icon: FlaskConical },
+  { id: "historical", label: "Historical BT", icon: History },
   { id: "drivers", label: "Market Drivers", icon: Globe2 },
   { id: "inventories", label: "Inventories", icon: Warehouse },
   { id: "news", label: "News", icon: Newspaper },
@@ -18,7 +19,7 @@ export const Sidebar = ({ active, setActive, collapsed, setCollapsed }) => (
   <motion.aside
     animate={{ width: collapsed ? 56 : 208 }}
     transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-    className="bg-[#0a0b0e] border-r border-[#1c1d22] flex flex-col flex-shrink-0"
+    className="no-print bg-[#0a0b0e] border-r border-[#1c1d22] flex flex-col flex-shrink-0"
   >
     {/* Logo */}
     <div className="h-14 border-b border-[#1c1d22] flex items-center px-3 gap-2">

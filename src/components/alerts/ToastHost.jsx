@@ -47,7 +47,7 @@ export const ToastHost = () => {
   const alerts = useAlerts();
   if (!alerts) return null;
   return (
-    <div className="fixed bottom-5 right-5 z-[60] flex flex-col gap-2 pointer-events-none [&>*]:pointer-events-auto">
+    <div className="no-print fixed bottom-5 right-5 z-[60] flex flex-col gap-2 pointer-events-none [&>*]:pointer-events-auto">
       <AnimatePresence initial={false}>
         {alerts.toasts.map((t) => (
           <Toast key={t.id} t={t} onDismiss={alerts.dismissToast} />

@@ -276,33 +276,34 @@ This is a **backtest**: a careful simulation of the strategy on historical data,
 
 ## 1. The data being tested
 
-The backtest runs on a database of **15-minute price bars** for crude futures. A "15-minute bar" simply summarizes all the trading in a 15-minute window (its open, high, low and closing price). There are two sources, and the engine automatically uses whichever is **fresher**: a snapshot committed to the project's `Backtesting/Data` folder (the offline fallback, ~156 bars), and the **mentor's live company feed**, which streams new bars as the market trades. The results in this report were produced on the **live feed**, which by 17 June held **258 bars** spanning **12 June → 17 June 2026** — a Friday session, the weekend gap, and into the following week of active trading.
+The backtest runs on a database of **15-minute price bars** for crude futures. A "15-minute bar" simply summarizes all the trading in a 15-minute window (its open, high, low and closing price). There are two sources, and the engine automatically uses whichever is **fresher**: a snapshot committed to the project's `Backtesting/Data` folder (the offline fallback, ~156 bars), and the **mentor's live company feed**, which streams new bars as the market trades. The results in this report were produced on the **live feed**, which by 18 June held **~350 bars** spanning **12 June → 18 June 2026** — a Friday session, the weekend gap, and into the following week of active trading.
 
 Because this data contains only crude (WTI + Brent), the backtest trades the crude spreads — calendars, butterflies, and Brent–WTI — and not the refined-product cracks.
 
 ## 2. The strategy being tested (restated precisely)
 
-The exact Phase-2 strategy — **regime-conditioned relative-value mean-reversion** — applied to this fast data. The engine was **refined in three ways** over its first version to chase better, more *honest* profit; each refinement is explained in plain English here and dissected in depth in the companion document [`Backtesting/STRATEGY.md`](Backtesting/STRATEGY.md).
+The Phase-2 idea — **relative-value mean-reversion** — applied to this fast data, as a single clean engine. It is deliberately simple; the plain-English deep dive is in the companion document [`Backtesting/STRATEGY.md`](Backtesting/STRATEGY.md).
 
-**Step 1 — Estimate a robust fair value.** For each spread, continuously estimate its **fair value** from its recent prices. Rather than a plain rolling *average* (which is dragged around by the very spike we want to fade), the engine uses a **robust centre — the rolling median, with its spread measured by the MAD** (median absolute deviation). The median ignores the one-off dislocation bar, so the "normal" we compare against isn't contaminated by the abnormal move itself. *(See the honest note below on why fair value is estimated from the live data rather than reusing Phase 2's older daily levels.)*
+**First, the key question: can we reuse Phase 2's fair-value model?** Phase 2 built a clever statistical fair value for each spread from *fundamentals* (inventories, the dollar, volatility, the season). The natural instinct is to reuse it here — but we looked carefully, and **it cannot be used intraday**, for three concrete reasons:
+  - **Its ingredients aren't in this data.** The intraday feed contains *only oil prices* — none of the fundamental inputs the model needs — so it literally cannot be computed.
+  - **Its number is out of date.** Phase 2's fair value for WTI Jul–Aug is ~**2.18**; that gap actually trades at ~**0.74** now. Forcing the old number on would flag a permanent false "cheap."
+  - **It barely moves intraday.** Fundamentals update daily/weekly, so over a few days the model is a flat line — it can't explain the minute-by-minute moves we're trading.
 
-**Step 2 — Measure the z-score.** How stretched is the spread right now, in standard-deviation units, versus that robust centre.
+So fair value is estimated **from each spread's own recent history**, and Phase 2 is kept as *context* (its proven hit-rates feed the confidence score), not as the price reference. With that settled, the strategy is four simple steps:
 
-**Step 3 — Enter only on a *corroborated*, *favorable* dislocation.** Enter when **all** of these hold:
-  - the spread is dislocated **≥ 1.5 standard deviations** (the Phase-2 threshold) — but **not more than ~2.1**, because a spread stretched right up against our stop-loss has great reward on paper but poor odds; **and**
-  - the **daily fundamentals model agrees on the direction** — i.e. Phase 2's regression fair value (built from inventories, the dollar, volatility, momentum, seasonality) *also* says the spread is rich (to sell) or cheap (to buy). This **reconnects the two fair-value engines**: the fast intraday read and the slow fundamental read must point the same way; **and**
-  - the **reward-to-risk is favorable** — the room back to fair value must be at least 1.5× the room to the stop-loss (more on this below).
-  - Then **fade** it: sell if rich, buy if cheap (betting on reversion).
+**Step 1 — Estimate fair value.** For each spread, take the **average of its last 24 readings (~6 hours)**. That rolling average is "normal." As new readings arrive it rolls forward, keeping up with a slowly drifting spread.
 
-**Step 3b — Size the trade by the 1% rule.** Rather than trading a fixed amount, the engine sizes each position so that **if the stop-loss is hit, the loss is at most 1% of capital** (about $2,500 on the $250,000 account). The size is simply *risk budget ÷ distance to the stop*: calmer, tighter setups get a bigger position, riskier ones a smaller position, so **every trade puts the same small slice of the account at risk**. This is the standard professional discipline that stops any single trade from doing real damage.
+**Step 2 — Measure the z-score.** How far the spread is from that average right now, counted in *standard deviations* (its typical wiggle). A z-score of +2 means "two normal wiggles too high."
 
-**Step 4 — Exit with better geometry.** The first version took a tiny profit and risked a large loss; the refined exits fix that asymmetry. Exit when any of these happen:
-  - it **reverts through to fair** (z back within ±0.1, the *whole* reversion, not just the first sliver) → **take profit**;
-  - it stretches against us to **2.5 standard deviations** (a *tighter* stop than the old 3.0, so we risk less than we aim to make) → **stop loss**;
-  - it simply **fails to revert in time** — specifically, after roughly **three "half-lives"** of the spread's own measured mean-reversion speed (an *Ornstein-Uhlenbeck* estimate of how fast it typically snaps back) → **time stop**. This cuts the slow bleeders that would otherwise drift all the way to the stop.
-  - the session ends / the weekend gap arrives → **flatten** (never hold blindly through a multi-day gap).
+**Step 3 — Enter on a clear dislocation.** When the spread is stretched to **2 standard deviations or more**, **fade** it: sell if it's rich (stretched wide), buy if it's cheap (stretched narrow). That single, strict condition is the whole entry — no extra filters.
 
-**Step 5 — Make it cost-aware (optional NET mode).** By default the backtest is still **gross** (zero cost, per the brief — it isolates the pure signal). But it can now be run **net of realistic trading costs** with a single switch (`--slip`), and in that mode it **only takes a trade whose expected reversion is worth at least twice its round-trip cost** — so it stops paying to harvest moves smaller than the spread it has to cross. This is what finally answers *"is this actually profitable to trade?"* rather than just *"does the prediction work?"*
+**Step 4 — Exit, on the first of four triggers.**
+  - it **reverts through to fair** (z back within ±0.25) → **take profit** (the whole snap-back, not a sliver);
+  - it stretches further against us to **3.5 standard deviations** → **stop loss**;
+  - it **hasn't resolved within ~12 hours** → **time stop** (cut the dead trades);
+  - the session/weekend gap arrives → **flatten** (never hold blindly through a multi-day gap).
+
+**Sizing — fixed one unit per trade.** Every trade is the same small size, so the result is the **raw per-unit signal**, not a leveraged book. (An earlier version added clever 1%-of-capital sizing; it multiplied every position ~100× and turned the figures into scary six-figure numbers that obscured whether the *signal* was any good, so it was stripped back out. Sizing is a separate decision layered on *after* you trust the signal — see Part VII.)
 
 ## 3. The trade log — the main output
 
@@ -311,38 +312,38 @@ The centrepiece of Phase 3 is the **trade log**: a complete record of *every sin
 - **which spread** and **direction** (buy/sell);
 - **entry time and price**, and the **z-score** at entry (how stretched it was);
 - **exit time and price**, and **why** it exited (took profit / stopped out / **timed out** / session end);
-- **how long it was held** (in bars and minutes), and the spread's measured **half-life** (its reversion speed);
+- **how long it was held** (in bars and minutes);
 - **the profit or loss in dollars** (the "PnL"), and in net mode the **cost** charged and the **net PnL** after it;
 - **MAE / MFE** — the worst paper loss and best paper profit *during* the trade (how much heat it took before resolving);
-- **the fundamentals view** (the daily model's z and whether it **agreed** with the trade);
-- **the regime** it was traded in and a **confidence score** (lifted when fundamentals agree, cut when they don't).
+- **the regime** it was traded in and a **confidence score** (grounded in Phase 2's validated hit-rate for that spread).
 
 This log is produced both as a spreadsheet (`trades.csv`, openable in Excel) and as a human-readable document (`trades_log.md`) where each trade is written out in words.
 
 ### What the dollar figures mean
 
-Each oil contract is **1,000 barrels**, so a **$1.00 per barrel** move in a spread is worth **$1,000 per contract**. The simulation starts with a notional **$250,000** of capital and sizes each trade by the **1% rule** described above (risking ~$2,500 per trade). By default the backtest runs on a **gross basis with slippage set to zero** — measuring the *pure signal*, before real-world trading frictions. This was the brief's instruction, and it isolates the question *"does the prediction work?"*. The refined engine can **also** run **net of realistic costs**, which answers the separate, harder question *"can you actually execute it for a profit?"* — and the contrast between the two is the most important result in this report.
-
-> **One honest caveat on the 1% rule.** It caps the risk of *each trade individually*. But the seven spreads are close cousins (all crude oil) and often move together, so when several are open at once their risks add up — the account can swing by more than 1% at a time. Capping the *combined* risk of all open positions is the natural next step.
+Each oil contract is **1,000 barrels**, so a **$1.00 per barrel** move in a spread is worth **$1,000 per contract**. Every trade is a **fixed one unit**, so the dollar figures are the *raw per-unit signal* — small, honest, and directly comparable across trades. (The $250,000 starting capital is only a baseline for the running-total chart.) By default the backtest runs on a **gross basis with slippage set to zero** — measuring the *pure signal*, before real-world trading frictions; that was the brief's instruction, and it isolates the question *"does the prediction work?"*. Running it **net of realistic costs** (`--slip`) answers the separate, harder question *"can you actually execute it for a profit?"*.
 
 ## 4. The results
 
-Running the refined strategy on the **live company feed (~279 fifteen-minute bars, 12–17 June 2026)**, now with the **1% rule sizing** and **favorable-R:R** filter switched on. Because the 1% rule scales position size to risk, dollar results are best read as a **percentage of the $250,000 account**. *(Exact figures drift as more live bars accumulate; the **pattern** is the point.)*
+On the **live company feed (~350 fifteen-minute bars, 12–18 June 2026)**, fixed one unit per trade. *(Exact figures drift as more live bars accumulate; the shape is the point.)*
 
-| Mode | Trades | Gross | Net | Win | Profit factor | Avg R:R | Risk/trade | Max drawdown |
-|---|---|---|---|---|---|---|---|---|
-| **Gross** (pure signal) | 114 | **+$297k (+119%)** | — | 73% | 2.39 | 2.6 | ~1% | −$58k (−23%) |
-| **Net + fundamentals gate** | ~10–30 | varies | net-positive | ~80% | >1 (net) | ~3 | ~1% | small |
+| Metric | Result | What it means |
+|---|---|---|
+| **Trades** | 76 | the strategy found 76 stretched-spread opportunities |
+| **Gross profit** | **+$4,270** | total per-unit dollars made (before costs) |
+| **Win rate** | **78%** | 78% of trades were profitable |
+| **Profit factor** | **3.03** | for every $1 lost, $3.03 was won |
+| **Expectancy** | **+$56 / trade** | the average trade made $56 |
+| **Max drawdown** | **−$1,450** | the worst peak-to-trough dip along the way |
+| **Net (after a 1¢/leg fee)** | **~break-even (+$150)** | costs eat the small intraday edge |
 
 How to read this:
 
-- **The 1% rule did its job.** Every trade risked ≈ **$2,400 (about 1% of capital)** at its stop, regardless of which spread or how jumpy it was. That single discipline is what turns the old "tiny one-unit" results into **meaningful, controlled-risk size** — the same edge (profit factor ~2.4), just sized to matter.
-- **Favorable R:R, honestly applied.** The average trade now offers about **2.6× more reward than risk**, taken from the *sweet-spot* band — not from spreads stretched right against the stop, which look great on paper but lose too often (we deliberately exclude those).
-- **The cost story still holds** (from the earlier finding): once realistic costs are charged, trading everything is a net loser; only the **fundamentals-corroborated** trades stay net-positive. Filtering, not frequency, is where the money is.
+- **The signal works.** A profit factor of 3.0 and a 78% win rate over 76 trades is a genuine, healthy mean-reversion edge — the gaps really do snap back more often than not.
+- **The numbers are small and honest.** One contract per trade and few-cent intraday moves mean modest dollars. That's the *raw signal*, not a sized portfolio — exactly what a clean test should report.
+- **Costs are the deciding factor.** Charge a realistic fee and the edge thins to roughly break-even. This is the honest truth about a high-frequency, small-move strategy, and it's the headline of the next part.
 
-But there is a blunt caveat that matters more now that size is real: the **−23% drawdown**. See Part VII.
-
-The honest headline is a **method**, not a single profit number: the edge is genuine, sized to a controlled 1%-per-trade risk, favorable in reward-to-risk, fragile to costs, and — as the drawdown shows — still exposed at the *portfolio* level. The next part reads all of this critically.
+Per spread, most were profitable (the butterflies and Brent–WTI strongest); one — Brent Sep–Oct — actually **lost** money, shown plainly rather than hidden. The honest headline is a **method**: the edge is real but small, and whether it's *tradeable* comes down to costs.
 
 ---
 
@@ -350,45 +351,41 @@ The honest headline is a **method**, not a single profit number: the edge is gen
 
 A good analyst is their own harshest critic. Here is the honest interpretation — exactly what you should tell a mentor or risk manager.
 
-## 1. Win rate, profit, and what the refinements deliberately traded away
+## 1. A high win rate *and* a high profit factor — why that's a good sign
 
-The first version of this engine reported an **83% win rate** — which sounds dazzling until you see *how* it was earned: it took profit at a **near** target (a sliver of the reversion) while only stopping out at a **far** level. That geometry *manufactures* a high win rate — lots of tiny wins, a few larger losses — and in that version the average win was actually *smaller* than the average loss. A high win rate from a near-target/far-stop design is partly a **mechanical artifact, not skill.**
+The strategy wins **78%** of the time, and — unlike a "win-often-lose-big" trick — it *also* has a strong **profit factor of 3.0**. Those two together are the healthy combination: it wins often **and** the wins outweigh the losses (it won $3 for every $1 lost). The reason is the exit design — we hold for the **whole** snap-back (a 1.75-wiggle reward) but cut losers at a slightly **closer** stop (a 1.5-wiggle risk), so winners are a touch bigger than losers on top of being more frequent. Win rate alone can be faked; win rate *plus* profit factor cannot. The honest scoreboard is the profit factor and the expectancy, and both are clearly positive.
 
-The refined exits **deliberately give up some of that win rate** (down to ~64% gross) in exchange for a healthier shape: the new target holds for the *whole* reversion, the stop is *tighter* than the target distance, and the time stop cuts losers early. So each win is **bigger**, each loss is **smaller and quicker**, and the genuine edge shows up where it should — in the **profit factor** and **expectancy**, not the headline win rate. This is the correct trade-off to make: win rate is vanity, expectancy is sanity.
+The dollar totals are **small on purpose**: one contract per trade and few-cent intraday moves. That is the *raw signal*, not a sized book — exactly what a clean test should show.
 
-The dollar totals are still modest for two honest reasons that have nothing to do with whether the signal works: the **position size is tiny** (one contract per spread) and **intraday spread moves are small** (a few cents). The strategy is barely *sized*, not barely *working* — and edge-weighted position sizing is the obvious next lever (deliberately left out here to keep the test clean).
+## 2. The cost test — the number that actually decides it
 
-## 2. The cost test — the caveat the first version hid, now answered head-on
+The most important honest point: **gross, the signal works; net of realistic fees, it thins to roughly break-even.** This is a high-frequency, small-move strategy — you pay the bid–ask spread on every entry and exit, and those costs are about the size of the moves you're capturing. A backtest that only ever shows the *gross* figure is quietly flattering itself.
 
-The single most important number in this report is the one the original gross-only backtest could not show: **net of realistic trading costs, the unfiltered strategy loses money.** Trading 193 times to harvest few-cent reversions, you pay the bid–ask spread on every entry and exit, and those costs are larger than the moves you capture. A backtest that only ever reports the *gross* figure is, in effect, flattering itself.
+This isn't a reason to bin the strategy — it's the honest brief a desk would write: *the prediction is real, but the edge per trade is small, so execution cost is the deciding factor.* The path to a tradeable version is **fewer, higher-conviction trades** (bigger expected moves that clear the cost), not more trades. Being able to put a **net** number next to the gross one is what makes the analysis credible.
 
-This is not a reason to abandon the strategy — it is a reason to **trade it selectively**. When the engine is forced to clear costs *and* to act only when the daily fundamentals model agrees, it self-selects down to ~28 trades that remain **net-positive with a tiny drawdown**. The lesson is the honest one a desk would draw: *the signal is real but cost-fragile; profitability comes from discipline (fewer, corroborated, larger trades), not from trading more.* Being able to **measure** this — to put a net number next to the gross one — is itself the upgrade.
+## 3. Why we size at one fixed unit (and the experiment we removed)
 
-## 3. Position sizing did its job — but watch the *portfolio* risk
+This backtest sizes every trade at **one unit**, on purpose, so the result is the *raw signal*. An earlier iteration tried a textbook **1%-of-capital sizing rule** — size each trade so a stop-out loses 1% of $250,000. It technically worked, but it multiplied every position by ~100×, turning the results into **six-figure swings** (+$300k gross, −$58k drawdown) that looked dramatic but said nothing new about the *signal* — they just scaled it up *and* scaled the risk up with it. Worse, because the seven spreads are close cousins (all crude), their risks stacked into a portfolio drawdown far bigger than any single trade's 1%.
 
-The 1% rule worked exactly as designed at the **per-trade** level: each trade risked about 1% of capital, no matter the spread. That is the right way to size, and it's what lets the strategy run at a size that actually produces meaningful dollars instead of pocket change.
-
-But notice the **−23% drawdown**. How can the account fall 23% if no single trade risks more than 1%? Because the seven spreads are **close cousins** — they're all built from the same crude-oil curve, so they tend to get stretched, and snap back, *together*. When five or six of them are in losing trades at the same moment, their individual 1% risks **stack** into a much larger combined loss. The 1% rule controls each trade in isolation; it does **not** control how correlated trades pile up.
-
-This is the honest next problem to solve: a **portfolio-level risk cap** — limiting the *combined* risk of everything open at once, or sizing down when positions are correlated. It's the natural follow-on to the two controls added here, and it's the difference between "each bet is safe" and "the whole book is safe."
+The lesson, kept here as the honest takeaway: **sizing is a separate decision you layer on *after* you trust the signal — and it needs portfolio-level risk limits, not just per-trade ones.** Mixing it into the signal test only obscured whether the underlying edge was real. So we test the edge cleanly at one unit; sizing is future work.
 
 ## 4. The regime caveat (an important subtlety)
 
-Phase 2's regimes are based on *daily, fundamental* data (inventories, the dollar, volatility) that change over **weeks**. The backtest window is only **3 days long**, so within it the regime **never changes** — it is "Balanced · High Vol" the entire time.
+Phase 2's regimes are based on *daily, fundamental* data (inventories, the dollar, volatility) that change over **weeks**. The backtest window is only **a few days long**, so within it the regime **barely changes** — it is "Balanced · High Vol" essentially throughout.
 
-This means that, over this short window, the regime *conditioning* part of the strategy does no real work — there is nothing to switch between. What the backtest genuinely tests is the **mean-reversion core** of the strategy, with the regime attached as honest context and the validated historical hit-rates feeding the confidence score. This is an inherent property of running a *daily* framework on a *3-day* sample — not a flaw to be hidden, but a limitation to be stated.
+So over this short window the regime *conditioning* does little real work — there's nothing to switch between. What the backtest genuinely tests is the **mean-reversion core**, with the regime attached as honest context and Phase 2's validated hit-rates feeding the confidence score. That's an inherent property of running a *daily* framework on a *few-day* sample — a limitation to state, not a flaw to hide.
 
 ## 5. The fair-value caveat
 
-The backtest estimates each spread's fair value from a **robust rolling centre (median/MAD) of the recent data**, rather than reusing Phase 2's stored daily fair values. Why estimate it live? Because Phase 2's stored levels are from an earlier date and the contracts have since re-priced — for example, the live WTI M1–M2 spread sits around **1.3**, while Phase 2's older "fair" level for it was around **4.6**. Forcing the old number onto today's market would make every spread look artificially "cheap" — pure noise, not signal. The *level* doesn't transfer; what the engine borrows from Phase 2 instead is the **direction** of the fundamental view (rich vs cheap), which does transfer and is used as the agreement gate. And the centre is a **median, not a mean**, precisely so the dislocation we're trading doesn't pollute the "normal" we measure it against.
+The backtest estimates each spread's fair value as a **rolling average of its own recent prices**, *not* by reusing Phase 2's fundamental model — because that model **can't be used here** (its inputs aren't in the intraday feed, its stored level is stale, and it's flat over a few days; see Part VI). This is the right tool for the timeframe, but it has an honest weakness of its own: a plain average can be **tugged by a single sharp spike**, slightly distorting "normal" on the very bar we're reacting to. A more robust centre (a median, say) is a sensible refinement; we kept the simple average for clarity.
 
 ## 6. The honest headline caveats, in one place
 
-1. **Small sample.** A few hundred bars over a handful of sessions → a modest number of trades. This is a *working engine and a methodology*, not a statistically final result. Feeding it more days of data is the path to confidence — and anything tuned on this little data risks being overfit, so the structural changes (better exits, cost-awareness) should be trusted more than any single fitted number.
-2. **Costs are now tested, not ignored.** The default run is still gross (per the brief), but the engine can charge realistic slippage — and when it does, the headline flips negative unless trades are filtered. The illustrative cost used (1¢/leg) should be replaced with the desk's true spread.
+1. **Small sample.** ~350 bars over a handful of sessions → a modest number of trades. This is a *working engine and a methodology*, not a statistically final result. More days of data is the path to confidence.
+2. **Costs decide it.** Gross isolates the signal (and it's positive); net of a realistic fee it's roughly break-even. Real profitability needs lower costs or pickier, higher-conviction trades. The illustrative 1¢/leg should be replaced with the desk's true spread.
 3. **Crude-only.** The live data is WTI + Brent, so the product cracks aren't backtested here.
 4. **In-window only.** Roll/expiry of contracts within the window is not modelled (the window is short).
-5. **Per-trade risk, not portfolio risk.** The 1% rule caps each trade; it does not yet cap the *combined* risk of correlated positions, which is why the drawdown can exceed 1% (§3). A portfolio-level cap is the next control.
+5. **One-unit sizing.** This reports the raw per-unit signal, not a sized/leveraged portfolio. Position sizing and portfolio risk limits are a separate layer on top (§3).
 
 Stating these plainly is not weakness — it is exactly what separates a credible analysis from a misleading one.
 
@@ -428,11 +425,9 @@ Each phase feeds the next. The regime and the validated hit-rates from Phase 2 f
 - **Futures contract** — a standardized agreement to buy/sell oil at a set price for future delivery.
 - **Gross basis** — results before trading costs (slippage, commission).
 - **Hedger** — a market participant trading to reduce risk (airlines, refiners, producers).
-- **Half-life** — how long a stretched spread typically takes to revert halfway back to fair; the engine's "is it reverting fast enough?" clock, behind the time stop.
 - **Hit-rate** — the % of times a stretched spread historically reverted; the core measure of edge.
-- **MAD (median absolute deviation)** — a robust measure of "typical wiggle" that, unlike standard deviation, isn't inflated by a single extreme bar; the scale behind the robust z-score.
 - **Net basis** — results *after* trading costs (slippage); the honest "tradeable profit" figure, vs the gross "pure signal."
-- **Ornstein-Uhlenbeck (OU)** — the standard mathematical model of a mean-reverting series; used here only to estimate each spread's reversion half-life.
+- **Time stop** — closing a trade that hasn't resolved within a set time (~12h here), to avoid dead positions.
 - **Inventories / stocks** — oil sitting in storage; the clearest read on supply vs demand.
 - **Leg** — one of the individual contracts inside a spread trade.
 - **Liquidity** — how easily a contract can be traded without moving its price.

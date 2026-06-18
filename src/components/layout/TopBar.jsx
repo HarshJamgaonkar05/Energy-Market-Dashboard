@@ -13,7 +13,7 @@ export const TopBar = ({ pageTitle }) => {
   const ist = time.toLocaleTimeString("en-GB", { timeZone: "Asia/Kolkata", hour12: false });
 
   return (
-    <header className="h-14 bg-[#0a0b0e] border-b border-[#1c1d22] flex items-center px-4 gap-4 flex-shrink-0">
+    <header className="no-print h-14 bg-[#0a0b0e] border-b border-[#1c1d22] flex items-center px-4 gap-4 flex-shrink-0">
       <div className="flex items-baseline gap-2 min-w-0">
         <h1 className="text-[13px] font-semibold text-zinc-100 capitalize whitespace-nowrap">{pageTitle}</h1>
       </div>

@@ -1,112 +1,87 @@
 import { useState } from "react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine } from "recharts";
 import { ResponsiveContainer } from "../lib/ResponsiveContainer";
-import { TrendingUp, Layers, ListChecks, ChevronDown, Circle, ArrowUpRight, ArrowDownRight, Download, Award } from "lucide-react";
+import { History, Layers, Gauge, ChevronDown, ArrowUpRight, ArrowDownRight, Download } from "lucide-react";
 import { Card } from "../components/primitives/Card";
 import { Band } from "../components/primitives/Band";
-import { SourceTag } from "../components/primitives/SourceTag";
 import { chartProps, ChartTooltip } from "../lib/chart-theme";
 import { useLive } from "../lib/useLive";
 import { fmt, fmtSigned } from "../lib/format";
 
 // ----------------------------------------------------------------------------
-// Strategy Backtest — the Phase-2 relative-value mean-reversion strategy run
-// over the provided 15-min crude data. The trade log is the centrepiece: every
-// trade, its gross PnL (slippage 0), and full detail.
+// Historical Backtest — the Phase-2 FUNDAMENTAL fair value, traded as a daily
+// mean-reversion simulation over 2021-2026. This is the model's proper home: on
+// daily data with the fundamental drivers present, the regression fair value is
+// meaningful, and 5+ years is a statistically real sample. Walk-forward (no
+// look-ahead), fixed 1 unit/trade, gross.
 // ----------------------------------------------------------------------------
 
 const FALLBACK = {
-  generatedAt: "—", mode: "local", live: false, firstBar: "—", lastBar: "—", bars: 0,
-  regime: "—", strategy: { name: "Regime-conditioned RV mean-reversion", params: {} },
+  generatedAt: "—", span: { first: "—", last: "—" }, years: 0, days: 0,
+  strategy: { name: "Phase-2 fundamental RV mean-reversion", desc: "", params: {} },
   summary: { trades: 0, grossPnl: 0, netPnl: 0, costs: 0, winRate: 0, avgWin: 0, avgLoss: 0,
     profitFactor: null, expectancy: 0, netExpectancy: 0, avgNetWin: 0, avgNetLoss: 0,
-    perTradeSharpe: 0, avgHoldMin: 0, maxDrawdown: 0,
-    endingEquity: 250000, initialCapital: 250000, byExitReason: {}, byDirection: {} },
-  byStructure: {}, equityCurve: [], trades: [], openPositions: [], openCount: 0,
+    perTradeSharpe: 0, avgHoldDays: 0, tradesPerYear: 0,
+    maxDrawdown: 0, endingEquity: 250000, initialCapital: 250000, byExitReason: {}, byDirection: {} },
+  byStructure: {}, byRegime: {}, equityCurve: [], trades: [], openPositions: [], openCount: 0,
 };
 
-const regimeText = (r) => (typeof r === "string" ? r : r?.label ?? "—");
 const dirColor = (d) => (d === "LONG" ? "text-emerald-400" : "text-red-400");
 const pnlColor = (n) => (n > 0 ? "text-emerald-400" : n < 0 ? "text-red-400" : "text-zinc-400");
-const compactUsd = (n) => {
-  const a = Math.abs(n);
-  if (a >= 1e6) return `$${(n / 1e6).toFixed(2)}M`;
-  if (a >= 1e3) return `$${Math.round(n / 1e3)}k`;
-  return `$${Math.round(n)}`;
-};
-
-// ----------------------------------------------------------------------------
-// Proven-track-record strip — the live panel is only a few days; this anchors it
-// to the same strategy's 5-year, cost-validated result (the Historical BT panel),
-// so the short live sample isn't read in a vacuum.
-// ----------------------------------------------------------------------------
-const ProvenStrip = ({ ctx }) => {
-  const s = ctx?.summary;
-  if (!s || !s.trades) return null;
-  const net = s.refNet ?? s.netPnl ?? s.grossPnl;
-  const keep = s.refKeepPct != null ? `${Math.round(s.refKeepPct * 100)}%` : null;
-  return (
-    <Card padding={false}>
-      <div className="px-4 py-2.5 flex items-center gap-x-3 gap-y-1 flex-wrap">
-        <Award size={15} className="text-sky-400 shrink-0" />
-        <span className="text-[11px] text-zinc-400">
-          A <span className="text-zinc-200 font-medium">few-day demo</span> on the real feed — the{" "}
-          <span className="text-zinc-200 font-medium">same strategy</span>, proven over{" "}
-          <span className="text-zinc-200 font-medium">{ctx.years} years</span> (Historical BT):
-        </span>
-        <span className="flex items-center gap-2.5 font-mono text-[11px] ml-auto">
-          <span className="text-emerald-400">net {compactUsd(net)}</span>
-          <span className="text-zinc-700">·</span>
-          <span className="text-zinc-200">PF {s.profitFactor}</span>
-          {keep && (<><span className="text-zinc-700">·</span><span className="text-zinc-300">{keep} kept after costs</span></>)}
-          <span className="text-zinc-700">·</span>
-          <span className="text-zinc-400">{fmt(s.trades, 0)} trades</span>
-        </span>
-      </div>
-    </Card>
-  );
-};
+const pct = (n) => `${(n * 100).toFixed(0)}%`;
 
 // ----------------------------------------------------------------------------
 // Hero scoreboard
 // ----------------------------------------------------------------------------
-const Hero = ({ d, live, stale }) => {
+const ModeToggle = ({ mode, setMode }) => (
+  <div className="no-print inline-flex rounded-md border border-[#26272e] overflow-hidden text-[11px] font-medium">
+    {[["daily", "Daily · fundamental"], ["intraday", "Intraday · rolling"]].map(([m, lbl]) => (
+      <button key={m} onClick={() => setMode(m)}
+        className={`px-3 h-8 transition-colors ${mode === m ? "bg-sky-500/15 text-sky-300" : "text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.02]"}`}>
+        {lbl}
+      </button>
+    ))}
+  </div>
+);
+
+const Hero = ({ d, mode, setMode }) => {
   const s = d.summary;
   const hasCost = (s.costs || 0) > 0;
+  const intraday = d.mode === "intraday";
+  const obs = intraday ? `${fmt(d.bars || 0, 0)} 15-min bars` : `${d.days || 0} trading days`;
+  const fvText = intraday ? "rolling-mean fair value (price-derived)" : "Phase-2 fundamental fair value · walk-forward (out-of-sample)";
   const stats = [
-    { k: "Trades", v: s.trades, sub: `${d.openCount} still open` },
+    { k: "Trades", v: fmt(s.trades, 0), sub: `${fmt(s.tradesPerYear || 0, 0)}/yr` },
     { k: "Gross P&L", v: fmtSigned(s.grossPnl, 0),
       sub: hasCost ? `net ${fmtSigned(s.netPnl, 0)} after costs` : `exp ${fmtSigned(s.expectancy, 0)}/trade`,
       color: pnlColor(s.grossPnl) },
-    { k: "Win rate", v: `${(s.winRate * 100).toFixed(0)}%`,
+    { k: "Win rate", v: pct(s.winRate),
       sub: hasCost ? `+${fmt(s.avgNetWin, 0)} / ${fmt(s.avgNetLoss, 0)} avg · net`
                    : `+${fmt(s.avgWin, 0)} / ${fmt(s.avgLoss, 0)} avg` },
-    { k: "Profit factor", v: s.profitFactor ?? "∞", sub: `Sharpe ${s.perTradeSharpe} · max DD ${fmtSigned(s.maxDrawdown, 0)}` },
+    { k: "Profit factor", v: s.profitFactor ?? "∞", sub: `Sharpe ${s.perTradeSharpe} · DD ${fmtSigned(s.maxDrawdown, 0)}` },
   ];
   return (
     <Card padding={false}>
       <div className="p-4 border-b border-[#1c1d22] flex items-start justify-between flex-wrap gap-3">
         <div className="flex items-center gap-3">
-          <div className="w-1 h-12 rounded-sm bg-amber-500" />
+          <div className="w-1 h-12 rounded-sm bg-sky-500" />
           <div>
-            <div className="text-[10px] uppercase tracking-[0.16em] text-zinc-500">Strategy Backtest · {d.strategy?.name}</div>
-            <div className="text-2xl font-semibold text-zinc-100 leading-tight">{regimeText(d.regime)} <span className="text-zinc-600 text-base">regime</span></div>
+            <div className="text-[10px] uppercase tracking-[0.16em] text-zinc-500">Historical Backtest · WTI &amp; Brent · {fvText.split(" ·")[0]}</div>
+            <div className="text-2xl font-semibold text-zinc-100 leading-tight">{d.years}-year {intraday ? "intraday" : "daily"} simulation <span className="text-zinc-600 text-base">2021–2026</span></div>
             <div className="text-[10px] text-zinc-600 mt-0.5 font-mono">
-              {d.bars} bars · {d.firstBar} → {d.lastBar} · {d.mode === "live" ? "LIVE feed" : "provided data"}
-              {" · "}1 unit/trade · {hasCost ? "net of slippage" : "gross"}
+              {obs} · {d.span?.first} → {d.span?.last} · {fvText} · 1 unit/trade · {hasCost ? "net of cost" : "gross"}
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <ModeToggle mode={mode} setMode={setMode} />
           <button
             onClick={() => window.print()}
-            className="no-print inline-flex items-center gap-1.5 h-8 px-3 rounded-md bg-amber-500/10 border border-amber-500/30 text-[11px] font-medium text-amber-300 hover:bg-amber-500/15 hover:border-amber-500/50 transition-colors"
+            className="no-print inline-flex items-center gap-1.5 h-8 px-3 rounded-md bg-sky-500/10 border border-sky-500/30 text-[11px] font-medium text-sky-300 hover:bg-sky-500/15 hover:border-sky-500/50 transition-colors"
             title="Export this page as a PDF (opens the print dialog → Save as PDF)"
           >
             <Download size={13} /> Export PDF
           </button>
-          <SourceTag live={live && !stale} stale={stale} source="signalEngine"
-            note="The Phase-2 mean-reversion strategy backtested over the provided 15-min crude bars. Trade log + equity are computed here." />
         </div>
       </div>
       <div className="grid grid-cols-2 lg:grid-cols-4 divide-x divide-[#1c1d22]">
@@ -123,7 +98,7 @@ const Hero = ({ d, live, stale }) => {
 };
 
 // ----------------------------------------------------------------------------
-// Equity curve
+// Equity curve (5-year)
 // ----------------------------------------------------------------------------
 const Equity = ({ curve, initial }) => {
   if (!curve || curve.length < 2) return null;
@@ -131,24 +106,24 @@ const Equity = ({ curve, initial }) => {
   return (
     <Card padding={false}>
       <div className="px-4 py-2.5 border-b border-[#1c1d22] text-[11px] uppercase tracking-[0.14em] text-zinc-400">
-        Equity curve <span className="text-zinc-600 normal-case tracking-normal">· realised, gross</span>
+        Equity curve <span className="text-zinc-600 normal-case tracking-normal">· realised, gross · {curve[0].t} → {curve[curve.length - 1].t}</span>
       </div>
-      <div className="h-44 p-2">
+      <div className="h-56 p-2">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={data} margin={{ top: 8, right: 12, bottom: 4, left: 0 }}>
             <defs>
-              <linearGradient id="eq" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#10b981" stopOpacity={0.22} />
-                <stop offset="100%" stopColor="#10b981" stopOpacity={0} />
+              <linearGradient id="heq" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#38bdf8" stopOpacity={0.22} />
+                <stop offset="100%" stopColor="#38bdf8" stopOpacity={0} />
               </linearGradient>
             </defs>
             <CartesianGrid {...chartProps.grid} />
             <XAxis dataKey="i" {...chartProps.axis} tick={false} />
-            <YAxis {...chartProps.axis} width={64} domain={["dataMin - 100", "dataMax + 100"]}
-              tickFormatter={(v) => `$${(v / 1000).toFixed(1)}k`} />
+            <YAxis {...chartProps.axis} width={64} domain={["dataMin - 5000", "dataMax + 5000"]}
+              tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
             <ReferenceLine y={initial} stroke="#3f3f46" strokeDasharray="3 3" />
             <Tooltip content={<ChartTooltip formatter={(v) => `$${fmt(v, 0)}`} />} />
-            <Area type="monotone" dataKey="equity" stroke="#10b981" strokeWidth={1.5} fill="url(#eq)" />
+            <Area type="monotone" dataKey="equity" stroke="#38bdf8" strokeWidth={1.5} fill="url(#heq)" />
           </AreaChart>
         </ResponsiveContainer>
       </div>
@@ -157,15 +132,18 @@ const Equity = ({ curve, initial }) => {
 };
 
 // ----------------------------------------------------------------------------
-// Trade Log — the centrepiece
+// Trade log
 // ----------------------------------------------------------------------------
-const TradeLog = ({ trades }) => {
+const TradeLog = ({ trades, total }) => {
   const [open, setOpen] = useState(null);
+  const capped = total && total > trades.length;
   return (
     <Card padding={false}>
       <div className="px-4 py-2.5 border-b border-[#1c1d22] flex items-center justify-between">
-        <span className="text-[11px] uppercase tracking-[0.14em] text-zinc-400">{trades.length} trades</span>
-        <span className="text-[10px] text-zinc-600">1 unit/trade · 1,000 bbl/contract · tap a row for detail</span>
+        <span className="text-[11px] uppercase tracking-[0.14em] text-zinc-400">
+          {capped ? `${trades.length} of ${fmt(total, 0)} trades` : `${trades.length} trades`}
+        </span>
+        <span className="text-[10px] text-zinc-600">1 unit/trade · {capped ? "most recent shown · " : ""}tap a row for detail</span>
       </div>
       <div className="overflow-x-auto max-h-[560px] overflow-y-auto print-expand">
         <table className="w-full text-[11px]">
@@ -176,21 +154,21 @@ const TradeLog = ({ trades }) => {
               <th className="text-left font-medium px-2 py-2">Dir</th>
               <th className="text-right font-medium px-2 py-2">Entry z</th>
               <th className="text-right font-medium px-2 py-2">Held</th>
+              <th className="text-left font-medium px-2 py-2">Regime</th>
               <th className="text-left font-medium px-2 py-2">Exit</th>
-              <th className="text-right font-medium px-2 py-2">Conf</th>
               <th className="text-right font-medium px-2 py-2">PnL</th>
               <th className="w-6"></th>
             </tr>
           </thead>
           <tbody>
             {trades.map((t, i) => {
-              const id = t.structure + t.entryTime + i;
+              const id = t.structure + t.entryDate + i;
               const isOpen = open === id;
               return (
                 <>
                   <tr key={id} onClick={() => setOpen(isOpen ? null : id)}
                     className="border-b border-[#141519] hover:bg-white/[0.02] cursor-pointer">
-                    <td className="px-3 py-2 font-mono text-zinc-400 whitespace-nowrap">{t.entryTime}</td>
+                    <td className="px-3 py-2 font-mono text-zinc-400 whitespace-nowrap">{t.entryDate}</td>
                     <td className="px-2 py-2 text-zinc-200 whitespace-nowrap">{t.label}</td>
                     <td className={`px-2 py-2 font-semibold ${dirColor(t.direction)}`}>
                       <span className="inline-flex items-center gap-1">
@@ -198,9 +176,9 @@ const TradeLog = ({ trades }) => {
                       </span>
                     </td>
                     <td className="px-2 py-2 text-right font-mono text-zinc-400 tabular-nums">{fmtSigned(t.entryZ, 2)}</td>
-                    <td className="px-2 py-2 text-right font-mono text-zinc-500 tabular-nums">{t.holdMin}m</td>
+                    <td className="px-2 py-2 text-right font-mono text-zinc-500 tabular-nums">{t.holdLabel || `${t.holdDays}d`}</td>
+                    <td className="px-2 py-2 text-zinc-500 whitespace-nowrap">{t.regime || "—"}</td>
                     <td className="px-2 py-2 text-zinc-500 whitespace-nowrap">{t.exitReason}</td>
-                    <td className="px-2 py-2 text-right font-mono text-zinc-500 tabular-nums">{t.confidence}</td>
                     <td className={`px-2 py-2 text-right font-mono tabular-nums font-medium ${pnlColor(t.pnl)}`}>{fmtSigned(t.pnl, 0)}</td>
                     <td className="px-2 py-2 text-zinc-600"><ChevronDown size={12} className={`transition-transform ${isOpen ? "rotate-180" : ""}`} /></td>
                   </tr>
@@ -208,20 +186,16 @@ const TradeLog = ({ trades }) => {
                     <tr key={id + "-d"} className="bg-[#0a0b0e] border-b border-[#141519]">
                       <td colSpan={9} className="px-4 py-3 space-y-2">
                         <div className="text-[10px] text-zinc-500">
-                          <span className="text-zinc-300">{t.strategy}</span> · regime {regimeText(t.regime)} · historical edge {(t.histHitRate * 100).toFixed(0)}% · confidence {t.confidence}/100
+                          Faded a {Math.abs(t.entryZ)}σ {t.direction === "LONG" ? "cheap" : "rich"} dislocation from the fundamental fair value · regime {t.regime || "—"}
+                          {t.histHitRate != null && <> · Phase-2 reversion edge {pct(t.histHitRate)}</>}
                         </div>
                         <div className="flex flex-wrap gap-x-5 gap-y-1 text-[10px] font-mono text-zinc-500">
                           <span>spread {t.entrySpread} → {t.exitSpread}</span>
+                          <span>fair value {t.fairValue}</span>
                           <span>z {fmtSigned(t.entryZ, 2)} → {fmtSigned(t.exitZ, 2)}</span>
-                          <span>held {t.holdBars} bars ({t.holdMin}m)</span>
+                          <span>held {t.holdLabel || `${t.holdDays} days`}</span>
                           <span>MAE/MFE {fmtSigned(t.mae, 0)} / {fmtSigned(t.mfe, 0)}</span>
-                          <span>contracts {t.contracts}</span>
                           {t.cost > 0 && <span>cost {fmt(t.cost, 0)} · net {fmtSigned(t.netPnl, 0)}</span>}
-                        </div>
-                        <div className="flex flex-wrap gap-x-4 gap-y-1 text-[10px] font-mono text-zinc-600">
-                          {Object.entries(t.entryLegs || {}).map(([leg, px]) => (
-                            <span key={leg}>{leg}: {px} → {t.exitLegs?.[leg]}</span>
-                          ))}
                         </div>
                       </td>
                     </tr>
@@ -237,15 +211,16 @@ const TradeLog = ({ trades }) => {
 };
 
 // ----------------------------------------------------------------------------
-// Per-structure + open positions
+// By structure + by regime
 // ----------------------------------------------------------------------------
-const Bottom = ({ byStructure, openPositions }) => {
+const Breakdown = ({ byStructure, byRegime }) => {
   const rows = Object.entries(byStructure);
+  const regimes = Object.entries(byRegime);
   return (
     <div className="grid grid-cols-12 gap-3">
       <Card className="col-span-12 lg:col-span-7" padding={false}>
         <div className="px-4 py-2.5 border-b border-[#1c1d22] text-[11px] uppercase tracking-[0.14em] text-zinc-400">
-          By structure <span className="text-zinc-600 normal-case tracking-normal">· result vs historical edge</span>
+          By structure <span className="text-zinc-600 normal-case tracking-normal">· result vs Phase-2 historical edge</span>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-[11px]">
@@ -265,10 +240,10 @@ const Bottom = ({ byStructure, openPositions }) => {
                 <tr key={k} className="border-b border-[#141519]">
                   <td className="px-3 py-2 text-zinc-200">{s.label}</td>
                   <td className="px-2 py-2 text-right font-mono text-zinc-400 tabular-nums">{s.trades}</td>
-                  <td className="px-2 py-2 text-right font-mono text-zinc-400 tabular-nums">{(s.winRate * 100).toFixed(0)}%</td>
+                  <td className="px-2 py-2 text-right font-mono text-zinc-400 tabular-nums">{pct(s.winRate)}</td>
                   <td className={`px-2 py-2 text-right font-mono tabular-nums ${pnlColor(s.pnl)}`}>{fmtSigned(s.pnl, 0)}</td>
-                  <td className="px-2 py-2 text-right font-mono text-zinc-400 tabular-nums">{s.profitFactor ?? "∞"}</td>
-                  <td className="px-3 py-2 text-right font-mono text-emerald-400/70 tabular-nums">{(s.histHitRate * 100).toFixed(0)}%</td>
+                  <td className={`px-2 py-2 text-right font-mono tabular-nums ${s.profitFactor && s.profitFactor < 1 ? "text-red-400/80" : "text-zinc-400"}`}>{s.profitFactor ?? "∞"}</td>
+                  <td className="px-3 py-2 text-right font-mono text-emerald-400/70 tabular-nums">{s.histHitRate != null ? pct(s.histHitRate) : "—"}</td>
                 </tr>
               ))}
             </tbody>
@@ -278,21 +253,32 @@ const Bottom = ({ byStructure, openPositions }) => {
 
       <Card className="col-span-12 lg:col-span-5" padding={false}>
         <div className="px-4 py-2.5 border-b border-[#1c1d22] text-[11px] uppercase tracking-[0.14em] text-zinc-400">
-          Open at last bar ({openPositions.length})
+          By regime <span className="text-zinc-600 normal-case tracking-normal">· does the edge hold across market states?</span>
         </div>
-        <div className="divide-y divide-[#141519]">
-          {openPositions.length === 0 && <div className="px-4 py-6 text-center text-[11px] text-zinc-600">Flat — no positions open at the last bar.</div>}
-          {openPositions.map((p) => (
-            <div key={p.structure + p.entryTime} className="px-4 py-2.5 flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <div className="text-[12px] text-zinc-200 font-medium truncate">
-                  {p.label} <span className={`ml-1 text-[10px] font-semibold ${dirColor(p.direction)}`}>{p.direction}</span>
-                </div>
-                <div className="text-[10px] text-zinc-600 font-mono">in {p.entryTime} @ {p.entrySpread} · z {fmtSigned(p.entryZ, 2)}→{fmtSigned(p.curZ, 2)} · {p.holdBars} bars</div>
-              </div>
-              <div className={`font-mono text-[13px] tabular-nums ${pnlColor(p.unrealizedPnl)}`}>{fmtSigned(p.unrealizedPnl, 0)}</div>
-            </div>
-          ))}
+        <div className="overflow-x-auto">
+          <table className="w-full text-[11px]">
+            <thead className="text-zinc-600 text-[9px] uppercase tracking-wider">
+              <tr className="border-b border-[#1c1d22]">
+                <th className="text-left font-medium px-3 py-2">Regime</th>
+                <th className="text-right font-medium px-2 py-2">Trades</th>
+                <th className="text-right font-medium px-2 py-2">Win</th>
+                <th className="text-right font-medium px-2 py-2">PnL</th>
+                <th className="text-right font-medium px-3 py-2">PF</th>
+              </tr>
+            </thead>
+            <tbody>
+              {regimes.length === 0 && <tr><td colSpan={5} className="px-3 py-6 text-center text-zinc-600">No data.</td></tr>}
+              {regimes.map(([k, s]) => (
+                <tr key={k} className="border-b border-[#141519]">
+                  <td className="px-3 py-2 text-zinc-200 whitespace-nowrap">{k}</td>
+                  <td className="px-2 py-2 text-right font-mono text-zinc-400 tabular-nums">{s.trades}</td>
+                  <td className="px-2 py-2 text-right font-mono text-zinc-400 tabular-nums">{pct(s.winRate)}</td>
+                  <td className={`px-2 py-2 text-right font-mono tabular-nums ${pnlColor(s.pnl)}`}>{fmtSigned(s.pnl, 0)}</td>
+                  <td className={`px-3 py-2 text-right font-mono tabular-nums ${s.profitFactor && s.profitFactor < 1 ? "text-red-400/80" : "text-zinc-400"}`}>{s.profitFactor ?? "∞"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </Card>
     </div>
@@ -302,30 +288,32 @@ const Bottom = ({ byStructure, openPositions }) => {
 // ============================================================================
 // PAGE
 // ============================================================================
-export const PageSignalEngine = () => {
-  const { data, live, stale } = useLive("/api/signal-engine", FALLBACK, useLive.REFRESH.fast);
-  const { data: ctx } = useLive("/api/historical-intraday", null, useLive.REFRESH.slow);
+export const PageHistoricalBacktest = () => {
+  const [mode, setMode] = useState("daily");
+  const ep = mode === "intraday" ? "/api/historical-intraday" : "/api/historical-backtest";
+  const { data } = useLive(ep, FALLBACK, useLive.REFRESH.slow);
   const d = data || FALLBACK;
+  const intraday = d.mode === "intraday";
   return (
     <div className="space-y-4">
-      {/* Print-only report masthead — replaces the (hidden) app top bar in the PDF */}
+      {/* Print-only masthead */}
       <div className="hidden print:flex items-baseline justify-between pb-2 mb-1 border-b border-[#1c1d22]">
         <div className="flex items-baseline gap-2">
-          <span className="text-base font-bold tracking-tight text-amber-400">VOLTAIRE</span>
-          <span className="text-sm font-semibold text-zinc-100">Strategy Backtest</span>
+          <span className="text-base font-bold tracking-tight text-sky-400">VOLTAIRE</span>
+          <span className="text-sm font-semibold text-zinc-100">Historical Backtest · WTI &amp; Brent · {intraday ? "Intraday" : "Daily"} · 2021–2026</span>
         </div>
-        <div className="text-[10px] font-mono text-zinc-500">Exported {d.generatedAt} · {d.mode === "live" ? "live feed" : "provided data"}</div>
+        <div className="text-[10px] font-mono text-zinc-500">Exported {d.generatedAt}</div>
       </div>
-      <Hero d={d} live={live} stale={stale} />
-      <ProvenStrip ctx={ctx} />
+
+      <Hero d={d} mode={mode} setMode={setMode} />
       <Equity curve={d.equityCurve} initial={d.summary?.initialCapital || 250000} />
       <div className="space-y-2">
-        <Band icon={TrendingUp} title="Trade Log" sub="every trade · full detail · gross PnL" />
-        <TradeLog trades={d.trades || []} />
+        <Band icon={History} title="Trade Log" sub={`every ${intraday ? "intraday" : "daily"} trade · full detail · gross PnL`} />
+        <TradeLog trades={d.trades || []} total={d.summary?.trades} />
       </div>
       <div className="space-y-2">
-        <Band icon={Layers} title="Breakdown" sub="per structure & open positions" />
-        <Bottom byStructure={d.byStructure || {}} openPositions={d.openPositions || []} />
+        <Band icon={Gauge} title="Breakdown" sub="per structure & per regime" />
+        <Breakdown byStructure={d.byStructure || {}} byRegime={d.byRegime || {}} />
       </div>
     </div>
   );

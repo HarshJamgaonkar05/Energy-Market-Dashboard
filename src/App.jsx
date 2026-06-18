@@ -35,6 +35,7 @@ const PageDashboard = lazyRetry(() => import("./pages/Dashboard").then((m) => ({
 const PageAnalytics = lazyRetry(() => import("./pages/Analytics").then((m) => ({ default: m.PageAnalytics })));
 const PageRegime = lazyRetry(() => import("./pages/Regime").then((m) => ({ default: m.PageRegime })));
 const PageSignalEngine = lazyRetry(() => import("./pages/SignalEngine").then((m) => ({ default: m.PageSignalEngine })));
+const PageHistoricalBacktest = lazyRetry(() => import("./pages/HistoricalBacktest").then((m) => ({ default: m.PageHistoricalBacktest })));
 const PageDrivers = lazyRetry(() => import("./pages/Drivers").then((m) => ({ default: m.PageDrivers })));
 const PageInventories = lazyRetry(() => import("./pages/Inventories").then((m) => ({ default: m.PageInventories })));
 const PageNews = lazyRetry(() => import("./pages/News").then((m) => ({ default: m.PageNews })));
@@ -44,6 +45,7 @@ const PAGES = {
   analytics: { title: "Analytics", el: PageAnalytics },
   regime: { title: "Regime & Signals", el: PageRegime },
   signalengine: { title: "Strategy Backtest", el: PageSignalEngine },
+  historical: { title: "Historical Backtest", el: PageHistoricalBacktest },
   drivers: { title: "Market Drivers", el: PageDrivers },
   inventories: { title: "Inventories & Storage", el: PageInventories },
   news: { title: "News & Sentiment", el: PageNews },
@@ -78,15 +80,15 @@ export default function App() {
 
   return (
     <AlertsProvider>
-    <div className="flex h-screen w-full bg-[#08090b] text-zinc-100 overflow-hidden" style={{ fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif" }}>
+    <div className="flex h-screen w-full bg-[#08090b] text-zinc-100 overflow-hidden print:h-auto print:overflow-visible print:block" style={{ fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif" }}>
       <Sidebar active={active} setActive={setActive} collapsed={collapsed} setCollapsed={setCollapsed} />
 
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden print:overflow-visible">
         <TopBar pageTitle={PAGES[active].title} />
 
         {/* Backend-offline banner — shown only once a health poll has actually failed */}
         {backendDown && (
-          <div className="flex items-center gap-2 bg-amber-950/40 border-b border-amber-900/50 px-4 py-1.5 text-[10px] text-amber-300/90">
+          <div className="no-print flex items-center gap-2 bg-amber-950/40 border-b border-amber-900/50 px-4 py-1.5 text-[10px] text-amber-300/90">
             <WifiOff size={12} className="flex-shrink-0 text-amber-400" />
             <span>
               Backend offline — every panel is showing <strong className="font-semibold">sample data</strong>, not live feeds. Start the API with{" "}
@@ -96,7 +98,7 @@ export default function App() {
           </div>
         )}
 
-        <main className="flex-1 overflow-y-auto p-3 bg-[#08090b]">
+        <main className="flex-1 overflow-y-auto p-3 bg-[#08090b] print:overflow-visible print:p-0">
           <AnimatePresence mode="wait">
             <motion.div
               key={active}
@@ -115,7 +117,7 @@ export default function App() {
         </main>
 
         {/* Status bar */}
-        <footer className="h-6 bg-[#0a0b0e] border-t border-[#1c1d22] flex items-center px-4 gap-4 text-[10px] font-mono text-zinc-500">
+        <footer className="no-print h-6 bg-[#0a0b0e] border-t border-[#1c1d22] flex items-center px-4 gap-4 text-[10px] font-mono text-zinc-500">
           {health.ok ? (
             <span className="flex items-center gap-1.5"><Wifi size={10} className="text-emerald-500" /> {live ? "Live feed" : "Connected"}</span>
           ) : (

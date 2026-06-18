@@ -18,24 +18,35 @@
 
 /* Custom scrollbar — thin, on-brand */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 9px;
+  height: 9px;
 }
 ::-webkit-scrollbar-track {
-  background: #0a0b0e;
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #1c1d22;
-  border-radius: 0;
+  background: #232429;
+  border-radius: 6px;
+  border: 2px solid #08090b;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #2a2b31;
+  background: #34353d;
+}
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #232429 transparent;
 }
 
 /* Selection */
 ::selection {
   background: rgba(245, 158, 11, 0.25);
   color: #fff;
+}
+
+/* Keyboard focus — visible, on-brand, never on mouse click */
+:focus-visible {
+  outline: 2px solid rgba(245, 158, 11, 0.6);
+  outline-offset: 2px;
 }
 
 @layer components {
@@ -47,5 +58,55 @@
   }
   .data-cell {
     @apply font-mono tabular-nums;
+  }
+  /* Shared card surface — subtle elevation + hairline top highlight */
+  .surface {
+    background: linear-gradient(180deg, #101115 0%, #0e0f12 60%);
+    box-shadow: 0 1px 0 0 rgba(255, 255, 255, 0.025) inset,
+      0 1px 3px rgba(0, 0, 0, 0.45);
+  }
+}
+
+/* ============================================================================
+   PRINT — "Export PDF" renders the current page faithfully (dark, as on screen),
+   minus the app chrome. Used by the Backtest panel's Export button (window.print).
+   ========================================================================== */
+@media print {
+  @page {
+    size: A4;
+    margin: 11mm 10mm 13mm;
+  }
+  /* Print background colours/ink exactly as designed (dark theme) */
+  *,
+  *::before,
+  *::after {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  /* Let the fixed-viewport layout flow across pages */
+  html,
+  body,
+  #root {
+    height: auto !important;
+    overflow: visible !important;
+    background: #08090b !important;
+  }
+  /* Hide app chrome and anything explicitly marked no-print */
+  .no-print {
+    display: none !important;
+  }
+  /* Expand internal scroll regions so nothing is clipped in the PDF */
+  .print-expand {
+    max-height: none !important;
+    overflow: visible !important;
+  }
+  /* Keep cards/sections from splitting awkwardly across pages */
+  .print-keep {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  a {
+    text-decoration: none !important;
+    color: inherit !important;
   }
 }

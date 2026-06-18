@@ -1,78 +1,76 @@
-# Strategy Backtest — Phase-2 strategy, backtested on the provided data
+# Phase 3 — Strategy Backtest (methodology)
 
-We take the Phase-2 framework's strategy — **regime-conditioned relative-value
-mean-reversion** — and **backtest it over the 15-minute crude bars in
-`Backtesting/Data`**, logging every trade with full detail and gross PnL
-(slippage 0). The main output is the **trade log**.
+We take the Phase-2 idea — **relative-value mean-reversion on crude spreads** — and
+**backtest it over the intraday 15-minute bars** in the mentor's live company feed,
+logging every trade in full. One clean engine ([`engine.py`](engine.py)); the main
+output is the **trade log**.
 
 ---
 
 ## 1. The data
 
-`Backtesting/Data/bars_15min_20260612.db` — a SQLite DB of 15-minute OHLCV bars,
-one table per contract (`{PRODUCT}_{TENOR}`: `CL_*` = WTI, `CO_*` = Brent). The
-freshest bars live in the **write-ahead log (WAL)**, so the engine snapshots
-`.db`+`.db-wal` and checkpoints to read every bar.
+The live feed at `I:\Public\Summer Interns Energy\DB\bars_15min_*.db` — a SQLite DB of
+15-minute OHLCV bars, one table per contract (`CL_*` = WTI, `CO_*` = Brent). The freshest
+bars live in the **write-ahead log (WAL)**, so the engine snapshots `.db`+`.db-wal` and
+checkpoints before reading. (A committed copy in `Backtesting/Data/` is the offline
+fallback; the engine uses whichever source is deeper.)
 
-- Span: **2026-06-12 10:00 → 2026-06-16 00:45 UTC** (~156 bars: a Friday session,
-  the weekend gap, the Monday open and into Tuesday).
-- Liquid contracts: WTI `N26,Q26,U26,V26,X26,Z26`; Brent `Q26,U26,V26,X26,Z26`.
-- **Crude-only**, so we backtest the Phase-2 *crude* relative-value structures
-  (calendars, flies, Brent-WTI); the product cracks (HO/RBOB/Gas Oil) aren't here.
-
-If the mentor's live company feed (`I:\Public\Summer Interns Energy\DB\`) is
-reachable and holds *more* bars than the local copy, the engine uses it instead —
-so the same backtest runs on the freshest data as new 15-min bars arrive. The feed
-records `mode: live` vs `local`. (The local `Data/` copy is only the offline
-fallback.)
+- Span at time of writing: **2026-06-12 → 2026-06-18**, ~350 fifteen-minute bars.
+- **Crude-only** (WTI + Brent across the curve), so we trade the crude relative-value
+  structures — calendars, butterflies, Brent-WTI — not the product cracks.
 
 ---
 
-## 2. The strategy (Phase 2)
+## 2. Fair value — why it is estimated from the data, not the Phase-2 model
 
-A **regime-conditioned relative-value mean-reversion** strategy: a spread has a
-fair value; when it dislocates far enough from it, fade the move and bet on
-reversion. The Phase-2 daily backtest validated this — 1.5σ dislocations reverted
-**67–83%** of the time with positive edge.
+This was the central design question, and the answer is decisive: **the Phase-2 fair-value
+model cannot be used to price these intraday spreads.** Three independent reasons:
 
-Run intraday over this data:
+1. **Its inputs aren't in the feed.** The Phase-2 regression is a function of *fundamentals*
+   — crude/distillate inventories, refinery utilisation, DXY, VIX, momentum, seasonality.
+   The intraday feed contains **only crude futures prices** — none of those features — so the
+   model literally cannot be evaluated here.
+2. **Its output level is stale.** Phase-2's daily fair value for WTI M1-M2 is ~**2.18**; the
+   spread now trades at ~**0.74**. Forcing the old level on would flag a permanent fake
+   "cheap" — pure basis, not signal.
+3. **Fundamentals are daily, so it's ~constant intraday.** Over a few days the regression
+   barely moves and cannot explain intraday spread moves, which are driven by order flow.
 
-- **Fair value** = a **robust** rolling center of the spread over `LOOKBACK = 16`
-  bars (~4h): the rolling **median**, scaled by the **MAD** (×1.4826 → σ-equivalent).
-  *Why robust and not a plain mean/std:* the mean and std are pulled by the very
-  dislocation bar we want to fade, biasing the reference toward the move; the median/MAD
-  are not. *Why estimated from the data and not Phase-2's stored fair value:* Phase-2's
-  levels are daily and the contracts have since re-priced — live WTI M1-M2 sits ~1.3 vs
-  Phase-2's 4.6, pure basis — so the reversion reference must be estimated from the data
-  being traded. (Set `--no-robust` to fall back to mean/std.)
-- **Signal** = robust z-score `z = (spread − median) / (1.4826 · MAD)`.
-- **Entry** = fade when `1.5 ≤ |z| ≤ 2.1` (rich → short the spread, cheap → long it),
-  **if the daily fundamentals model agrees** on the sign of the dislocation (see §5a),
-  the **reward:risk is favorable** (≥ `MIN_RR = 1.5`, see §4a) and, in NET mode, the
-  expected reversion clears its trading cost (§4). The upper `|z| ≤ 2.1` band excludes
-  near-stop extremes whose R:R looks great but whose odds are poor.
-- **Position size** = the **1% rule**: units chosen so a stop-out loses at most
-  `RISK_PCT = 1%` of capital — `units = ⌊(0.01 · $250k) / (price-distance-to-stop · 1000)⌋`,
-  capped at `MAX_UNITS = 200` (see §4a).
-- **Exit** (improved geometry) = reversion **through to fair** (`|z| ≤ 0.1`, directional —
-  capture the whole reversion, not just the first quarter); a **tighter `|z| ≥ 2.5` stop**
-  (positive reward:risk vs the 1.5σ entry, was 3.0); an **OU half-life time stop** (bail
-  after `3 ×` the spread's estimated mean-reversion half-life if unsettled — cuts the
-  left tail of positions drifting toward the stop); or a session/weekend break
-  (>90-min gap). The **regime label and validated per-structure edge are carried in from
-  Phase 2**, so each trade still ties back to the framework.
+So **fair value = a rolling mean of the spread over `LOOKBACK = 24` bars (~6h)** — estimated
+from the very series being traded. The dislocation is the **z-score**
+`z = (spread − rolling mean) / rolling std`.
 
-A position still on at the **last bar** is reported as a live **open position**
-(unrealised PnL), not a closed trade.
-
-> Note on the 3-day window: Phase-2's regimes are daily/fundamental, so over a few
-> days the regime is constant — its conditioning is dormant here by construction,
-> and the strategy reduces to its mean-reversion core. That is an honest property of
-> running a daily framework intraday, not something we engineer around.
+> Phase 2 is **not discarded** — it contributes as *context*: its validated per-structure
+> reversion hit-rates and the current regime label are carried in as the **confidence** and
+> the **rationale** on every trade. They are priors/labels, never the price reference.
 
 ---
 
-## 3. Structures backtested
+## 3. The strategy (deliberately simple)
+
+- **Fair value** — rolling mean of the spread (`LOOKBACK = 24` bars).
+- **Signal** — z-score off that mean.
+- **Entry** — fade when `|z| ≥ 2.0` (rich → short the spread, cheap → long it).
+- **Exit** — the first of:
+  - **target**: reverted through to fair, `|z| ≤ 0.25` (directional — capture the whole move);
+  - **stop**: stretched further to `|z| ≥ 3.5`;
+  - **time stop**: held `MAX_HOLD_BARS = 48` bars (~12h) without resolving;
+  - **session break**: a >90-min gap to the next bar (no overnight/weekend holds).
+- **Size** — a fixed **1 unit per trade**. This reports the *raw per-unit signal*, not a
+  leveraged book; dollar figures stay small and honest. (Position sizing is a separate
+  concern, deliberately left out so the backtest measures the signal, not the leverage.)
+
+A position still on at the **last bar** is reported as a live **open position** (unrealised
+PnL), not a closed trade.
+
+> Note on the 3-6 day window: Phase-2's regimes are daily/fundamental, so over a few days the
+> regime is constant — its conditioning is dormant here by construction, and the strategy
+> reduces to its mean-reversion core. An honest property of running a daily framework
+> intraday, not something engineered around.
+
+---
+
+## 4. Structures backtested
 
 | Structure | Legs | Phase-2 edge key |
 |---|---|---|
@@ -84,107 +82,60 @@ A position still on at the **last bar** is reported as a live **open position**
 | `BRENT_FLY` | +CO_Q26 −2·CO_U26 +CO_V26 | `wti_fly` |
 | `BRENT_WTI` | +CO_Q26 −CL_Q26 | `brent_wti` |
 
-Each trades independently but all share one capital base, so the equity curve,
-drawdown and stats are portfolio-level.
+M1/M2/M3 = 1st/2nd/3rd nearest contract during this June-2026 window. Each trades
+independently but all share one capital base, so the equity curve, drawdown and stats are
+portfolio-level.
 
 ---
 
-## 4. Execution model — GROSS by default, NET on demand
+## 5. Execution model
 
-- **GROSS (default):** slippage 0, commission 0, per the brief — isolates the raw
-  signal edge. Fills at the bar close.
-- **NET (`--slip <price/leg>`):** charges `slip × 2 × legs × 1,000` per round turn and,
-  critically, **only takes a signal whose expected reversion to fair ≥ `--cost-mult`
-  (default 2×) its round-turn cost** — so the engine stops paying to harvest moves
-  smaller than the spread it crosses. Reports gross *and* net PnL / PF / win rate.
+- **Gross by default** (slippage 0, per the brief) — isolates the raw signal. Fills at the
+  bar close. `--slip <price/leg>` charges `slip × 2 × legs × 1,000` per round turn and reports
+  **net** alongside gross (no other behaviour changes).
 - **Multiplier** 1,000 bbl → $1.00/bbl = **$1,000 per contract**.
-- **Size** by the **1% rule** (§4a), not a fixed unit. `INITIAL_CAPITAL = $250,000`.
-
-Why NET matters: the old exit took profit at `|z|≤0.25` against a far `3σ` stop —
-a **high win rate but tiny average wins**, profit driven by frequency. Those wins do
-not survive realistic transaction costs: on this data, `--slip 0.01` turns a +$2.7k
-gross book **net-negative**, while adding the fundamentals gate (§5a) cuts to a
-handful of high-conviction trades that stay **net-positive with a fraction of the
-drawdown**. The improved exit geometry (§2) and the cost/conviction gates trade win
-rate for expectancy — the honest edge metric.
-
-### 4a. Risk management — favorable R:R + the 1% rule
-
-Two textbook risk controls govern *which* trades to take and *how large*:
-
-- **Favorable risk:reward.** At entry, `reward = |z|−Z_TARGET` and `risk = Z_STOP−|z|`
-  (both in σ). A trade is taken only if `reward/risk ≥ MIN_RR = 1.5`. Because that ratio
-  rises as `|z|` approaches the stop, a naïve gate would select near-stop entries with
-  great paper R:R but coin-flip odds — so entries are also **capped at `|z| ≤ 2.1`**. The
-  result is a clean ~2.5 average R:R from the *sweet-spot band*, not gamed extremes.
-- **The 1% rule (position sizing).** Size each trade so a stop-out costs at most
-  `RISK_PCT = 1%` of capital: `units = ⌊(0.01·$250k) / (Δ$-to-stop)⌋`, where
-  `Δ$-to-stop = (Z_STOP−|z|)·scale·1000`, capped at `MAX_UNITS = 200`. Risk per trade is
-  thus held ≈ constant ($2,500) regardless of the spread or its volatility; tame setups get
-  more size, jumpy ones less. Tune with `--risk`, `--min-rr`, `--z-entry-max`, `--max-units`.
-
-> **Honest caveat (portfolio risk ≠ per-trade risk).** The 1% rule bounds *each trade*. But
-> the seven structures are highly correlated (all crude term structure), so concurrent
-> positions stack — portfolio drawdown runs well above 1% (≈20%+ on this data). A
-> portfolio-level concurrent-risk cap is the natural next control; it needs a chronological
-> cross-structure simulation the current per-structure engine doesn't yet do.
+- `INITIAL_CAPITAL = $250,000` is the equity-curve baseline only (size is fixed 1 unit).
 
 ---
 
-## 5. Confidence score (0–100)
-
-Each trade carries a confidence grounding the live signal in the historical
-validation:
+## 6. Confidence (0-100)
 
 ```
-edge       = the structure's Phase-2 reversion hit-rate (backtest.json), else 0.6
-confidence = 100 × ( 0.65 · edge  +  0.35 · min(1, |z| / 2.5) )
+edge       = the structure's Phase-2 reversion hit-rate (backtest.json) if validated, else 0.60
+confidence = 100 · ( 0.6 · edge  +  0.4 · min(1, |z_entry| / 3.0) )
 ```
 
-Mostly the proven historical edge, lifted by how far the spread is dislocated, and
-adjusted ±for the fundamentals agreement below.
-
-### 5a. Fundamentals anchor (reconnecting the two fair-value engines)
-
-The intraday rolling z says *"dislocated vs its own recent history"*; the Phase-2
-**regression fair value** (`models.json`, drivers: inventories, refinery utilization,
-vol, momentum, DXY/VIX/UST10Y, seasonality) says *"rich or cheap vs fundamentals"*.
-We read the **sign** of the daily residual-z for each structure and require the
-intraday fade to **agree** with it — the absolute daily *level* does not transfer
-across the re-pricing, but the *direction* (rich/cheap) does. Agreement lifts
-confidence; disagreement cuts it, and `--fund-gate` hard-skips contradicted fades.
-This is the lever that turns the net book positive: it keeps the dislocations both
-read-outs corroborate and drops the ones only the noise supports.
+Mostly the validated historical hit-rate, lifted by how stretched the spread is at entry.
 
 ---
 
-## 6. Outputs
+## 7. Outputs
 
-- **`out/trades.csv`** — one row per trade, every field + running equity (machine).
+- **`out/trades.csv`** — one row per trade + running equity (machine-readable).
 - **`out/trades_log.md`** — the readable, trade-by-trade log (the main output).
 - **`out/by_structure.csv`** — per-structure trades / win / PnL / PF / edge.
-- **`server/data/signal_engine.json`** — the dashboard feed: summary, equity curve,
-  full trade list, per-structure, open positions, and the persistent signal log.
-- **`server/data/signal_log.json`** — the append-only opportunity journal
-  (timestamp · regime · instrument · rationale · confidence · performance).
+- **`server/data/signal_engine.json`** — the dashboard feed (summary, equity curve, full trade
+  list, per-structure, open positions, signal log).
+- **`server/data/signal_log.json`** — the persistent opportunity journal.
 
 ```
-python Backtesting/engine.py                       # one GROSS pass (default: 1% rule + R:R gate)
-python Backtesting/engine.py --slip 0.01           # NET: cost + expected-edge gate
-python Backtesting/engine.py --slip 0.01 --fund-gate  # NET + fundamentals agreement gate
-python Backtesting/engine.py --risk 0.005 --min-rr 2  # risk 0.5%/trade, demand 2:1 reward:risk
-python Backtesting/engine.py --no-robust           # mean/std fair value (old reference)
-python Backtesting/engine.py --live                # re-run every 60s on the freshest data
+python Backtesting/engine.py            # one backtest pass (gross)
+python Backtesting/engine.py --slip 0.01  # charge per-leg slippage; report net too
+python Backtesting/engine.py --live       # re-run every 60s on the freshest data
 ```
 
 ---
 
-## 7. Honest caveats
+## 8. Honest caveats
 
-1. **Small sample** (~156 bars / a few sessions) — a working engine and methodology,
-   not a statistically conclusive backtest. Drop more daily `.db` files into `Data/`
-   and re-run to accumulate significance.
-2. **Intraday adaptation** — the strategy's reversion logic on a rolling fair value,
-   not Phase-2's stale daily levels (which don't transfer; §2).
-3. **Gross basis** — slippage/commission off.
-4. **Crude-only** — product cracks aren't in this feed.
+1. **Small sample** (~350 bars / a few sessions) — a working engine and methodology, not a
+   statistically conclusive backtest. Drop more daily `.db` files into `Data/` (or let the
+   live feed accumulate) and re-run to build significance.
+2. **Costs.** Gross by default; with realistic slippage (`--slip 0.01`) the high-frequency
+   edge thins to roughly break-even — these small intraday moves are where costs bite hardest.
+   The honest read is gross = "does the signal work", net = "is it cheap enough to trade".
+3. **Crude-only** — the feed is WTI + Brent, so the product cracks aren't backtested here.
+4. **Fixed 1-unit sizing** — reports the raw per-unit signal, not a sized/leveraged portfolio.
+   Position sizing and portfolio risk limits are a separate layer on top.
+5. **Daily framework, intraday window** — the regime conditioning is dormant over a few days
+   (§3); what's tested is the mean-reversion core with Phase-2 hit-rates as priors.

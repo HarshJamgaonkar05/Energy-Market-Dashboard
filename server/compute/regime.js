@@ -100,6 +100,20 @@ export function signalEngine() {
   return loadJson("signal_engine.json");
 }
 
+// ---- Historical Backtest (Phase 2 fair value, daily, 5y) -------------------
+/** The historical backtest feed: the Phase-2 fundamental fair value traded as a
+ *  daily mean-reversion simulation over 2021-2026. Written by
+ *  analytics/historical_backtest.py. Returns null until it has been run once. */
+export function historicalBacktest() {
+  return loadJson("historical_backtest.json");
+}
+
+/** The intraday historical backtest feed: rolling-mean fair value traded over 5
+ *  years of 15-min WTI/Brent bars. Written by analytics/historical_intraday.py. */
+export function historicalIntraday() {
+  return loadJson("historical_intraday.json");
+}
+
 // ---- Narrative -------------------------------------------------------------
 /** Synthesize a one-line market briefing from the regime, the top signal and the
  *  biggest live mover — the Dashboard's headline. Pure: live movers are passed in

@@ -1,30 +1,33 @@
 # ============================================================================
-# Backtest engine  —  the Phase-2 strategy, backtested on the provided 15-min data
+# Phase 3 — Strategy Backtest  (clean rebuild)
 # ============================================================================
-# Runs the Phase-2 framework's strategy — regime-conditioned relative-value
-# MEAN-REVERSION — over the intraday bars in Backtesting/Data and logs EVERY
-# trade: entry/exit, gross PnL (slippage 0), holding time, MAE/MFE, exit reason,
-# the regime it was taken in, and a confidence score grounded in Phase-2's
-# validated hit-rates.
+# Backtests the Phase-2 idea — relative-value MEAN-REVERSION on crude spreads —
+# over the intraday 15-minute bars in the mentor's live feed. One simple, honest
+# engine: estimate each spread's fair value from its own recent history, fade
+# large dislocations, exit on reversion / stop / session break. Fixed one-unit
+# sizing, gross PnL — the raw signal, not a leveraged book.
 #
-# The strategy (straight from Phase 2): a spread has a fair value; when it
-# dislocates >=1.5sigma from it, fade the move and bet on reversion to fair.
-# Intraday, the fair value is a ROBUST rolling center (median/MAD, so the very
-# dislocation we fade doesn't pull the reference) — Phase-2's absolute daily levels
-# don't transfer to today's contracts (proven: live WTI M1-M2 sits ~1.3 vs Phase-2's
-# 4.6), so the reversion reference is estimated from the data itself. Fades are taken
-# only when the daily fundamentals fair-value model agrees on the dislocation's sign,
-# and (in NET mode) only when the expected reversion clears its trading cost. Exits
-# revert through to fair, take a tighter 2.5sigma stop, an OU half-life time stop, or a
-# session break. The regime label and the per-structure historical edge are carried in
-# from Phase 2 so every trade is tied back to the validated framework.
+# ---- Why fair value is estimated from the data (not the Phase-2 model) ------
+# The Phase-2 fair value is a DAILY regression on fundamentals (inventories,
+# refinery utilisation, DXY, VIX, momentum, seasonality). It cannot price these
+# intraday spreads, for three independent reasons:
+#   1. Its INPUTS are absent — the feed holds only crude futures prices, none of
+#      the fundamental features the regression needs, so it can't be evaluated.
+#   2. Its OUTPUT level is stale — e.g. Phase-2 fair value for WTI M1-M2 ~2.18 vs
+#      the live spread ~0.74; forcing it on would flag a permanent fake "cheap".
+#   3. Fundamentals are daily, so over a few days the model is ~constant and can't
+#      explain intraday moves (which are order-flow, not fundamentals).
+# So fair value = a rolling mean of the spread itself. Phase 2 still contributes
+# as CONTEXT: its validated per-structure hit-rates and the regime label are
+# carried in as priors/labels (confidence + rationale), not as the price anchor.
 #
 # Run:
-#   python Backtesting/engine.py            # one backtest pass
-#   python Backtesting/engine.py --live      # re-run every 60s on the freshest data
+#   python Backtesting/engine.py            # one backtest pass (gross)
+#   python Backtesting/engine.py --slip 0.01  # charge per-leg slippage (net too)
+#   python Backtesting/engine.py --live       # re-run every 60s on the freshest data
 #
-# Main output: the TRADE LOG — out/trades.csv (machine) + out/trades_log.md
-# (readable) — plus the dashboard feed at server/data/signal_engine.json.
+# Outputs: out/trades.csv, out/trades_log.md, out/by_structure.csv, and the
+# dashboard feed server/data/signal_engine.json (+ persistent signal_log.json).
 # ============================================================================
 import argparse
 import csv
@@ -43,62 +46,84 @@ import pandas as pd
 
 # ---- Paths -----------------------------------------------------------------
 HERE = Path(__file__).resolve().parent
-LOCAL_DIR = HERE / "Data"                                  # the provided snapshot (fallback)
+LOCAL_DIR = HERE / "Data"                                  # committed snapshot (fallback)
 LIVE_DIR = Path(r"I:\Public\Summer Interns Energy\DB")     # mentor's live company feed
 OUT_DIR = HERE / "out"
 SERVER_DATA = HERE.parent / "server" / "data"
-REGIMES_JSON = SERVER_DATA / "regimes.json"
-PHASE2_BACKTEST = SERVER_DATA / "backtest.json"            # validated daily edge
-MODELS_JSON = SERVER_DATA / "models.json"                 # daily fundamentals fair value
-FEED_JSON = SERVER_DATA / "signal_engine.json"            # dashboard feed
-SIGNAL_LOG = SERVER_DATA / "signal_log.json"              # persistent journal
+REGIMES_JSON = SERVER_DATA / "regimes.json"                # current regime label (context)
+PHASE2_BACKTEST = SERVER_DATA / "backtest.json"            # validated daily hit-rates (context)
+FEED_JSON = SERVER_DATA / "signal_engine.json"             # dashboard feed
+SIGNAL_LOG = SERVER_DATA / "signal_log.json"               # persistent journal
 
-# ---- Strategy parameters (Phase-2 logic, intraday horizon) -----------------
-LOOKBACK = 16          # bars in the rolling fair value (~4h of 15-min bars)
-Z_ENTRY = 1.5          # fade when |z| >= this (Phase-2 dislocation threshold)
-Z_TARGET = 0.10        # take profit on reversion through to fair value (|z| <= this)
-Z_STOP = 2.5           # stop if it stretches to |z| >= this (tighter -> positive reward:risk)
-MAX_HOLD_HL = 3.0      # time stop: bail after this many estimated half-lives unsettled
-HL_FALLBACK_BARS = 12  # hold cap when a half-life can't be estimated (~3h)
-SESSION_GAP_MIN = 90   # gap to next bar > this = session/weekend break -> flatten
-MULT = 1000            # 1,000 bbl/contract -> $1.00/bbl move = $1,000
-INITIAL_CAPITAL = 250_000
-SLIP_PER_LEG = 0.0     # price units per leg per side; 0 = GROSS (brief). Set via --slip for NET.
-COST_EXP_MULT = 2.0    # NET mode only: enter only if expected reversion >= this x round-turn cost
-ROBUST = True          # fair value via rolling median/MAD (resists the dislocation bar) vs mean/std
-FUND_GATE = False      # hard-skip fades that disagree with the daily fundamentals fair value
-# ---- Risk management -------------------------------------------------------
-RISK_PCT = 0.01        # the 1% RULE: risk at most this fraction of capital per trade
-MIN_RR = 1.5           # FAVORABLE R:R: only take trades whose reward:risk >= this
-Z_ENTRY_MAX = 2.1      # don't chase dislocations this deep — too close to the stop (poor odds,
-                       # and distance-to-stop sizing would over-size them); keeps R:R honest
-MAX_UNITS = 200        # safety cap on the size the 1% rule can produce
+# ---- Strategy parameters (intentionally few) -------------------------------
+LOOKBACK = 24          # bars in the rolling fair value (~6h of 15-min bars)
+Z_ENTRY = 2.0          # fade when |z| >= this (a 2-sigma dislocation)
+Z_EXIT = -1.0          # take profit after reverting THROUGH fair to ~1sigma the other side
+                       #   (entry_sign*z <= this). Spreads overshoot, so exiting at fair leaves money
+                       #   on the table; riding the overshoot lifts both gross and net (5y-validated).
+Z_STOP = 3.5           # stop if it stretches further to |z| >= this
+MAX_HOLD_BARS = 48     # time stop: never hold a single trade longer than ~12h
+SESSION_GAP_MIN = 90   # a gap to the next bar > this = session/weekend break -> flatten
+MULT = 1000            # 1,000 bbl/contract -> a $1.00/bbl spread move = $1,000
+INITIAL_CAPITAL = 250_000   # equity-curve baseline (display); size is fixed 1 unit
+SLIP_PER_LEG = 0.0     # per-leg, per-side slippage in price units; 0 = GROSS (the brief)
+# ---- Cost discipline (mirrors analytics/historical_intraday.py) -------------
+# Only fade when the expected $ move back to fair (|spread-fair| x MULT) clears a
+# realistic round-turn cost. ASSUMED_SLIP is a design-time cost that's ALWAYS on
+# (even when reporting gross) so the trade set is one we'd actually trade — it skips
+# the cent-sized, low-volatility dislocations that just bleed turnover. Validated on
+# 5y of 15-min history: net@1c $50k -> $1.12M, net drawdown -$242k -> -$16k.
+ASSUMED_SLIP = 0.01    # per-leg cost the entry gate must clear (independent of --slip reporting)
+EDGE_COST_MULT = 2.0   # require expected capture >= this x round-turn cost
+# ---- LIVE panel display mode -----------------------------------------------
+# True (default): live mirrors the DISCIPLINED, actually-tradeable strategy (cost gate
+# + the 3 proven structures) that the 5-year historical backtest validates — a small
+# but honestly-profitable demo on the few-day feed.
+# False: the FULL ungated book (all 7 structures, every >=2sigma signal, no gate) —
+# a bigger gross headline but a WORSE after-cost result (the extra trades lose money
+# once you pay to trade them). Available on request; not the default.
+LIVE_DISCIPLINED = True
 LIVE_REFRESH_SEC = 60
 
 # ---- Tradeable structures (crude-only — what the feed contains) -------------
+# M1/M2/M3 = 1st/2nd/3rd nearest contract during this June-2026 window.
+# `active` = traded. Over 5y of 15-min history the Brent calendars/fly and the WTI
+# front calendar (M1-M2) had no persistent net edge after costs in either the 2021-23
+# train or the 2024+ test half (PF ~0.9-1.2); only Brent-WTI arb, the WTI fly and WTI
+# M2-M3 survive costs in both. We evaluate all seven but trade only those three.
 STRUCTURES = {
-    "WTI_M1M2":   {"label": "WTI Jul/Aug (M1-M2)",   "legs": [("CL_N26", 1), ("CL_Q26", -1)], "phase2": "wti_m1m2"},
-    "WTI_M2M3":   {"label": "WTI Aug/Sep (M2-M3)",   "legs": [("CL_Q26", 1), ("CL_U26", -1)], "phase2": "wti_m1m2"},
-    "WTI_FLY":    {"label": "WTI Jul/Aug/Sep fly",   "legs": [("CL_N26", 1), ("CL_Q26", -2), ("CL_U26", 1)], "phase2": "wti_fly"},
-    "BRENT_M1M2": {"label": "Brent Aug/Sep (M1-M2)", "legs": [("CO_Q26", 1), ("CO_U26", -1)], "phase2": "brent_m1m2"},
-    "BRENT_M2M3": {"label": "Brent Sep/Oct (M2-M3)", "legs": [("CO_U26", 1), ("CO_V26", -1)], "phase2": "brent_m1m2"},
-    "BRENT_FLY":  {"label": "Brent Aug/Sep/Oct fly", "legs": [("CO_Q26", 1), ("CO_U26", -2), ("CO_V26", 1)], "phase2": "wti_fly"},
-    "BRENT_WTI":  {"label": "Brent-WTI arb (Aug)",   "legs": [("CO_Q26", 1), ("CL_Q26", -1)], "phase2": "brent_wti"},
+    "WTI_M1M2":   {"label": "WTI Jul/Aug (M1-M2)",   "legs": [("CL_N26", 1), ("CL_Q26", -1)], "phase2": "wti_m1m2", "active": False},
+    "WTI_M2M3":   {"label": "WTI Aug/Sep (M2-M3)",   "legs": [("CL_Q26", 1), ("CL_U26", -1)], "phase2": "wti_m1m2", "active": True},
+    "WTI_FLY":    {"label": "WTI Jul/Aug/Sep fly",   "legs": [("CL_N26", 1), ("CL_Q26", -2), ("CL_U26", 1)], "phase2": "wti_fly", "active": True},
+    "BRENT_M1M2": {"label": "Brent Aug/Sep (M1-M2)", "legs": [("CO_Q26", 1), ("CO_U26", -1)], "phase2": "brent_m1m2", "active": False},
+    "BRENT_M2M3": {"label": "Brent Sep/Oct (M2-M3)", "legs": [("CO_U26", 1), ("CO_V26", -1)], "phase2": "brent_m1m2", "active": False},
+    "BRENT_FLY":  {"label": "Brent Aug/Sep/Oct fly", "legs": [("CO_Q26", 1), ("CO_U26", -2), ("CO_V26", 1)], "phase2": "wti_fly", "active": False},
+    "BRENT_WTI":  {"label": "Brent-WTI arb (Aug)",   "legs": [("CO_Q26", 1), ("CL_Q26", -1)], "phase2": "brent_wti", "active": True},
 }
 
-STRATEGY_NAME = "Regime-conditioned RV mean-reversion (Phase 2)"
-STRATEGY_DESC = ("Fade a spread when it dislocates >=1.5sigma from a robust (median/MAD) "
-                 "rolling fair value, in agreement with the daily fundamentals model; exit on "
-                 "reversion through to fair (|z|<=0.1), a tighter 2.5sigma stop, an OU "
-                 "half-life time stop, or a session break. The Phase-2 strategy, backtested "
-                 "intraday with optional net-of-cost gating.")
+if LIVE_DISCIPLINED:
+    STRATEGY_NAME = "RV mean-reversion + cost gate (Phase-2 idea, intraday)"
+    STRATEGY_DESC = ("Estimate each crude spread's fair value as a rolling mean of its own recent "
+                     "history; fade a >=2sigma dislocation ONLY when the expected $ move to fair clears "
+                     "2x realistic cost (volatility-adaptive cost gate); ride the reversion through fair to "
+                     "~1sigma overshoot (z<=-1.0), with a 3.5sigma stop, a 12h time stop, or a session break. "
+                     "Universe pruned to the 3 structures with a persistent post-cost edge. Fixed 1 unit/trade, gross.")
+else:
+    STRATEGY_NAME = "RV mean-reversion — full live book (Phase-2 idea, intraday)"
+    STRATEGY_DESC = ("Estimate each crude spread's fair value as a rolling mean of its own recent history; "
+                     "fade EVERY >=2sigma dislocation across ALL 7 WTI & Brent crude structures (no cost "
+                     "gate — full live book); ride the reversion through fair to ~1sigma overshoot (z<=-1.0), "
+                     "with a 3.5sigma stop, a 12h time stop, or a session break. Fixed 1 unit/trade, gross. "
+                     "(Bigger gross, but a worse after-cost result than the disciplined 3-structure strategy "
+                     "proven over 5 years in the Historical BT panel.)")
 
 
 # ============================================================================
-# Data
+# Data — snapshot the live SQLite (incl. WAL), checkpoint, read closes
 # ============================================================================
 def _snapshot_closes(db_path: Path) -> dict:
-    """Snapshot db(+wal), checkpoint, return {table: close-series}."""
+    """Copy db(+wal/shm), checkpoint, return {table: close-series}. The freshest
+    bars live in the write-ahead log, so we must snapshot and checkpoint to see them."""
     tmp = Path(tempfile.mkdtemp()); dst = tmp / "snap.db"
     shutil.copy(db_path, dst)
     for ext in ("-wal", "-shm"):
@@ -130,8 +155,8 @@ def _latest_db(folder: Path):
 
 
 def load_closes():
-    """(closes_df, mode, source). Backtests on the provided ./Data unless the live
-    feed is reachable AND fresher (more bars)."""
+    """(closes_df, mode, source). Use the live company feed when reachable and at least
+    as deep as the local snapshot; otherwise fall back to the committed ./Data copy."""
     local_db, live_db = _latest_db(LOCAL_DIR), _latest_db(LIVE_DIR)
     local = _snapshot_closes(local_db) if local_db else {}
     live = {}
@@ -139,7 +164,7 @@ def load_closes():
         try: live = _snapshot_closes(live_db)
         except Exception: live = {}
     depth = lambda f: max((len(s) for s in f.values()), default=0)
-    if depth(live) > depth(local):
+    if depth(live) >= depth(local) and depth(live) > 0:
         frames, mode, src = live, "live", str(live_db)
     else:
         frames, mode, src = local, "local", str(local_db) if local_db else "(none)"
@@ -149,6 +174,7 @@ def load_closes():
 
 
 def build_spread(closes, legs):
+    """Signed sum of leg closes (only on bars where every leg traded)."""
     cols = [t for t, _ in legs]
     if any(c not in closes.columns for c in cols):
         return pd.Series(dtype=float)
@@ -159,7 +185,7 @@ def build_spread(closes, legs):
 
 
 # ============================================================================
-# Phase-2 context
+# Phase-2 context (labels & priors only — NOT the price reference)
 # ============================================================================
 def current_regime():
     try:
@@ -183,184 +209,76 @@ def edge_for(key, edges):
     return 0.6, "prior"
 
 
-def fundamental_views():
-    """{phase2Key: daily residual z} from the regression fair-value model. The SIGN says
-    whether fundamentals see the spread as rich (>0) or cheap (<0) — a transferable
-    cross-check on the intraday fade even though the absolute daily LEVEL does not carry."""
-    try:
-        models = json.loads(MODELS_JSON.read_text(encoding="utf8")).get("models", {})
-        return {k: (v.get("residual", {}) or {}).get("z") for k, v in models.items()}
-    except Exception:
-        return {}
-
-
-def fund_agree(fund_z, entry_z):
-    """True/False if the daily model corroborates the intraday fade, None if no view.
-    Agree when both call the spread the same way (same sign of dislocation)."""
-    if fund_z is None:
-        return None
-    return bool((fund_z >= 0) == (entry_z >= 0))
-
-
-def confidence_score(edge, abs_z, agree=None):
-    """0-100: mostly the validated historical edge, lifted by the live dislocation and by
-    whether the daily fundamentals model agrees (+/- a small adjustment)."""
-    base = 100 * (0.65 * edge + 0.35 * min(1.0, abs_z / 2.5))
-    if agree is True:
-        base += 8
-    elif agree is False:
-        base -= 12
-    return int(round(max(0.0, min(100.0, base))))
-
-
-# ============================================================================
-# Fair value & mean-reversion statistics
-# ============================================================================
-def fair_value_z(spread, lookback, robust):
-    """Rolling fair value, scale and z. ROBUST uses the median + MAD so the very
-    dislocation we want to fade does not pull the reference (the mean/std do)."""
-    if robust:
-        center = spread.rolling(lookback).median()
-        mad = spread.rolling(lookback).apply(
-            lambda w: np.median(np.abs(w - np.median(w))), raw=True)
-        scale = 1.4826 * mad                       # MAD -> std-equivalent
-    else:
-        center = spread.rolling(lookback).mean()
-        scale = spread.rolling(lookback).std()
-    scale = scale.replace(0.0, np.nan)
-    z = (spread - center) / scale
-    return center, scale, z
-
-
-def half_life_bars(spread):
-    """Mean-reversion half-life in bars via an OU / AR(1) fit:
-    dx_t = beta*(x_{t-1} - mu) + e  ->  rho = 1+beta  ->  HL = -ln2 / ln(rho).
-    Returns None if the series does not mean-revert (beta >= 0)."""
-    s = spread.dropna()
-    if len(s) < 12:
-        return None
-    lag = s.shift(1).dropna()
-    dx = (s - s.shift(1)).dropna()
-    x = (lag - lag.mean()).values
-    if np.std(x) == 0:
-        return None
-    beta = float(np.polyfit(x, dx.values, 1)[0])
-    rho = 1.0 + beta
-    if not (0.0 < rho < 1.0):
-        return None
-    hl = float(-np.log(2) / np.log(rho))
-    return hl if np.isfinite(hl) and hl > 0 else None
+def confidence_score(edge, abs_z):
+    """0-100: mostly the validated historical hit-rate, lifted by how stretched the spread is."""
+    return int(round(100 * (0.6 * edge + 0.4 * min(1.0, abs_z / 3.0))))
 
 
 # ============================================================================
 # Backtest one structure
 # ============================================================================
-def backtest_structure(name, meta, closes, regime, edges, views):
+def backtest_structure(name, meta, closes, regime, edges):
     spread = build_spread(closes, meta["legs"])
     if len(spread) < LOOKBACK + 3:
         return [], None
     df = pd.DataFrame({"spread": spread})
-    df["mean"], df["scale"], df["z"] = fair_value_z(df["spread"], LOOKBACK, ROBUST)
-    df = df.dropna(subset=["spread", "mean", "scale", "z"])
+    df["mean"] = df["spread"].rolling(LOOKBACK).mean()        # fair value = rolling mean
+    df["std"] = df["spread"].rolling(LOOKBACK).std()
+    df["z"] = (df["spread"] - df["mean"]) / df["std"]         # dislocation in sigma
+    df = df.dropna(subset=["mean", "std", "z"])
+    df = df[df["std"] > 0]
     if df.empty:
         return [], None
 
-    hl = half_life_bars(spread)                       # OU half-life for the time stop
-    max_hold = int(np.ceil(MAX_HOLD_HL * hl)) if hl else HL_FALLBACK_BARS
-    fund_z = views.get(meta["phase2"])                # daily fundamentals view (sign)
-    n_legs = sum(abs(q) for _, q in meta["legs"])
-    round_turn_cost = SLIP_PER_LEG * 2 * n_legs * MULT   # entry+exit, both legs
-
     idx = df.index
-    deltas = idx.to_series().diff().shift(-1)            # gap from bar i to i+1
-    gap_next = (deltas > pd.Timedelta(minutes=SESSION_GAP_MIN)).fillna(False)
-    gap_next.iloc[-1] = False                            # last bar stays OPEN, not forced
+    gap_next = (idx.to_series().diff().shift(-1) > pd.Timedelta(minutes=SESSION_GAP_MIN)).fillna(False)
+    gap_next.iloc[-1] = False                                 # last bar stays OPEN, not forced flat
 
     edge, edge_src = edge_for(meta["phase2"], edges)
     contracts = sum(abs(q) for _, q in meta["legs"])
+    cost = SLIP_PER_LEG * 2 * contracts * MULT                # round-turn slippage (0 in gross)
+    # min $ capture to take a trade (0 = gate OFF, i.e. the full ungated live book)
+    gate_cost = EDGE_COST_MULT * 2 * contracts * ASSUMED_SLIP * MULT if LIVE_DISCIPLINED else 0.0
 
     def legs_at(ts):
         return {t: round(float(closes[t].get(ts, float("nan"))), 3) for t, _ in meta["legs"]}
 
     trades, pos = [], None
     for i, (ts, row) in enumerate(df.iterrows()):
-        z, sp, scale = row["z"], row["spread"], row["scale"]
+        z, sp, fv = float(row["z"]), float(row["spread"]), float(row["mean"])
         if pos is None:
-            abs_z = abs(z)
-            if abs_z < Z_ENTRY or abs_z > Z_ENTRY_MAX:       # fade the band, not near-stop extremes
-                continue
-            agree = fund_agree(fund_z, z)
-            # (3) Fundamentals anchor: skip a fade the daily model contradicts (gate only).
-            if FUND_GATE and agree is False:
-                continue
-            # (R:R) FAVORABLE RISK:REWARD — reward = room to the target (revert to fair),
-            # risk = room to the stop, both in sigma. Only fade when reward:risk clears MIN_RR.
-            reward_sigma = abs_z - Z_TARGET
-            risk_sigma = Z_STOP - abs_z
-            if risk_sigma <= 0:                              # already at/through the stop — no room
-                continue
-            rr = reward_sigma / risk_sigma
-            if rr < MIN_RR:
-                continue
-            # (1%) POSITION SIZING — size so a stop-out loses at most RISK_PCT of capital.
-            # Dollar risk per unit = (price distance to the stop) x contract multiplier.
-            risk_per_unit = risk_sigma * scale * MULT
-            if risk_per_unit <= 0:
-                continue
-            units = int((RISK_PCT * INITIAL_CAPITAL) // risk_per_unit)
-            units = min(units, MAX_UNITS)
-            if units < 1:                                    # can't take even 1 unit within the 1% rule
-                continue
-            # (2) Cost-aware: in NET mode, only enter if the expected reversion to fair
-            # clears a multiple of the round-turn cost. No-op at slippage 0 (GROSS).
-            exp_move = reward_sigma * scale * MULT
-            if round_turn_cost > 0 and exp_move < COST_EXP_MULT * round_turn_cost:
-                continue
-            pos = {"dir": "LONG" if z <= -Z_ENTRY else "SHORT", "i": i, "t": ts,
-                   "sp": sp, "z": float(z), "legs": legs_at(ts), "mae": 0.0, "mfe": 0.0,
-                   "agree": agree, "units": units, "rr": rr,
-                   "riskDollars": units * risk_per_unit}
+            if abs(z) >= Z_ENTRY and abs(sp - fv) * MULT >= gate_cost:   # fade only if $ edge clears cost
+                pos = {"dir": "LONG" if z <= -Z_ENTRY else "SHORT", "i": i, "t": ts,
+                       "sp": sp, "z": z, "legs": legs_at(ts), "mae": 0.0, "mfe": 0.0}
             continue
         sign = 1.0 if pos["dir"] == "LONG" else -1.0
-        entry_sign = -sign                                   # +1 if SHORT (entered rich), -1 if LONG
-        units = pos["units"]
-        upnl = sign * (sp - pos["sp"]) * MULT * units
+        entry_sign = -sign                                    # +1 if SHORT (entered rich), -1 if LONG
+        upnl = sign * (sp - pos["sp"]) * MULT
         pos["mae"], pos["mfe"] = min(pos["mae"], upnl), max(pos["mfe"], upnl)
         held = i - pos["i"]
-        # (1) Exit geometry: revert THROUGH fair (directional), a tighter symmetric stop,
-        # an OU half-life time stop, or a session break.
-        hit_t = entry_sign * z <= Z_TARGET
-        hit_s = abs(z) >= Z_STOP
-        hit_time = held >= max_hold
+
+        hit_target = entry_sign * z <= Z_EXIT                 # reverted through to fair
+        hit_stop = abs(z) >= Z_STOP                           # stretched further -> wrong
+        hit_time = held >= MAX_HOLD_BARS
         forced = bool(gap_next.iloc[i])
-        if hit_t or hit_s or hit_time or forced:
-            reason = ("target" if hit_t else "stop" if hit_s
+        if hit_target or hit_stop or hit_time or forced:
+            reason = ("target" if hit_target else "stop" if hit_stop
                       else "time_stop" if hit_time else "session_end")
-            units = pos["units"]
-            cost = round_turn_cost * units
-            gross = sign * (sp - pos["sp"]) * MULT * units
-            net = gross - cost
-            abs_z = abs(pos["z"])
+            gross = sign * (sp - pos["sp"]) * MULT
             trades.append({
-                "structure": name, "label": meta["label"],
-                "strategy": STRATEGY_NAME, "phase2Key": meta["phase2"], "regime": regime,
-                "direction": pos["dir"],
+                "structure": name, "label": meta["label"], "strategy": STRATEGY_NAME,
+                "phase2Key": meta["phase2"], "regime": regime, "direction": pos["dir"],
                 "entryTime": pos["t"].strftime("%Y-%m-%d %H:%M"),
                 "exitTime": ts.strftime("%Y-%m-%d %H:%M"),
-                "entrySpread": round(pos["sp"], 4), "exitSpread": round(float(sp), 4),
-                "entryZ": round(pos["z"], 2), "exitZ": round(float(z), 2),
+                "entrySpread": round(pos["sp"], 4), "exitSpread": round(sp, 4),
+                "entryZ": round(pos["z"], 2), "exitZ": round(z, 2),
                 "entryLegs": pos["legs"], "exitLegs": legs_at(ts),
-                "holdBars": held,
-                "holdMin": int((ts - pos["t"]).total_seconds() // 60),
-                "contracts": contracts, "units": units,
-                "rrRatio": round(pos["rr"], 2), "riskDollars": round(pos["riskDollars"], 2),
-                "pnl": round(gross, 2),
-                "cost": round(cost, 2), "netPnl": round(net, 2),
+                "holdBars": held, "holdMin": int((ts - pos["t"]).total_seconds() // 60),
+                "contracts": contracts, "pnl": round(gross, 2),
+                "cost": round(cost, 2), "netPnl": round(gross - cost, 2),
                 "mae": round(pos["mae"], 2), "mfe": round(pos["mfe"], 2),
-                "exitReason": reason, "histHitRate": round(edge, 3),
-                "edgeSource": edge_src, "halfLifeBars": round(hl, 1) if hl else None,
-                "fundZ": fund_z, "fundAgree": pos["agree"],
-                "confidence": confidence_score(edge, abs_z, pos["agree"]),
+                "exitReason": reason, "histHitRate": round(edge, 3), "edgeSource": edge_src,
+                "confidence": confidence_score(edge, abs(pos["z"])),
             })
             pos = None
 
@@ -370,16 +288,12 @@ def backtest_structure(name, meta, closes, regime, edges, views):
         sign = 1.0 if pos["dir"] == "LONG" else -1.0
         open_pos = {
             "structure": name, "label": meta["label"], "direction": pos["dir"],
-            "entryTime": pos["t"].strftime("%Y-%m-%d %H:%M"),
-            "asOf": ts.strftime("%Y-%m-%d %H:%M"),
+            "entryTime": pos["t"].strftime("%Y-%m-%d %H:%M"), "asOf": ts.strftime("%Y-%m-%d %H:%M"),
             "entrySpread": round(pos["sp"], 4), "curSpread": round(sp, 4),
             "entryZ": round(pos["z"], 2), "curZ": round(z, 2),
             "holdBars": int(len(df) - 1 - pos["i"]),
-            "units": pos["units"], "rrRatio": round(pos["rr"], 2),
-            "riskDollars": round(pos["riskDollars"], 2),
-            "unrealizedPnl": round(sign * (sp - pos["sp"]) * MULT * pos["units"], 2),
-            "fundZ": fund_z, "fundAgree": pos["agree"],
-            "regime": regime, "confidence": confidence_score(edge, abs(pos["z"]), pos["agree"]),
+            "unrealizedPnl": round(sign * (sp - pos["sp"]) * MULT, 2),
+            "regime": regime, "confidence": confidence_score(edge, abs(pos["z"])),
         }
     return trades, open_pos
 
@@ -405,48 +319,42 @@ def max_drawdown(curve):
     return round(mdd, 2)
 
 
-def summarize(all_trades, curve):
-    n = len(all_trades)
-    pnl = sum(t["pnl"] for t in all_trades)
-    net = sum(t.get("netPnl", t["pnl"]) for t in all_trades)
-    costs = sum(t.get("cost", 0.0) for t in all_trades)
-    wins = [t for t in all_trades if t["pnl"] > 0]
-    losses = [t for t in all_trades if t["pnl"] <= 0]
-    gw, gl = sum(t["pnl"] for t in wins), -sum(t["pnl"] for t in losses)
-    pf = (gw / gl) if gl > 0 else (None if gw == 0 else None)
-    pnls = np.array([t["pnl"] for t in all_trades], float) if n else np.array([])
-    sharpe = float(pnls.mean() / pnls.std()) if n > 1 and pnls.std() > 0 else 0.0
-    # Net profit factor / win rate (the cost-aware view; equals gross at slippage 0).
-    nets = [t.get("netPnl", t["pnl"]) for t in all_trades]
-    nwins = [v for v in nets if v > 0]
-    ngw = sum(v for v in nwins); ngl = -sum(v for v in nets if v <= 0)
-    return {
-        "trades": n, "grossPnl": round(pnl, 2), "netPnl": round(net, 2), "costs": round(costs, 2),
-        "winRate": round(len(wins) / n, 4) if n else 0.0,
-        "netWinRate": round(len(nwins) / n, 4) if n else 0.0,
-        "avgWin": round(gw / len(wins), 2) if wins else 0.0,
-        "avgLoss": round(-gl / len(losses), 2) if losses else 0.0,
-        "profitFactor": round(gw / gl, 3) if gl > 0 else None,
-        "netProfitFactor": round(ngw / ngl, 3) if ngl > 0 else None,
-        "expectancy": round(pnl / n, 2) if n else 0.0,
-        "netExpectancy": round(net / n, 2) if n else 0.0,
-        "perTradeSharpe": round(sharpe, 3),
-        "avgRR": round(float(np.mean([t["rrRatio"] for t in all_trades])), 2) if n else 0.0,
-        "avgUnits": round(float(np.mean([t["units"] for t in all_trades])), 1) if n else 0.0,
-        "avgRiskDollars": round(float(np.mean([t["riskDollars"] for t in all_trades])), 0) if n else 0.0,
-        "riskPctPerTrade": RISK_PCT,
-        "avgHoldMin": round(float(np.mean([t["holdMin"] for t in all_trades])), 1) if n else 0.0,
-        "maxDrawdown": max_drawdown(curve),
-        "endingEquity": round(INITIAL_CAPITAL + pnl, 2), "initialCapital": INITIAL_CAPITAL,
-        "byExitReason": _counts(all_trades, "exitReason"),
-        "byDirection": _counts(all_trades, "direction"),
-    }
-
-
 def _counts(rows, key):
     out = {}
     for r in rows:
         out[r[key]] = out.get(r[key], 0) + 1
+    return out
+
+
+def summarize(all_trades, curve):
+    n = len(all_trades)
+    pnl = sum(t["pnl"] for t in all_trades)
+    net = sum(t["netPnl"] for t in all_trades)
+    costs = sum(t["cost"] for t in all_trades)
+    wins = [t for t in all_trades if t["pnl"] > 0]
+    losses = [t for t in all_trades if t["pnl"] <= 0]
+    gw, gl = sum(t["pnl"] for t in wins), -sum(t["pnl"] for t in losses)
+    # Net (after-cost) per-trade figures — equal the gross ones at slippage 0.
+    nwins = [t for t in all_trades if t["netPnl"] > 0]
+    nlosses = [t for t in all_trades if t["netPnl"] <= 0]
+    pnls = np.array([t["pnl"] for t in all_trades], float) if n else np.array([])
+    sharpe = float(pnls.mean() / pnls.std()) if n > 1 and pnls.std() > 0 else 0.0
+    out = {
+        "trades": n, "grossPnl": round(pnl, 2), "netPnl": round(net, 2), "costs": round(costs, 2),
+        "winRate": round(len(wins) / n, 4) if n else 0.0,
+        "avgWin": round(gw / len(wins), 2) if wins else 0.0,
+        "avgLoss": round(-gl / len(losses), 2) if losses else 0.0,
+        "avgNetWin": round(sum(t["netPnl"] for t in nwins) / len(nwins), 2) if nwins else 0.0,
+        "avgNetLoss": round(sum(t["netPnl"] for t in nlosses) / len(nlosses), 2) if nlosses else 0.0,
+        "profitFactor": round(gw / gl, 3) if gl > 0 else None,
+        "expectancy": round(pnl / n, 2) if n else 0.0,
+        "netExpectancy": round(net / n, 2) if n else 0.0,
+        "perTradeSharpe": round(sharpe, 3),
+        "avgHoldMin": round(float(np.mean([t["holdMin"] for t in all_trades])), 1) if n else 0.0,
+        "maxDrawdown": max_drawdown(curve),
+        "endingEquity": round(INITIAL_CAPITAL + pnl, 2), "initialCapital": INITIAL_CAPITAL,
+        "byExitReason": _counts(all_trades, "exitReason"), "byDirection": _counts(all_trades, "direction"),
+    }
     return out
 
 
@@ -460,8 +368,7 @@ def per_structure(all_trades):
         gw = sum(t["pnl"] for t in wins); gl = -sum(t["pnl"] for t in ts if t["pnl"] <= 0)
         out[name] = {
             "label": meta["label"], "trades": len(ts), "wins": len(wins),
-            "winRate": round(len(wins) / len(ts), 3),
-            "pnl": round(sum(t["pnl"] for t in ts), 2),
+            "winRate": round(len(wins) / len(ts), 3), "pnl": round(sum(t["pnl"] for t in ts), 2),
             "profitFactor": round(gw / gl, 3) if gl > 0 else None,
             "avgHoldMin": round(float(np.mean([t["holdMin"] for t in ts])), 1),
             "histHitRate": ts[0]["histHitRate"],
@@ -470,12 +377,12 @@ def per_structure(all_trades):
 
 
 # ============================================================================
-# Signal log (every opportunity, persistent)
+# Signal log (persistent opportunity journal)
 # ============================================================================
 def rationale(direction, abs_z, regime, edge, src):
     side = "cheap" if direction == "LONG" else "rich"
-    return (f"Faded a {abs_z:.2f}sigma {side} dislocation from rolling fair value in the "
-            f"{regime} regime. Historical reversion edge ~{round(edge*100)}% ({src}).")
+    return (f"Faded a {abs_z:.1f}sigma {side} dislocation from the rolling fair value in the "
+            f"{regime} regime. Phase-2 reversion hit-rate ~{round(edge*100)}% ({src}).")
 
 
 def signals_from(all_trades, open_positions, regime):
@@ -485,8 +392,7 @@ def signals_from(all_trades, open_positions, regime):
             "id": f'{t["structure"]}@{t["entryTime"]}', "timestamp": t["entryTime"],
             "regime": t["regime"], "instrument": t["structure"], "label": t["label"],
             "direction": t["direction"],
-            "rationale": rationale(t["direction"], abs(t["entryZ"]), t["regime"],
-                                   t["histHitRate"], t["edgeSource"]),
+            "rationale": rationale(t["direction"], abs(t["entryZ"]), t["regime"], t["histHitRate"], t["edgeSource"]),
             "confidence": t["confidence"], "status": "CLOSED", "performance": t["pnl"],
             "outcome": "reverted-win" if t["pnl"] > 0 else "stopped-loss",
             "exitReason": t["exitReason"], "entryZ": t["entryZ"], "histHitRate": t["histHitRate"],
@@ -532,11 +438,9 @@ def safe_write(path, text):
 
 def write_trade_csv(all_trades):
     OUT_DIR.mkdir(parents=True, exist_ok=True)
-    cols = ["structure", "label", "strategy", "phase2Key", "regime", "direction",
-            "entryTime", "exitTime", "holdBars", "holdMin", "entrySpread", "exitSpread",
-            "entryZ", "exitZ", "contracts", "units", "rrRatio", "riskDollars",
-            "pnl", "cost", "netPnl", "mae", "mfe",
-            "exitReason", "halfLifeBars", "fundZ", "fundAgree", "histHitRate",
+    cols = ["structure", "label", "strategy", "phase2Key", "regime", "direction", "entryTime",
+            "exitTime", "holdBars", "holdMin", "entrySpread", "exitSpread", "entryZ", "exitZ",
+            "contracts", "pnl", "cost", "netPnl", "mae", "mfe", "exitReason", "histHitRate",
             "confidence", "equityAfter"]
     try:
         with open(OUT_DIR / "trades.csv", "w", newline="", encoding="utf8") as f:
@@ -550,28 +454,28 @@ def write_trade_csv(all_trades):
 
 
 def write_trade_md(all_trades, summary, mode, regime):
-    pf = summary["profitFactor"]
-    basis = (f"Net basis (slippage {SLIP_PER_LEG}/leg)" if SLIP_PER_LEG > 0
-             else "Gross basis (slippage 0)")
-    net_line = (f" · net ${summary['netPnl']:,.0f} (PF {summary['netProfitFactor']}, "
-                f"costs ${summary['costs']:,.0f})" if SLIP_PER_LEG > 0 else "")
+    net = (f" · net ${summary['netPnl']:,.0f} (costs ${summary['costs']:,.0f})"
+           if summary["costs"] > 0 else "")
     lines = [
-        "# Trade Log — Phase-2 strategy backtested on the provided 15-min data", "",
-        f"_Strategy: {STRATEGY_NAME}. Data: **{mode}**. Regime: **{regime}**. {basis}._", "",
-        f"**{summary['trades']} trades · gross ${summary['grossPnl']:,.0f} · "
-        f"win {summary['winRate']*100:.0f}% · PF {pf} · max DD ${summary['maxDrawdown']:,.0f}"
-        f"{net_line}**", "",
-        "Each trade names the strategy, the setup, the legs with fills, the signal, the exit and the gross PnL.",
-        "", "---", "",
+        "# Trade Log — Phase-3 backtest (RV mean-reversion, intraday)", "",
+        f"_Strategy: {STRATEGY_NAME}. Data: **{mode}**. Regime: **{regime}**. "
+        f"Fixed 1 unit/trade, {'net of slippage' if summary['costs'] > 0 else 'gross (slippage 0)'}._", "",
+        f"**{summary['trades']} trades · gross ${summary['grossPnl']:,.0f}{net} · "
+        f"win {summary['winRate']*100:.0f}% · PF {summary['profitFactor']} · "
+        f"exp ${summary['expectancy']:,.0f}/trade · max DD ${summary['maxDrawdown']:,.0f}**", "",
+        "Each trade: the setup, the legs with fills, the signal, the exit and the gross PnL.", "",
+        "---", "",
     ]
     for i, t in enumerate(sorted(all_trades, key=lambda x: x["entryTime"]), 1):
         legs = ", ".join(f"{k} {v}->{t['exitLegs'].get(k)}" for k, v in t["entryLegs"].items())
         lines += [
             f"### {i}. {t['label']} — {t['direction']}  ({t['pnl']:+,.0f} USD)",
-            f"- **Strategy:** {t['strategy']} · regime {t['regime']} · hist. edge {t['histHitRate']*100:.0f}% · confidence {t['confidence']}/100",
-            f"- **Setup:** dislocated to {t['entryZ']:+.2f}sigma ({'cheap' if t['direction']=='LONG' else 'rich'}) -> fade · R:R {t['rrRatio']:.2f} · size {t['units']}u (risk ${t['riskDollars']:,.0f})",
+            f"- **Setup:** dislocated to {t['entryZ']:+.2f}sigma "
+            f"({'cheap' if t['direction']=='LONG' else 'rich'}) -> fade · regime {t['regime']} · "
+            f"hist. edge {t['histHitRate']*100:.0f}% · confidence {t['confidence']}/100",
             f"- **Legs (entry->exit):** {legs}",
-            f"- **In:** {t['entryTime']} @ {t['entrySpread']}   **Out:** {t['exitTime']} @ {t['exitSpread']} (z {t['exitZ']:+.2f}, {t['exitReason']})",
+            f"- **In:** {t['entryTime']} @ {t['entrySpread']}   **Out:** {t['exitTime']} @ {t['exitSpread']} "
+            f"(z {t['exitZ']:+.2f}, {t['exitReason']})",
             f"- **Held:** {t['holdBars']} bars ({t['holdMin']} min)   **MAE/MFE:** {t['mae']:+,.0f} / {t['mfe']:+,.0f}",
             "",
         ]
@@ -594,13 +498,15 @@ def write_structure_csv(by_structure):
 # ============================================================================
 def run_once(generated_at):
     closes, mode, src = load_closes()
-    regime, edges, views = current_regime(), phase2_edges(), fundamental_views()
-    last_bar = closes.index[-1].strftime("%Y-%m-%d %H:%M")
+    regime, edges = current_regime(), phase2_edges()
     first_bar = closes.index[0].strftime("%Y-%m-%d %H:%M")
+    last_bar = closes.index[-1].strftime("%Y-%m-%d %H:%M")
 
     all_trades, open_positions = [], []
     for name, meta in STRUCTURES.items():
-        trades, open_pos = backtest_structure(name, meta, closes, regime, edges, views)
+        if LIVE_DISCIPLINED and not meta.get("active", True):  # disciplined: trade only proven 3
+            continue                                            # full-book mode: trade all 7
+        trades, open_pos = backtest_structure(name, meta, closes, regime, edges)
         all_trades += trades
         if open_pos:
             open_positions.append(open_pos)
@@ -619,52 +525,36 @@ def run_once(generated_at):
         "source": os.path.basename(src), "firstBar": first_bar, "lastBar": last_bar,
         "bars": int(len(closes)), "regime": regime,
         "strategy": {"name": STRATEGY_NAME, "desc": STRATEGY_DESC,
-                     "params": {"lookback": LOOKBACK, "zEntry": Z_ENTRY, "zTarget": Z_TARGET,
-                                "zStop": Z_STOP, "maxHoldHalfLives": MAX_HOLD_HL,
-                                "robustFairValue": ROBUST, "fundamentalGate": FUND_GATE,
-                                "riskPct": RISK_PCT, "minRR": MIN_RR, "zEntryMax": Z_ENTRY_MAX,
-                                "maxUnits": MAX_UNITS,
-                                "mult": MULT, "slipPerLeg": SLIP_PER_LEG,
-                                "costExpMult": COST_EXP_MULT}},
+                     "params": {"lookback": LOOKBACK, "zEntry": Z_ENTRY, "zExit": Z_EXIT,
+                                "zStop": Z_STOP, "maxHoldBars": MAX_HOLD_BARS, "mult": MULT,
+                                "slipPerLeg": SLIP_PER_LEG, "assumedSlip": ASSUMED_SLIP,
+                                "edgeCostMult": EDGE_COST_MULT if LIVE_DISCIPLINED else 0.0,
+                                "costGate": LIVE_DISCIPLINED,
+                                "activeStructures": sorted(k for k, m in STRUCTURES.items()
+                                                           if not LIVE_DISCIPLINED or m.get("active", True))}},
         "summary": summary, "byStructure": by_structure, "equityCurve": curve,
         "trades": sorted(all_trades, key=lambda t: t["entryTime"], reverse=True),
         "openPositions": open_positions, "signalLog": journal, "openCount": len(open_positions),
     }
     safe_write(FEED_JSON, json.dumps(feed, indent=1))
-    net_tag = (f" | net ${summary['netPnl']:,.0f} (PF {summary['netProfitFactor']})"
-               if SLIP_PER_LEG > 0 else "")
+    net = f" | net ${summary['netPnl']:,.0f}" if summary["costs"] > 0 else ""
     print(f"[{generated_at}] mode={mode} {first_bar}->{last_bar} ({len(closes)} bars) | "
-          f"trades {summary['trades']} | gross ${summary['grossPnl']:,.0f} | "
-          f"win {summary['winRate']*100:.0f}% | PF {summary['profitFactor']}{net_tag} | "
-          f"R:R {summary['avgRR']} | avg {summary['avgUnits']}u (risk ${summary['avgRiskDollars']:,.0f}/{RISK_PCT*100:.0f}%) | "
+          f"trades {summary['trades']} | gross ${summary['grossPnl']:,.0f}{net} | "
+          f"win {summary['winRate']*100:.0f}% | PF {summary['profitFactor']} | "
+          f"exp ${summary['netExpectancy' if summary['costs'] > 0 else 'expectancy']:,.0f} | "
           f"DD ${summary['maxDrawdown']:,.0f} | open {len(open_positions)}")
     return feed
 
 
 def main():
-    global SLIP_PER_LEG, COST_EXP_MULT, ROBUST, FUND_GATE, RISK_PCT, MIN_RR, MAX_UNITS, Z_ENTRY_MAX
+    global SLIP_PER_LEG
     ap = argparse.ArgumentParser()
-    ap.add_argument("--live", action="store_true")
+    ap.add_argument("--live", action="store_true", help="re-run continuously on the freshest data")
     ap.add_argument("--interval", type=int, default=LIVE_REFRESH_SEC)
     ap.add_argument("--slip", type=float, default=SLIP_PER_LEG,
-                    help="per-leg slippage in price units (e.g. 0.01); >0 = NET mode + cost gate")
-    ap.add_argument("--cost-mult", type=float, default=COST_EXP_MULT,
-                    help="NET mode: required expected reversion as a multiple of round-turn cost")
-    ap.add_argument("--no-robust", action="store_true", help="use mean/std fair value, not median/MAD")
-    ap.add_argument("--fund-gate", action="store_true",
-                    help="hard-skip fades the daily fundamentals model contradicts")
-    ap.add_argument("--risk", type=float, default=RISK_PCT,
-                    help="the 1%% rule: fraction of capital risked per trade (default 0.01)")
-    ap.add_argument("--min-rr", type=float, default=MIN_RR,
-                    help="favorable risk:reward — minimum reward:risk to take a trade (default 1.5)")
-    ap.add_argument("--z-entry-max", type=float, default=Z_ENTRY_MAX,
-                    help="don't fade dislocations deeper than this (too close to stop; default 2.1)")
-    ap.add_argument("--max-units", type=int, default=MAX_UNITS,
-                    help="cap on position size from the 1%% rule (default 200)")
+                    help="per-leg slippage in price units (e.g. 0.01); reports net alongside gross")
     args = ap.parse_args()
-    SLIP_PER_LEG, COST_EXP_MULT = args.slip, args.cost_mult
-    ROBUST, FUND_GATE = not args.no_robust, args.fund_gate
-    RISK_PCT, MIN_RR, MAX_UNITS, Z_ENTRY_MAX = args.risk, args.min_rr, args.max_units, args.z_entry_max
+    SLIP_PER_LEG = args.slip
     stamp = lambda: datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     if args.live:
         print(f"Live mode — re-running every {args.interval}s. Ctrl-C to stop.")
