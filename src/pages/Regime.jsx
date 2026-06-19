@@ -123,6 +123,17 @@ const RegimeExplorer = () => {
   const trans = (hist.transitions || {})[activeId] || {};
   const nextRegimes = Object.entries(trans).filter(([k]) => k !== activeId).slice(0, 3);
 
+  // Backend not built yet — one clear message instead of a half-empty two-column layout.
+  if (!catalog.length) {
+    return (
+      <Card>
+        <div className="py-12 text-center text-[12px] text-zinc-500">
+          Regime engine not built yet — run <code className="text-zinc-300">python analytics/run.py</code> to populate the regime catalog.
+        </div>
+      </Card>
+    );
+  }
+
   return (
     <div className="grid grid-cols-12 gap-3">
       {/* Catalog list */}
@@ -483,16 +494,20 @@ const RegressionPanel = () => {
             Rolling β · {FEATURE_LABELS[topDriver] || topDriver} <span className="text-[9px] text-zinc-600 normal-case tracking-normal">{roll?.window}d window</span>
           </div>
           <div className="h-40 px-2 py-2">
-            <ResponsiveContainer>
-              <LineChart data={rollData} margin={{ top: 6, right: 16, bottom: 4, left: 0 }}>
-                <CartesianGrid {...chartProps.grid} />
-                <XAxis dataKey="date" {...chartProps.axis} minTickGap={48} tickFormatter={(d) => (d || "").slice(0, 7)} />
-                <YAxis {...chartProps.axis} width={42} domain={["auto", "auto"]} />
-                <Tooltip content={<ChartTooltip source="regime" />} />
-                <ReferenceLine y={0} stroke="#3a3b41" />
-                <Line type="monotone" dataKey="beta" name="β" stroke="#a78bfa" strokeWidth={1.3} dot={false} isAnimationActive={false} />
-              </LineChart>
-            </ResponsiveContainer>
+            {rollData.length ? (
+              <ResponsiveContainer>
+                <LineChart data={rollData} margin={{ top: 6, right: 16, bottom: 4, left: 0 }}>
+                  <CartesianGrid {...chartProps.grid} />
+                  <XAxis dataKey="date" {...chartProps.axis} minTickGap={48} tickFormatter={(d) => (d || "").slice(0, 7)} />
+                  <YAxis {...chartProps.axis} width={42} domain={["auto", "auto"]} />
+                  <Tooltip content={<ChartTooltip source="regime" />} />
+                  <ReferenceLine y={0} stroke="#3a3b41" />
+                  <Line type="monotone" dataKey="beta" name="β" stroke="#a78bfa" strokeWidth={1.3} dot={false} isAnimationActive={false} />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-full flex items-center justify-center text-[10px] text-zinc-600">Insufficient data for a rolling fit.</div>
+            )}
           </div>
         </Card>
 

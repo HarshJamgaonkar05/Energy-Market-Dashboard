@@ -62,7 +62,7 @@ const SupplyDemandBalance = () => {
               <span className="font-mono text-lg text-zinc-100">
                 <Sourced source="eia" note={`${f.label} — EIA weekly (million bbl/day)`}>{fmt(f.val, 1)}</Sourced>
               </span>
-              <span className={`font-mono text-[10px] ${f.chg >= 0 ? "text-emerald-400" : "text-red-400"}`}>{fmtSigned(f.chg, 1)}</span>
+              <span className={`font-mono text-[10px] ${f.chg == null ? "text-zinc-600" : f.chg >= 0 ? "text-emerald-400" : "text-red-400"}`}>{fmtSigned(f.chg, 1)}</span>
             </div>
           </div>
         ))}
@@ -152,7 +152,7 @@ export const PageInventories = () => {
               </div>
               <div className="mt-3 flex items-center justify-between">
                 <span className="text-[9px] text-zinc-600 uppercase tracking-wider">PADD utilization</span>
-                <SourceTag modeled label="No source" source="modeled" note="EIA publishes only the national refinery utilization — no free per-PADD breakdown." />
+                <SourceTag modeled label="Modeled" source="modeled" note="EIA publishes only the national refinery utilization — no free per-PADD breakdown." />
               </div>
               <div className="mt-1.5 space-y-1.5">
                 {[
@@ -178,7 +178,8 @@ export const PageInventories = () => {
 
         <div className="col-span-12 lg:col-span-4 space-y-3">
           <Card>
-            <SectionTitle sub="Storage utilization" action={<SourceTag modeled label="No source" source="modeled" note="Tank-level storage data (Kpler/Vortexa) is paywalled — no free source." />}>Global Crude Storage</SectionTitle>
+            <SectionTitle sub="Storage utilization" action={<SourceTag modeled label="Modeled" source="modeled" note="Tank-level storage data (Kpler/Vortexa) is paywalled — no free source." />}>Global Crude Storage</SectionTitle>
+            <p className="text-[9px] text-zinc-600 leading-snug -mt-1.5 mb-2">Modeled — tank-level storage data is not public; values shown as “—”.</p>
             {[
               { r: "OECD", v: 84.2, c: -0.4 },
               { r: "China SPR", v: 71.8, c: +0.8 },

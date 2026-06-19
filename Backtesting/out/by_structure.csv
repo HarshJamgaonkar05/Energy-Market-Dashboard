@@ -1,4 +1,4 @@
 structure,label,trades,wins,winRate,pnl,profitFactor,avgHoldMin,histHitRate
-WTI_M2M3,WTI Aug/Sep (M2-M3),7,5,0.714,0.0,1.0,435.0,0.752
-WTI_FLY,WTI Jul/Aug/Sep fly,4,4,1.0,900.0,,217.5,0.816
-BRENT_WTI,Brent-WTI arb (Aug),9,8,0.889,870.0,4.0,286.7,0.833
+WTI_M2M3,WTI Aug/Sep (M2-M3),8,6,0.75,-90.0,0.862,483.8,0.752
+WTI_FLY,WTI Jul/Aug/Sep fly,6,6,1.0,1390.0,,360.0,0.816
+BRENT_WTI,Brent-WTI arb (Aug),9,7,0.778,680.0,2.447,376.7,0.833

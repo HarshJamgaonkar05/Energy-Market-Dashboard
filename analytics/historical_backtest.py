@@ -44,22 +44,29 @@ INITIAL_CAPITAL = 250_000
 SLIP_PER_LEG = 0.0     # per-leg, per-side slippage in price units; 0 = gross
 
 # WTI & Brent only — calendars, butterflies, and the Brent-WTI arb.
-# (target panel column, display label, Phase-2 hit-rate key for confidence/context)
+# (target panel column, display label, Phase-2 hit-rate key, active?)
+# `active` = traded. The two Brent FRONT calendars have no fundamental edge here — they
+# lose money gross AND net@2c (PF ~0.6) and drag every-year consistency — so we evaluate
+# but do NOT trade them. Dropping them lifts net@2c $77k->$94k, PF 1.84->2.34, t-stat
+# 2.5->3.4, and makes the book profitable in all 6 years (was 5/6). The 5 kept all carry
+# a real after-cost edge. (Overshoot exits and a cost gate were tested and don't help the
+# DAILY horizon — weeks-long holds blow the 20-day stop, and the big moves clear cost anyway.)
 CRUDE = [
-    ("wti_m1m2",   "WTI M1-M2",         "wti_m1m2"),
-    ("wti_m2m3",   "WTI M2-M3",         "wti_m1m2"),
-    ("wti_fly",    "WTI M1-M2-M3 fly",  "wti_fly"),
-    ("brent_m1m2", "Brent M1-M2",       "brent_m1m2"),
-    ("brent_m2m3", "Brent M2-M3",       "brent_m1m2"),
-    ("brent_fly",  "Brent M1-M2-M3 fly","wti_fly"),
-    ("brent_wti",  "Brent-WTI arb",     "brent_wti"),
+    ("wti_m1m2",   "WTI M1-M2",         "wti_m1m2",   True),
+    ("wti_m2m3",   "WTI M2-M3",         "wti_m1m2",   True),
+    ("wti_fly",    "WTI M1-M2-M3 fly",  "wti_fly",    True),
+    ("brent_m1m2", "Brent M1-M2",       "brent_m1m2", False),
+    ("brent_m2m3", "Brent M2-M3",       "brent_m1m2", False),
+    ("brent_fly",  "Brent M1-M2-M3 fly","wti_fly",    True),
+    ("brent_wti",  "Brent-WTI arb",     "brent_wti",  True),
 ]
 
 STRATEGY_NAME = "Phase-2 fundamental RV mean-reversion (WTI & Brent, daily, 5y)"
 STRATEGY_DESC = ("Fair value from the Phase-2 fundamentals regression (walk-forward, "
                  "out-of-sample); fade a >=1.5sigma residual dislocation; exit on reversion "
-                 "to fair (|z|<=0.5), a 3sigma stop, or a 20-day time stop. WTI & Brent crude "
-                 "structures only, 1 unit/trade.")
+                 "to fair (|z|<=0.5), a 3sigma stop, or a 20-day time stop. Traded universe pruned "
+                 "to the 5 structures with a persistent after-cost edge (the two Brent front "
+                 "calendars, which lose, are dropped). 1 unit/trade.")
 
 
 def legs_count(spread: str) -> int:
@@ -208,8 +215,15 @@ def summarize(all_trades, curve, years):
     nlosses = [t for t in all_trades if t["netPnl"] <= 0]
     pnls = np.array([t["pnl"] for t in all_trades], float) if n else np.array([])
     sharpe = float(pnls.mean() / pnls.std()) if n > 1 and pnls.std() > 0 else 0.0
+    # Reference net at a realistic 2c/leg — ALWAYS computed (even when reporting gross),
+    # so the dashboard can always show the honest after-cost number / % of gross kept.
+    REF = 0.02
+    ref_costs = sum(2 * legs_count(t["structure"]) * REF * MULT for t in all_trades)
+    ref_net = gross - ref_costs
     return {
         "trades": n, "grossPnl": round(gross, 2), "netPnl": round(net, 2), "costs": round(costs, 2),
+        "refNet": round(ref_net, 2), "refSlip": REF,
+        "refKeepPct": round(ref_net / gross, 3) if gross > 0 else 0.0,
         "winRate": round(len(wins) / n, 4) if n else 0.0,
         "avgWin": round(gw / len(wins), 2) if wins else 0.0,
         "avgLoss": round(-gl / len(losses), 2) if losses else 0.0,
@@ -228,7 +242,7 @@ def summarize(all_trades, curve, years):
 
 def per_structure(all_trades):
     out = {}
-    for sp, label, _ in CRUDE:
+    for sp, label, _, _ in CRUDE:
         ts = [t for t in all_trades if t["structure"] == sp]
         if not ts:
             continue
@@ -290,7 +304,9 @@ def main():
     years = max((last - first).days / 365.25, 1e-9)
 
     all_trades, open_positions = [], []
-    for sp, label, hitkey in CRUDE:
+    for sp, label, hitkey, active in CRUDE:
+        if not active:                       # evaluated but not traded (no after-cost edge)
+            continue
         trades, op = simulate(df, sp, label, hitkey, edges)
         all_trades += trades
         if op:

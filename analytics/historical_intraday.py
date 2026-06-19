@@ -43,10 +43,12 @@ BAR = "15min"
 # ---- Strategy parameters (intraday, mirror the live Phase 3) ----------------
 LOOKBACK = 24          # bars in the rolling fair value (~6h of 15-min bars)
 Z_ENTRY = 2.0          # fade when |z| >= this (2-sigma dislocation)
-Z_EXIT = -1.0          # take profit after the spread reverts THROUGH fair to ~1sigma the other
+Z_EXIT = -1.5          # take profit after the spread reverts THROUGH fair to ~1.5sigma the other
                        #   side (entry_sign*z <= this). Spreads routinely overshoot, so exiting at
-                       #   fair leaves money on the table; riding the overshoot lifts net 1.12M->1.77M
-                       #   and gross 1.40M->2.03M (5y, --slip 0.01), validated out-of-sample.
+                       #   fair leaves money on the table. Robustness testing (per-year + Monte-Carlo,
+                       #   see robustness.py) showed deepening from -1.0 to -1.5 earns +$213k net with
+                       #   NO extra drawdown and stays profitable every year — while keeping a 0.5sigma
+                       #   margin before the opposite (-2sigma) entry. Net 1.12M->1.98M, gross 1.40M->2.23M.
 Z_STOP = 3.5           # stop if it stretches further to |z| >= this
 MAX_HOLD_BARS = 48     # time stop (~12h) within a session
 SESSION_GAP_MIN = 90   # gap to next bar > this = session/weekend break -> segment + flatten
@@ -62,6 +64,14 @@ SLIP_PER_LEG = 0.0
 # trade. This is volatility-adaptive: big-$ moves pass, cent-sized churn is skipped.
 ASSUMED_SLIP = 0.01    # per-leg cost the entry gate must clear (independent of --slip reporting)
 EDGE_COST_MULT = 2.0   # require expected capture >= this x round-turn cost
+# ---- Position scaling (add a 2nd unit on the deepest dislocations) ----------
+# Validated in robustness.py: pyramiding a 2nd unit when |z| deepens to 2.75 (the
+# highest-conviction stretches) lifts net $1.98M -> $2.62M and stays profitable EVERY
+# year, for a small drawdown rise (-$12.8k -> -$16k). It DOES change sizing (up to 2
+# units/trade), so it is a toggle — set SCALE_IN=True to realize the bigger book.
+SCALE_IN = False
+SCALE_ADD_Z = 2.75     # add a unit when |z| deepens past this (same side) while in a position
+SCALE_MAX_UNITS = 2    # cap on total units per trade
 
 # WTI & Brent only. legs = (product, cN, weight); hitkey = Phase-2 context edge.
 # `active` = traded. The other four (Brent calendars/fly, WTI front calendar) had no
@@ -82,9 +92,10 @@ ACTIVE = {key for key, _, _, _, on in STRUCTURES if on}
 STRATEGY_NAME = "Intraday RV mean-reversion + cost gate (WTI & Brent, 15-min, 5y)"
 STRATEGY_DESC = ("Rolling-mean fair value on 15-min bars; fade a >=2sigma dislocation ONLY when the "
                  "expected $ move to fair clears 2x realistic cost (volatility-adaptive cost gate); ride "
-                 "the reversion THROUGH fair to ~1sigma overshoot (z<=-1.0), with a 3.5sigma stop, a 12h "
+                 "the reversion THROUGH fair to ~1.5sigma overshoot (z<=-1.5), with a 3.5sigma stop, a 12h "
                  "time stop, or a session/roll break. Traded universe pruned to the 3 crude structures "
-                 "with a persistent post-cost edge (Brent-WTI arb, WTI fly, WTI M2-M3). 1 unit/trade, 5 years.")
+                 "with a persistent post-cost edge (Brent-WTI arb, WTI fly, WTI M2-M3). 1 unit/trade "
+                 "(optional 2-unit scaling on the deepest >=2.75sigma dislocations). 5 years.")
 
 
 # ============================================================================
@@ -200,11 +211,15 @@ def simulate(df, key, label, legs, hitkey, edges, reg_map):
                     if capture < gate_cost:                         # too small to clear cost -> skip
                         continue
                     pos = {"dir": "LONG" if zi <= -Z_ENTRY else "SHORT", "i": i, "t": ts[i],
-                           "sp": spi, "z": zi, "fv": float(mv[i]), "mae": 0.0, "mfe": 0.0}
+                           "sp": spi, "entries": [spi], "z": zi, "fv": float(mv[i]), "mae": 0.0, "mfe": 0.0}
                 continue
             sign = 1.0 if pos["dir"] == "LONG" else -1.0
             entry_sign = -sign
-            upnl = sign * (spi - pos["sp"]) * MULT
+            # scale in: add a unit on a deeper, same-side dislocation (highest conviction)
+            if (SCALE_IN and len(pos["entries"]) < SCALE_MAX_UNITS and abs(zi) >= SCALE_ADD_Z
+                    and (zi < 0) == (pos["dir"] == "LONG")):
+                pos["entries"].append(spi)
+            upnl = sign * sum(spi - e for e in pos["entries"]) * MULT
             pos["mae"], pos["mfe"] = min(pos["mae"], upnl), max(pos["mfe"], upnl)
             held = i - pos["i"]
             hit_t = entry_sign * zi <= Z_EXIT
@@ -214,7 +229,9 @@ def simulate(df, key, label, legs, hitkey, edges, reg_map):
             if hit_t or hit_s or hit_time or forced:
                 reason = ("target" if hit_t else "stop" if hit_s
                           else "time_stop" if hit_time else "session_end")
-                gross = sign * (spi - pos["sp"]) * MULT
+                units = len(pos["entries"])
+                gross = sign * sum(spi - e for e in pos["entries"]) * MULT
+                trade_cost = cost * units
                 hold_min = int((ts[i] - pos["t"]).total_seconds() // 60)
                 day = pos["t"].strftime("%Y-%m-%d")
                 trades.append({
@@ -227,8 +244,8 @@ def simulate(df, key, label, legs, hitkey, edges, reg_map):
                     "entryZ": round(pos["z"], 2), "exitZ": round(zi, 2),
                     "holdBars": held, "holdMin": hold_min,
                     "holdLabel": f"{hold_min // 60}h{hold_min % 60:02d}" if hold_min >= 60 else f"{hold_min}m",
-                    "pnl": round(gross, 2), "cost": round(cost, 2), "netPnl": round(gross - cost, 2),
-                    "nLegs": n_legs, "mae": round(pos["mae"], 2), "mfe": round(pos["mfe"], 2),
+                    "pnl": round(gross, 2), "cost": round(trade_cost, 2), "netPnl": round(gross - trade_cost, 2),
+                    "nLegs": n_legs, "units": units, "mae": round(pos["mae"], 2), "mfe": round(pos["mfe"], 2),
                     "exitReason": reason, "histHitRate": hit,
                 })
                 pos = None
@@ -284,7 +301,7 @@ def summarize(all_trades, curve, years):
     # Reference net at a realistic 1c/leg — ALWAYS computed (even when reporting gross),
     # so the dashboard can always show the honest after-cost number / % of gross kept.
     REF = 0.01
-    ref_costs = sum(2 * t.get("nLegs", 2) * REF * MULT for t in all_trades)
+    ref_costs = sum(2 * t.get("nLegs", 2) * t.get("units", 1) * REF * MULT for t in all_trades)
     ref_net = gross - ref_costs
     return {
         "trades": n, "grossPnl": round(gross, 2), "netPnl": round(net, 2), "costs": round(costs, 2),
@@ -388,7 +405,8 @@ def main():
                      "params": {"lookback": LOOKBACK, "zEntry": Z_ENTRY, "zExit": Z_EXIT,
                                 "zStop": Z_STOP, "maxHoldBars": MAX_HOLD_BARS, "mult": MULT,
                                 "slipPerLeg": SLIP_PER_LEG, "assumedSlip": ASSUMED_SLIP,
-                                "edgeCostMult": EDGE_COST_MULT, "activeStructures": sorted(ACTIVE)}},
+                                "edgeCostMult": EDGE_COST_MULT, "activeStructures": sorted(ACTIVE),
+                                "scaleIn": SCALE_IN, "scaleAddZ": SCALE_ADD_Z, "scaleMaxUnits": SCALE_MAX_UNITS}},
         "summary": summary, "byStructure": per_structure(all_trades),
         "byRegime": per_regime(all_trades), "equityCurve": curve,
         "trades": shown, "tradesShown": len(shown),

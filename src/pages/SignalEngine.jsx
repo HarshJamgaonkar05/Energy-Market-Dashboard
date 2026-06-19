@@ -26,6 +26,11 @@ const FALLBACK = {
 };
 
 const regimeText = (r) => (typeof r === "string" ? r : r?.label ?? "—");
+const pct = (n) => (n == null || Number.isNaN(Number(n)) ? "—" : `${(n * 100).toFixed(0)}%`);
+// Profit factor: gross wins ÷ gross losses. null/undefined (no trades) → "—";
+// no losing trades makes it infinite → "Inf".
+const pf = (n) => (n == null ? "—" : !Number.isFinite(n) ? "Inf" : fmt(n, 2));
+const PF_TITLE = "Profit factor = gross profit ÷ gross loss. >1 is profitable; higher is better. “Inf” means no losing trades.";
 const dirColor = (d) => (d === "LONG" ? "text-emerald-400" : "text-red-400");
 const pnlColor = (n) => (n > 0 ? "text-emerald-400" : n < 0 ? "text-red-400" : "text-zinc-400");
 const compactUsd = (n) => {
@@ -57,7 +62,7 @@ const ProvenStrip = ({ ctx }) => {
         <span className="flex items-center gap-2.5 font-mono text-[11px] ml-auto">
           <span className="text-emerald-400">net {compactUsd(net)}</span>
           <span className="text-zinc-700">·</span>
-          <span className="text-zinc-200">PF {s.profitFactor}</span>
+          <span className="text-zinc-200" title={PF_TITLE}>PF {pf(s.profitFactor)}</span>
           {keep && (<><span className="text-zinc-700">·</span><span className="text-zinc-300">{keep} kept after costs</span></>)}
           <span className="text-zinc-700">·</span>
           <span className="text-zinc-400">{fmt(s.trades, 0)} trades</span>
@@ -78,10 +83,10 @@ const Hero = ({ d, live, stale }) => {
     { k: "Gross P&L", v: fmtSigned(s.grossPnl, 0),
       sub: hasCost ? `net ${fmtSigned(s.netPnl, 0)} after costs` : `exp ${fmtSigned(s.expectancy, 0)}/trade`,
       color: pnlColor(s.grossPnl) },
-    { k: "Win rate", v: `${(s.winRate * 100).toFixed(0)}%`,
+    { k: "Win rate", v: pct(s.winRate),
       sub: hasCost ? `+${fmt(s.avgNetWin, 0)} / ${fmt(s.avgNetLoss, 0)} avg · net`
                    : `+${fmt(s.avgWin, 0)} / ${fmt(s.avgLoss, 0)} avg` },
-    { k: "Profit factor", v: s.profitFactor ?? "∞", sub: `Sharpe ${s.perTradeSharpe} · max DD ${fmtSigned(s.maxDrawdown, 0)}` },
+    { k: "Profit factor", v: pf(s.profitFactor), title: PF_TITLE, sub: `Sharpe ${s.perTradeSharpe} · max DD ${fmtSigned(s.maxDrawdown, 0)}` },
   ];
   return (
     <Card padding={false}>
@@ -111,7 +116,7 @@ const Hero = ({ d, live, stale }) => {
       </div>
       <div className="grid grid-cols-2 lg:grid-cols-4 divide-x divide-[#1c1d22]">
         {stats.map((m) => (
-          <div key={m.k} className="p-4">
+          <div key={m.k} className="p-4" title={m.title}>
             <div className="text-[9px] uppercase tracking-[0.16em] text-zinc-500">{m.k}</div>
             <div className={`text-2xl font-semibold tabular-nums mt-1 ${m.color || "text-zinc-100"}`}>{m.v}</div>
             <div className="text-[10px] text-zinc-600 mt-0.5">{m.sub}</div>
@@ -183,6 +188,7 @@ const TradeLog = ({ trades }) => {
             </tr>
           </thead>
           <tbody>
+            {trades.length === 0 && <tr><td colSpan={9} className="px-3 py-8 text-center text-zinc-600">No trades — run the backtest to populate the log.</td></tr>}
             {trades.map((t, i) => {
               const id = t.structure + t.entryTime + i;
               const isOpen = open === id;
@@ -197,7 +203,7 @@ const TradeLog = ({ trades }) => {
                         {t.direction === "LONG" ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}{t.direction}
                       </span>
                     </td>
-                    <td className="px-2 py-2 text-right font-mono text-zinc-400 tabular-nums">{fmtSigned(t.entryZ, 2)}</td>
+                    <td className="px-2 py-2 text-right font-mono text-zinc-400 tabular-nums">{fmtSigned(t.entryZ, 2)}σ</td>
                     <td className="px-2 py-2 text-right font-mono text-zinc-500 tabular-nums">{t.holdMin}m</td>
                     <td className="px-2 py-2 text-zinc-500 whitespace-nowrap">{t.exitReason}</td>
                     <td className="px-2 py-2 text-right font-mono text-zinc-500 tabular-nums">{t.confidence}</td>
@@ -208,11 +214,11 @@ const TradeLog = ({ trades }) => {
                     <tr key={id + "-d"} className="bg-[#0a0b0e] border-b border-[#141519]">
                       <td colSpan={9} className="px-4 py-3 space-y-2">
                         <div className="text-[10px] text-zinc-500">
-                          <span className="text-zinc-300">{t.strategy}</span> · regime {regimeText(t.regime)} · historical edge {(t.histHitRate * 100).toFixed(0)}% · confidence {t.confidence}/100
+                          <span className="text-zinc-300">{t.strategy}</span> · regime {regimeText(t.regime)} · historical edge {pct(t.histHitRate)} · confidence {t.confidence}/100
                         </div>
                         <div className="flex flex-wrap gap-x-5 gap-y-1 text-[10px] font-mono text-zinc-500">
                           <span>spread {t.entrySpread} → {t.exitSpread}</span>
-                          <span>z {fmtSigned(t.entryZ, 2)} → {fmtSigned(t.exitZ, 2)}</span>
+                          <span>z {fmtSigned(t.entryZ, 2)}σ → {fmtSigned(t.exitZ, 2)}σ</span>
                           <span>held {t.holdBars} bars ({t.holdMin}m)</span>
                           <span>MAE/MFE {fmtSigned(t.mae, 0)} / {fmtSigned(t.mfe, 0)}</span>
                           <span>contracts {t.contracts}</span>
@@ -265,10 +271,10 @@ const Bottom = ({ byStructure, openPositions }) => {
                 <tr key={k} className="border-b border-[#141519]">
                   <td className="px-3 py-2 text-zinc-200">{s.label}</td>
                   <td className="px-2 py-2 text-right font-mono text-zinc-400 tabular-nums">{s.trades}</td>
-                  <td className="px-2 py-2 text-right font-mono text-zinc-400 tabular-nums">{(s.winRate * 100).toFixed(0)}%</td>
+                  <td className="px-2 py-2 text-right font-mono text-zinc-400 tabular-nums">{pct(s.winRate)}</td>
                   <td className={`px-2 py-2 text-right font-mono tabular-nums ${pnlColor(s.pnl)}`}>{fmtSigned(s.pnl, 0)}</td>
-                  <td className="px-2 py-2 text-right font-mono text-zinc-400 tabular-nums">{s.profitFactor ?? "∞"}</td>
-                  <td className="px-3 py-2 text-right font-mono text-emerald-400/70 tabular-nums">{(s.histHitRate * 100).toFixed(0)}%</td>
+                  <td className="px-2 py-2 text-right font-mono text-zinc-400 tabular-nums">{pf(s.profitFactor)}</td>
+                  <td className="px-3 py-2 text-right font-mono text-emerald-400/70 tabular-nums">{pct(s.histHitRate)}</td>
                 </tr>
               ))}
             </tbody>

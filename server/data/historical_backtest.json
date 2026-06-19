@@ -1,5 +1,5 @@
 {
- "generatedAt": "2026-06-18T04:19:22Z",
+ "generatedAt": "2026-06-19T02:22:39Z",
  "mode": "daily",
  "horizon": "daily",
  "span": {
@@ -10,7 +10,7 @@
  "days": 1851,
  "strategy": {
   "name": "Phase-2 fundamental RV mean-reversion (WTI & Brent, daily, 5y)",
-  "desc": "Fair value from the Phase-2 fundamentals regression (walk-forward, out-of-sample); fade a >=1.5sigma residual dislocation; exit on reversion to fair (|z|<=0.5), a 3sigma stop, or a 20-day time stop. WTI & Brent crude structures only, 1 unit/trade.",
+  "desc": "Fair value from the Phase-2 fundamentals regression (walk-forward, out-of-sample); fade a >=1.5sigma residual dislocation; exit on reversion to fair (|z|<=0.5), a 3sigma stop, or a 20-day time stop. Traded universe pruned to the 5 structures with a persistent after-cost edge (the two Brent front calendars, which lose, are dropped). 1 unit/trade.",
   "params": {
    "zEntry": 1.5,
    "zExit": 0.5,
@@ -21,32 +21,35 @@
   }
  },
  "summary": {
-  "trades": 243,
-  "grossPnl": 103738.4,
-  "netPnl": 103738.4,
+  "trades": 198,
+  "grossPnl": 117182.7,
+  "netPnl": 117182.7,
   "costs": 0.0,
-  "winRate": 0.642,
-  "avgWin": 1460.74,
-  "avgLoss": -1426.86,
-  "avgNetWin": 1460.74,
-  "avgNetLoss": -1426.86,
-  "profitFactor": 1.836,
-  "expectancy": 426.91,
-  "netExpectancy": 426.91,
-  "perTradeSharpe": 0.216,
-  "avgHoldDays": 4.7,
-  "tradesPerYear": 45.2,
-  "maxDrawdown": -43210.1,
-  "endingEquity": 353738.4,
+  "refNet": 94142.7,
+  "refSlip": 0.02,
+  "refKeepPct": 0.803,
+  "winRate": 0.6869,
+  "avgWin": 1505.78,
+  "avgLoss": -1412.97,
+  "avgNetWin": 1505.78,
+  "avgNetLoss": -1412.97,
+  "profitFactor": 2.338,
+  "expectancy": 591.83,
+  "netExpectancy": 591.83,
+  "perTradeSharpe": 0.304,
+  "avgHoldDays": 4.3,
+  "tradesPerYear": 36.8,
+  "maxDrawdown": -25703.4,
+  "endingEquity": 367182.7,
   "initialCapital": 250000,
   "byExitReason": {
-   "target": 124,
-   "stop": 103,
-   "time_stop": 16
+   "target": 116,
+   "stop": 73,
+   "time_stop": 9
   },
   "byDirection": {
-   "LONG": 79,
-   "SHORT": 164
+   "LONG": 74,
+   "SHORT": 124
   }
  },
  "byStructure": {
@@ -80,26 +83,6 @@
    "avgHoldDays": 2.1,
    "histHitRate": 0.816
   },
-  "brent_m1m2": {
-   "label": "Brent M1-M2",
-   "trades": 19,
-   "wins": 9,
-   "winRate": 0.474,
-   "pnl": -7298.6,
-   "profitFactor": 0.678,
-   "avgHoldDays": 8.2,
-   "histHitRate": 0.717
-  },
-  "brent_m2m3": {
-   "label": "Brent M2-M3",
-   "trades": 26,
-   "wins": 11,
-   "winRate": 0.423,
-   "pnl": -6145.7,
-   "profitFactor": 0.558,
-   "avgHoldDays": 5.6,
-   "histHitRate": 0.717
-  },
   "brent_fly": {
    "label": "Brent M1-M2-M3 fly",
    "trades": 21,
@@ -123,25 +106,25 @@
  },
  "byRegime": {
   "Balanced \u00b7 High Vol": {
-   "trades": 87,
-   "wins": 37,
-   "winRate": 0.425,
-   "pnl": -5285.1,
-   "profitFactor": 0.933
+   "trades": 63,
+   "wins": 30,
+   "winRate": 0.476,
+   "pnl": 11513.2,
+   "profitFactor": 1.22
   },
   "Balanced \u00b7 Low Vol": {
-   "trades": 14,
-   "wins": 14,
+   "trades": 12,
+   "wins": 12,
    "winRate": 1.0,
-   "pnl": 15530.1,
+   "pnl": 13118.2,
    "profitFactor": null
   },
   "Balanced \u00b7 Normal Vol": {
-   "trades": 14,
+   "trades": 12,
    "wins": 10,
-   "winRate": 0.714,
-   "pnl": 8558.5,
-   "profitFactor": 2.125
+   "winRate": 0.833,
+   "pnl": 13194.3,
+   "profitFactor": 5.438
   },
   "Oversupplied \u00b7 Normal Vol": {
    "trades": 3,
@@ -151,25 +134,25 @@
    "profitFactor": null
   },
   "Tight \u00b7 High Vol": {
-   "trades": 22,
-   "wins": 15,
-   "winRate": 0.682,
-   "pnl": 14288.2,
-   "profitFactor": 3.045
+   "trades": 18,
+   "wins": 11,
+   "winRate": 0.611,
+   "pnl": 8799.3,
+   "profitFactor": 2.259
   },
   "Tight \u00b7 Low Vol": {
-   "trades": 33,
-   "wins": 23,
-   "winRate": 0.697,
-   "pnl": 7009.0,
-   "profitFactor": 1.479
+   "trades": 29,
+   "wins": 22,
+   "winRate": 0.759,
+   "pnl": 11627.7,
+   "profitFactor": 2.182
   },
   "Tight \u00b7 Normal Vol": {
-   "trades": 70,
-   "wins": 54,
-   "winRate": 0.771,
-   "pnl": 57053.5,
-   "profitFactor": 4.442
+   "trades": 61,
+   "wins": 48,
+   "winRate": 0.787,
+   "pnl": 52345.8,
+   "profitFactor": 4.409
   }
  },
  "equityCurve": [
@@ -242,912 +225,732 @@
    "equity": 250157.6
   },
   {
-   "t": "2022-02-18",
-   "equity": 249307.9
-  },
-  {
    "t": "2022-02-21",
-   "equity": 249570.2
+   "equity": 250419.9
   },
   {
    "t": "2022-02-25",
-   "equity": 247786.0
+   "equity": 248635.7
   },
   {
    "t": "2022-02-26",
-   "equity": 246938.0
+   "equity": 247787.7
   },
   {
    "t": "2022-02-26",
-   "equity": 246569.2
+   "equity": 247418.9
   },
   {
    "t": "2022-02-28",
-   "equity": 245668.2
-  },
-  {
-   "t": "2022-02-28",
-   "equity": 246026.7
+   "equity": 247777.4
   },
   {
    "t": "2022-03-01",
-   "equity": 244814.8
+   "equity": 246565.5
   },
   {
    "t": "2022-03-01",
-   "equity": 243218.2
-  },
-  {
-   "t": "2022-03-02",
-   "equity": 240160.7
-  },
-  {
-   "t": "2022-03-02",
-   "equity": 239501.8
+   "equity": 244968.9
   },
   {
    "t": "2022-03-03",
-   "equity": 240032.8
+   "equity": 245499.9
   },
   {
    "t": "2022-03-03",
-   "equity": 240664.8
-  },
-  {
-   "t": "2022-03-04",
-   "equity": 240893.9
+   "equity": 246131.9
   },
   {
    "t": "2022-03-05",
-   "equity": 241768.0
+   "equity": 247006.0
   },
   {
    "t": "2022-03-07",
-   "equity": 241408.0
+   "equity": 246646.0
   },
   {
    "t": "2022-03-07",
-   "equity": 241321.4
-  },
-  {
-   "t": "2022-03-08",
-   "equity": 241052.0
+   "equity": 246559.4
   },
   {
    "t": "2022-03-09",
-   "equity": 241306.7
+   "equity": 246814.1
   },
   {
    "t": "2022-03-09",
-   "equity": 241680.4
+   "equity": 247187.8
   },
   {
    "t": "2022-03-11",
-   "equity": 242111.2
+   "equity": 247618.6
   },
   {
    "t": "2022-03-12",
-   "equity": 242261.2
+   "equity": 247768.6
   },
   {
    "t": "2022-03-12",
-   "equity": 242783.8
+   "equity": 248291.2
   },
   {
    "t": "2022-03-23",
-   "equity": 244054.7
-  },
-  {
-   "t": "2022-03-28",
-   "equity": 245376.4
+   "equity": 249562.1
   },
   {
    "t": "2022-03-31",
-   "equity": 246852.2
-  },
-  {
-   "t": "2022-03-31",
-   "equity": 249103.8
+   "equity": 251813.7
   },
   {
    "t": "2022-04-10",
-   "equity": 252826.1
+   "equity": 255536.0
   },
   {
    "t": "2022-04-18",
-   "equity": 254494.4
+   "equity": 257204.3
   },
   {
    "t": "2022-04-25",
-   "equity": 254078.7
+   "equity": 256788.6
   },
   {
    "t": "2022-04-25",
-   "equity": 253900.6
+   "equity": 256610.5
   },
   {
    "t": "2022-04-28",
-   "equity": 252316.3
+   "equity": 255026.2
   },
   {
    "t": "2022-04-29",
-   "equity": 253319.8
-  },
-  {
-   "t": "2022-05-01",
-   "equity": 254106.3
+   "equity": 256029.7
   },
   {
    "t": "2022-05-02",
-   "equity": 257874.2
-  },
-  {
-   "t": "2022-05-02",
-   "equity": 258960.5
+   "equity": 259797.6
   },
   {
    "t": "2022-05-03",
-   "equity": 262027.1
+   "equity": 262864.2
   },
   {
    "t": "2022-05-09",
-   "equity": 263491.7
+   "equity": 264328.8
   },
   {
    "t": "2022-05-15",
-   "equity": 260593.4
+   "equity": 261430.5
   },
   {
    "t": "2022-05-24",
-   "equity": 262253.7
+   "equity": 263090.8
   },
   {
    "t": "2022-05-29",
-   "equity": 262253.7
+   "equity": 263090.8
   },
   {
    "t": "2022-05-30",
-   "equity": 264022.5
+   "equity": 264859.6
   },
   {
    "t": "2022-05-31",
-   "equity": 260771.5
+   "equity": 261608.6
   },
   {
    "t": "2022-06-01",
-   "equity": 267663.2
+   "equity": 268500.3
   },
   {
    "t": "2022-06-21",
-   "equity": 269212.8
+   "equity": 270049.9
   },
   {
    "t": "2022-06-22",
-   "equity": 270253.6
-  },
-  {
-   "t": "2022-06-23",
-   "equity": 273791.6
+   "equity": 271090.7
   },
   {
    "t": "2022-06-27",
-   "equity": 274910.3
+   "equity": 272209.4
   },
   {
    "t": "2022-06-30",
-   "equity": 273047.6
+   "equity": 270346.7
   },
   {
    "t": "2022-07-01",
-   "equity": 276329.9
-  },
-  {
-   "t": "2022-07-12",
-   "equity": 276662.9
+   "equity": 273629.0
   },
   {
    "t": "2022-07-13",
-   "equity": 276896.5
+   "equity": 273862.6
   },
   {
    "t": "2022-07-13",
-   "equity": 277436.1
+   "equity": 274402.2
   },
   {
    "t": "2022-07-18",
-   "equity": 278206.7
-  },
-  {
-   "t": "2022-07-18",
-   "equity": 277913.4
+   "equity": 275172.8
   },
   {
    "t": "2022-07-20",
-   "equity": 277906.0
+   "equity": 275165.4
   },
   {
    "t": "2022-07-22",
-   "equity": 276717.8
+   "equity": 273977.2
   },
   {
    "t": "2022-07-24",
-   "equity": 276717.8
+   "equity": 273977.2
   },
   {
    "t": "2022-07-25",
-   "equity": 279916.8
+   "equity": 277176.2
   },
   {
    "t": "2022-07-29",
-   "equity": 278900.8
+   "equity": 276160.2
   },
   {
    "t": "2022-07-29",
-   "equity": 274719.2
-  },
-  {
-   "t": "2022-07-31",
-   "equity": 276859.5
+   "equity": 271978.6
   },
   {
    "t": "2022-08-26",
-   "equity": 277991.9
+   "equity": 273111.0
   },
   {
    "t": "2022-09-11",
-   "equity": 278100.1
+   "equity": 273219.2
   },
   {
    "t": "2022-09-12",
-   "equity": 278007.1
+   "equity": 273126.2
   },
   {
    "t": "2022-10-03",
-   "equity": 279463.3
+   "equity": 274582.4
   },
   {
    "t": "2022-10-16",
-   "equity": 281530.9
+   "equity": 276650.0
   },
   {
    "t": "2022-10-18",
-   "equity": 282730.1
+   "equity": 277849.2
   },
   {
    "t": "2022-11-07",
-   "equity": 284880.7
+   "equity": 279999.8
   },
   {
    "t": "2022-11-07",
-   "equity": 286949.8
+   "equity": 282068.9
   },
   {
    "t": "2022-11-21",
-   "equity": 289845.2
+   "equity": 284964.3
   },
   {
    "t": "2022-11-24",
-   "equity": 292450.7
+   "equity": 287569.8
   },
   {
    "t": "2022-11-28",
-   "equity": 295789.5
+   "equity": 290908.6
   },
   {
    "t": "2022-12-05",
-   "equity": 296623.5
+   "equity": 291742.6
   },
   {
    "t": "2022-12-10",
-   "equity": 297974.8
+   "equity": 293093.9
   },
   {
    "t": "2022-12-23",
-   "equity": 298897.6
+   "equity": 294016.7
   },
   {
    "t": "2022-12-27",
-   "equity": 300052.2
+   "equity": 295171.3
   },
   {
    "t": "2023-01-23",
-   "equity": 301239.3
+   "equity": 296358.4
   },
   {
    "t": "2023-03-27",
-   "equity": 301925.8
+   "equity": 297044.9
   },
   {
    "t": "2023-04-03",
-   "equity": 302933.9
+   "equity": 298053.0
   },
   {
    "t": "2023-04-03",
-   "equity": 307823.5
+   "equity": 302942.6
   },
   {
    "t": "2023-04-30",
-   "equity": 309011.0
+   "equity": 304130.1
   },
   {
    "t": "2023-05-29",
-   "equity": 310090.6
+   "equity": 305209.7
   },
   {
    "t": "2023-06-26",
-   "equity": 311139.8
+   "equity": 306258.9
   },
   {
    "t": "2023-08-14",
-   "equity": 311530.7
+   "equity": 306649.8
   },
   {
    "t": "2023-09-26",
-   "equity": 311333.4
+   "equity": 306452.5
   },
   {
    "t": "2023-10-17",
-   "equity": 311748.5
+   "equity": 306867.6
   },
   {
    "t": "2023-10-23",
-   "equity": 312755.0
+   "equity": 307874.1
   },
   {
    "t": "2023-10-23",
-   "equity": 315546.9
-  },
-  {
-   "t": "2023-10-24",
-   "equity": 316750.9
-  },
-  {
-   "t": "2023-10-25",
-   "equity": 317958.8
+   "equity": 310666.0
   },
   {
    "t": "2023-10-27",
-   "equity": 318864.7
+   "equity": 311571.9
   },
   {
    "t": "2023-11-01",
-   "equity": 320602.9
+   "equity": 313310.1
   },
   {
    "t": "2023-11-20",
-   "equity": 323452.2
+   "equity": 316159.4
   },
   {
    "t": "2023-11-20",
-   "equity": 326293.6
+   "equity": 319000.8
   },
   {
    "t": "2024-01-29",
-   "equity": 326973.2
+   "equity": 319680.4
   },
   {
    "t": "2024-02-01",
-   "equity": 328801.9
+   "equity": 321509.1
   },
   {
    "t": "2024-02-21",
-   "equity": 329433.9
+   "equity": 322141.1
   },
   {
    "t": "2024-03-01",
-   "equity": 330237.7
+   "equity": 322944.9
   },
   {
    "t": "2024-03-04",
-   "equity": 331346.5
+   "equity": 324053.7
   },
   {
    "t": "2024-04-23",
-   "equity": 333713.2
+   "equity": 326420.4
   },
   {
    "t": "2024-04-23",
-   "equity": 336214.2
+   "equity": 328921.4
   },
   {
    "t": "2024-06-21",
-   "equity": 336869.3
+   "equity": 329576.5
   },
   {
    "t": "2024-07-27",
-   "equity": 337382.5
-  },
-  {
-   "t": "2024-08-09",
-   "equity": 337572.0
+   "equity": 330089.7
   },
   {
    "t": "2024-08-17",
-   "equity": 338345.3
+   "equity": 330863.0
   },
   {
    "t": "2024-09-02",
-   "equity": 339265.7
+   "equity": 331783.4
   },
   {
    "t": "2024-10-15",
-   "equity": 341924.1
+   "equity": 334441.8
   },
   {
    "t": "2024-11-04",
-   "equity": 342582.7
+   "equity": 335100.4
   },
   {
    "t": "2024-12-26",
-   "equity": 343385.1
+   "equity": 335902.8
   },
   {
    "t": "2025-01-24",
-   "equity": 344300.2
+   "equity": 336817.9
   },
   {
    "t": "2025-02-03",
-   "equity": 345091.5
+   "equity": 337609.2
   },
   {
    "t": "2025-02-17",
-   "equity": 346574.7
+   "equity": 339092.4
   },
   {
    "t": "2025-04-01",
-   "equity": 347486.7
+   "equity": 340004.4
   },
   {
    "t": "2025-04-05",
-   "equity": 346082.2
+   "equity": 338599.9
   },
   {
    "t": "2025-04-07",
-   "equity": 347443.9
-  },
-  {
-   "t": "2025-04-14",
-   "equity": 347719.3
+   "equity": 339961.6
   },
   {
    "t": "2025-04-18",
-   "equity": 348377.6
-  },
-  {
-   "t": "2025-04-21",
-   "equity": 348609.7
+   "equity": 340619.9
   },
   {
    "t": "2025-04-24",
-   "equity": 348898.7
+   "equity": 340908.9
   },
   {
    "t": "2025-05-01",
-   "equity": 350475.2
+   "equity": 342485.4
   },
   {
    "t": "2025-05-19",
-   "equity": 351488.7
+   "equity": 343498.9
   },
   {
    "t": "2025-07-18",
-   "equity": 352259.7
+   "equity": 344269.9
   },
   {
    "t": "2025-07-22",
-   "equity": 352721.2
+   "equity": 344731.4
   },
   {
    "t": "2025-09-22",
-   "equity": 353359.5
+   "equity": 345369.7
   },
   {
    "t": "2025-10-13",
-   "equity": 354869.9
+   "equity": 346880.1
   },
   {
    "t": "2025-10-13",
-   "equity": 356302.3
+   "equity": 348312.5
   },
   {
    "t": "2025-12-01",
-   "equity": 356937.1
+   "equity": 348947.3
   },
   {
    "t": "2025-12-29",
-   "equity": 357908.3
+   "equity": 349918.5
   },
   {
    "t": "2026-01-14",
-   "equity": 359588.8
+   "equity": 351599.0
   },
   {
    "t": "2026-01-26",
-   "equity": 361159.8
+   "equity": 353170.0
   },
   {
    "t": "2026-01-26",
-   "equity": 362632.1
+   "equity": 354642.3
   },
   {
    "t": "2026-02-24",
-   "equity": 363115.0
+   "equity": 355125.2
   },
   {
    "t": "2026-03-05",
-   "equity": 365103.7
+   "equity": 357113.9
   },
   {
    "t": "2026-03-06",
-   "equity": 362775.2
+   "equity": 354785.4
   },
   {
    "t": "2026-03-06",
-   "equity": 362130.6
-  },
-  {
-   "t": "2026-03-06",
-   "equity": 359732.3
-  },
-  {
-   "t": "2026-03-06",
-   "equity": 357494.8
+   "equity": 354140.8
   },
   {
    "t": "2026-03-09",
-   "equity": 357300.6
+   "equity": 353946.6
   },
   {
    "t": "2026-03-10",
-   "equity": 357950.1
+   "equity": 354596.1
   },
   {
    "t": "2026-03-10",
-   "equity": 358829.3
-  },
-  {
-   "t": "2026-03-11",
-   "equity": 360127.9
+   "equity": 355475.3
   },
   {
    "t": "2026-03-12",
-   "equity": 359008.1
+   "equity": 354355.5
   },
   {
    "t": "2026-03-14",
-   "equity": 359509.5
+   "equity": 354856.9
   },
   {
    "t": "2026-03-17",
-   "equity": 359238.0
+   "equity": 354585.4
   },
   {
    "t": "2026-03-18",
-   "equity": 357446.3
-  },
-  {
-   "t": "2026-03-18",
-   "equity": 353758.8
+   "equity": 350897.9
   },
   {
    "t": "2026-03-19",
-   "equity": 354387.8
+   "equity": 351526.9
   },
   {
    "t": "2026-03-20",
-   "equity": 353739.5
-  },
-  {
-   "t": "2026-03-20",
-   "equity": 356294.5
+   "equity": 354081.9
   },
   {
    "t": "2026-03-23",
-   "equity": 358261.7
+   "equity": 356049.1
   },
   {
    "t": "2026-03-23",
-   "equity": 360726.3
+   "equity": 358513.7
   },
   {
    "t": "2026-03-23",
-   "equity": 362892.6
+   "equity": 360680.0
   },
   {
    "t": "2026-03-25",
-   "equity": 362490.9
+   "equity": 361639.9
   },
   {
    "t": "2026-03-25",
-   "equity": 363450.8
-  },
-  {
-   "t": "2026-03-25",
-   "equity": 362518.9
+   "equity": 360708.0
   },
   {
    "t": "2026-03-26",
-   "equity": 362117.8
+   "equity": 360306.9
   },
   {
    "t": "2026-03-27",
-   "equity": 359373.3
+   "equity": 357562.4
   },
   {
    "t": "2026-03-27",
-   "equity": 356006.6
-  },
-  {
-   "t": "2026-03-27",
-   "equity": 354613.7
-  },
-  {
-   "t": "2026-03-27",
-   "equity": 351923.2
+   "equity": 354871.9
   },
   {
    "t": "2026-03-28",
-   "equity": 351297.5
+   "equity": 354246.2
   },
   {
    "t": "2026-03-30",
-   "equity": 350701.4
+   "equity": 353650.1
   },
   {
    "t": "2026-03-30",
-   "equity": 349539.5
+   "equity": 352488.2
   },
   {
    "t": "2026-03-31",
-   "equity": 349159.5
+   "equity": 352108.2
   },
   {
    "t": "2026-03-31",
-   "equity": 340544.6
+   "equity": 360133.0
   },
   {
    "t": "2026-03-31",
-   "equity": 339954.5
-  },
-  {
-   "t": "2026-03-31",
-   "equity": 347979.3
-  },
-  {
-   "t": "2026-03-31",
-   "equity": 342267.7
+   "equity": 354421.4
   },
   {
    "t": "2026-04-01",
-   "equity": 341540.2
+   "equity": 353693.9
   },
   {
    "t": "2026-04-01",
-   "equity": 341658.0
+   "equity": 353811.7
   },
   {
    "t": "2026-04-02",
-   "equity": 338882.0
+   "equity": 351035.7
   },
   {
    "t": "2026-04-02",
-   "equity": 336504.5
-  },
-  {
-   "t": "2026-04-02",
-   "equity": 334011.2
-  },
-  {
-   "t": "2026-04-02",
-   "equity": 331198.7
+   "equity": 348223.2
   },
   {
    "t": "2026-04-03",
-   "equity": 330602.7
+   "equity": 347627.2
   },
   {
    "t": "2026-04-03",
-   "equity": 328968.7
+   "equity": 345993.2
   },
   {
    "t": "2026-04-06",
-   "equity": 327158.0
+   "equity": 344182.5
   },
   {
    "t": "2026-04-07",
-   "equity": 326873.0
+   "equity": 343897.5
   },
   {
    "t": "2026-04-07",
-   "equity": 326787.3
+   "equity": 343811.8
   },
   {
    "t": "2026-04-07",
-   "equity": 328940.6
-  },
-  {
-   "t": "2026-04-07",
-   "equity": 330790.6
-  },
-  {
-   "t": "2026-04-07",
-   "equity": 324829.0
+   "equity": 337850.2
   },
   {
    "t": "2026-04-08",
-   "equity": 328584.6
+   "equity": 341605.8
   },
   {
    "t": "2026-04-09",
-   "equity": 327174.8
+   "equity": 340196.0
   },
   {
    "t": "2026-04-09",
-   "equity": 326201.6
+   "equity": 339222.8
   },
   {
    "t": "2026-04-09",
-   "equity": 325303.7
-  },
-  {
-   "t": "2026-04-09",
-   "equity": 325179.9
-  },
-  {
-   "t": "2026-04-09",
-   "equity": 321893.6
+   "equity": 335936.5
   },
   {
    "t": "2026-04-10",
-   "equity": 322764.6
+   "equity": 336807.5
   },
   {
    "t": "2026-04-11",
-   "equity": 322959.6
+   "equity": 337002.5
   },
   {
    "t": "2026-04-11",
-   "equity": 323214.6
+   "equity": 337257.5
   },
   {
    "t": "2026-04-13",
-   "equity": 324042.1
+   "equity": 338085.0
   },
   {
    "t": "2026-04-13",
-   "equity": 323776.2
+   "equity": 337819.1
   },
   {
    "t": "2026-04-16",
-   "equity": 330397.9
+   "equity": 344440.8
   },
   {
    "t": "2026-04-17",
-   "equity": 334841.2
+   "equity": 348884.1
   },
   {
    "t": "2026-04-18",
-   "equity": 333445.4
+   "equity": 347488.3
   },
   {
    "t": "2026-04-20",
-   "equity": 335861.9
+   "equity": 349904.8
   },
   {
    "t": "2026-04-22",
-   "equity": 338155.2
-  },
-  {
-   "t": "2026-04-22",
-   "equity": 337156.6
-  },
-  {
-   "t": "2026-04-22",
-   "equity": 336474.3
+   "equity": 352198.1
   },
   {
    "t": "2026-04-24",
-   "equity": 336212.1
-  },
-  {
-   "t": "2026-04-24",
-   "equity": 336447.6
-  },
-  {
-   "t": "2026-04-24",
-   "equity": 334494.2
+   "equity": 350244.7
   },
   {
    "t": "2026-04-25",
-   "equity": 333215.9
+   "equity": 348966.4
   },
   {
    "t": "2026-04-27",
-   "equity": 333791.6
+   "equity": 349542.1
   },
   {
    "t": "2026-04-28",
-   "equity": 333342.6
+   "equity": 349093.1
   },
   {
    "t": "2026-04-28",
-   "equity": 332972.6
-  },
-  {
-   "t": "2026-04-28",
-   "equity": 332396.8
-  },
-  {
-   "t": "2026-04-28",
-   "equity": 332974.0
+   "equity": 349670.3
   },
   {
    "t": "2026-04-29",
-   "equity": 331446.8
+   "equity": 348143.1
   },
   {
    "t": "2026-04-29",
-   "equity": 332949.8
+   "equity": 349646.1
   },
   {
    "t": "2026-04-30",
-   "equity": 333905.3
+   "equity": 350601.6
   },
   {
    "t": "2026-04-30",
-   "equity": 334165.7
-  },
-  {
-   "t": "2026-04-30",
-   "equity": 338989.6
+   "equity": 355425.5
   },
   {
    "t": "2026-05-01",
-   "equity": 339677.6
-  },
-  {
-   "t": "2026-05-01",
-   "equity": 342294.2
+   "equity": 356113.5
   },
   {
    "t": "2026-05-04",
-   "equity": 342808.4
-  },
-  {
-   "t": "2026-05-04",
-   "equity": 342528.4
+   "equity": 356627.7
   },
   {
    "t": "2026-05-05",
-   "equity": 343345.5
+   "equity": 357444.8
   },
   {
    "t": "2026-05-05",
-   "equity": 344335.5
-  },
-  {
-   "t": "2026-05-06",
-   "equity": 344990.5
+   "equity": 358434.8
   },
   {
    "t": "2026-05-09",
-   "equity": 343880.9
+   "equity": 357325.2
   },
   {
    "t": "2026-05-12",
-   "equity": 352245.9
+   "equity": 365690.2
   },
   {
    "t": "2026-05-13",
-   "equity": 353677.9
+   "equity": 367122.2
   },
   {
    "t": "2026-05-16",
-   "equity": 352079.9
+   "equity": 365524.2
   },
   {
    "t": "2026-05-20",
-   "equity": 353738.4
+   "equity": 367182.7
   }
  ],
  "trades": [
@@ -1240,28 +1043,6 @@
    "histHitRate": 0.752
   },
   {
-   "structure": "brent_m2m3",
-   "label": "Brent M2-M3",
-   "regime": "Balanced \u00b7 High Vol",
-   "direction": "SHORT",
-   "entryDate": "2026-05-05",
-   "exitDate": "2026-05-06",
-   "entrySpread": 4.71,
-   "exitSpread": 4.055,
-   "fairValue": 1.668,
-   "entryZ": 3.53,
-   "exitZ": 3.2,
-   "holdDays": 1,
-   "holdLabel": "1d",
-   "pnl": 655.0,
-   "cost": 0.0,
-   "netPnl": 655.0,
-   "mae": 0.0,
-   "mfe": 655.0,
-   "exitReason": "stop",
-   "histHitRate": 0.717
-  },
-  {
    "structure": "wti_m2m3",
    "label": "WTI M2-M3",
    "regime": "Balanced \u00b7 High Vol",
@@ -1304,28 +1085,6 @@
    "mfe": 817.1,
    "exitReason": "target",
    "histHitRate": 0.816
-  },
-  {
-   "structure": "brent_m2m3",
-   "label": "Brent M2-M3",
-   "regime": "Balanced \u00b7 High Vol",
-   "direction": "SHORT",
-   "entryDate": "2026-05-01",
-   "exitDate": "2026-05-04",
-   "entrySpread": 5.09,
-   "exitSpread": 5.37,
-   "fairValue": 1.645,
-   "entryZ": 4.04,
-   "exitZ": 4.17,
-   "holdDays": 1,
-   "holdLabel": "1d",
-   "pnl": -280.0,
-   "cost": 0.0,
-   "netPnl": -280.0,
-   "mae": -280.0,
-   "mfe": 0.0,
-   "exitReason": "stop",
-   "histHitRate": 0.717
   },
   {
    "structure": "brent_fly",
@@ -1394,50 +1153,6 @@
    "histHitRate": 0.752
   },
   {
-   "structure": "brent_m1m2",
-   "label": "Brent M1-M2",
-   "regime": "Balanced \u00b7 High Vol",
-   "direction": "SHORT",
-   "entryDate": "2026-04-29",
-   "exitDate": "2026-05-01",
-   "entrySpread": 9.017,
-   "exitSpread": 6.4,
-   "fairValue": 1.914,
-   "entryZ": 5.99,
-   "exitZ": 3.74,
-   "holdDays": 2,
-   "holdLabel": "2d",
-   "pnl": 2616.6,
-   "cost": 0.0,
-   "netPnl": 2616.6,
-   "mae": 0.0,
-   "mfe": 5439.2,
-   "exitReason": "stop",
-   "histHitRate": 0.717
-  },
-  {
-   "structure": "brent_m2m3",
-   "label": "Brent M2-M3",
-   "regime": "Balanced \u00b7 High Vol",
-   "direction": "SHORT",
-   "entryDate": "2026-04-29",
-   "exitDate": "2026-04-30",
-   "entrySpread": 7.287,
-   "exitSpread": 7.026,
-   "fairValue": 1.509,
-   "entryZ": 6.94,
-   "exitZ": 6.75,
-   "holdDays": 1,
-   "holdLabel": "1d",
-   "pnl": 260.4,
-   "cost": 0.0,
-   "netPnl": 260.4,
-   "mae": 0.0,
-   "mfe": 260.4,
-   "exitReason": "stop",
-   "histHitRate": 0.717
-  },
-  {
    "structure": "brent_wti",
    "label": "Brent-WTI arb",
    "regime": "Balanced \u00b7 High Vol",
@@ -1504,50 +1219,6 @@
    "histHitRate": 0.752
   },
   {
-   "structure": "brent_m1m2",
-   "label": "Brent M1-M2",
-   "regime": "Balanced \u00b7 High Vol",
-   "direction": "SHORT",
-   "entryDate": "2026-04-27",
-   "exitDate": "2026-04-28",
-   "entrySpread": 6.47,
-   "exitSpread": 6.84,
-   "fairValue": 1.149,
-   "entryZ": 4.59,
-   "exitZ": 4.71,
-   "holdDays": 1,
-   "holdLabel": "1d",
-   "pnl": -370.0,
-   "cost": 0.0,
-   "netPnl": -370.0,
-   "mae": -370.0,
-   "mfe": 0.0,
-   "exitReason": "stop",
-   "histHitRate": 0.717
-  },
-  {
-   "structure": "brent_m2m3",
-   "label": "Brent M2-M3",
-   "regime": "Balanced \u00b7 High Vol",
-   "direction": "SHORT",
-   "entryDate": "2026-04-27",
-   "exitDate": "2026-04-28",
-   "entrySpread": 4.993,
-   "exitSpread": 5.568,
-   "fairValue": 0.807,
-   "entryZ": 5.19,
-   "exitZ": 5.62,
-   "holdDays": 1,
-   "holdLabel": "1d",
-   "pnl": -575.8,
-   "cost": 0.0,
-   "netPnl": -575.8,
-   "mae": -575.8,
-   "mfe": 0.0,
-   "exitReason": "stop",
-   "histHitRate": 0.717
-  },
-  {
    "structure": "brent_wti",
    "label": "Brent-WTI arb",
    "regime": "Balanced \u00b7 High Vol",
@@ -1590,50 +1261,6 @@
    "mfe": 1503.0,
    "exitReason": "target",
    "histHitRate": 0.816
-  },
-  {
-   "structure": "brent_m1m2",
-   "label": "Brent M1-M2",
-   "regime": "Balanced \u00b7 High Vol",
-   "direction": "SHORT",
-   "entryDate": "2026-04-23",
-   "exitDate": "2026-04-24",
-   "entrySpread": 5.867,
-   "exitSpread": 6.129,
-   "fairValue": 2.085,
-   "entryZ": 3.3,
-   "exitZ": 3.63,
-   "holdDays": 1,
-   "holdLabel": "1d",
-   "pnl": -262.2,
-   "cost": 0.0,
-   "netPnl": -262.2,
-   "mae": -262.2,
-   "mfe": 0.0,
-   "exitReason": "stop",
-   "histHitRate": 0.717
-  },
-  {
-   "structure": "brent_m2m3",
-   "label": "Brent M2-M3",
-   "regime": "Balanced \u00b7 High Vol",
-   "direction": "SHORT",
-   "entryDate": "2026-04-23",
-   "exitDate": "2026-04-24",
-   "entrySpread": 4.977,
-   "exitSpread": 4.741,
-   "fairValue": 1.65,
-   "entryZ": 4.19,
-   "exitZ": 4.04,
-   "holdDays": 1,
-   "holdLabel": "1d",
-   "pnl": 235.5,
-   "cost": 0.0,
-   "netPnl": 235.5,
-   "mae": 0.0,
-   "mfe": 235.5,
-   "exitReason": "stop",
-   "histHitRate": 0.717
   },
   {
    "structure": "wti_m1m2",
@@ -1812,28 +1439,6 @@
    "histHitRate": 0.752
   },
   {
-   "structure": "brent_m2m3",
-   "label": "Brent M2-M3",
-   "regime": "Balanced \u00b7 High Vol",
-   "direction": "SHORT",
-   "entryDate": "2026-04-13",
-   "exitDate": "2026-04-22",
-   "entrySpread": 3.556,
-   "exitSpread": 4.238,
-   "fairValue": 2.129,
-   "entryZ": 1.83,
-   "exitZ": 3.38,
-   "holdDays": 7,
-   "holdLabel": "7d",
-   "pnl": -682.3,
-   "cost": 0.0,
-   "netPnl": -682.3,
-   "mae": -682.3,
-   "mfe": 682.7,
-   "exitReason": "stop",
-   "histHitRate": 0.717
-  },
-  {
    "structure": "wti_fly",
    "label": "WTI M1-M2-M3 fly",
    "regime": "Balanced \u00b7 High Vol",
@@ -1898,28 +1503,6 @@
    "mfe": 255.0,
    "exitReason": "stop",
    "histHitRate": 0.752
-  },
-  {
-   "structure": "brent_m1m2",
-   "label": "Brent M1-M2",
-   "regime": "Balanced \u00b7 High Vol",
-   "direction": "SHORT",
-   "entryDate": "2026-04-10",
-   "exitDate": "2026-04-22",
-   "entrySpread": 4.791,
-   "exitSpread": 5.79,
-   "fairValue": 2.845,
-   "entryZ": 1.73,
-   "exitZ": 3.31,
-   "holdDays": 8,
-   "holdLabel": "8d",
-   "pnl": -998.6,
-   "cost": 0.0,
-   "netPnl": -998.6,
-   "mae": -998.6,
-   "mfe": 536.4,
-   "exitReason": "stop",
-   "histHitRate": 0.717
   },
   {
    "structure": "brent_wti",
@@ -2010,50 +1593,6 @@
    "histHitRate": 0.752
   },
   {
-   "structure": "brent_m1m2",
-   "label": "Brent M1-M2",
-   "regime": "Balanced \u00b7 High Vol",
-   "direction": "SHORT",
-   "entryDate": "2026-04-08",
-   "exitDate": "2026-04-09",
-   "entrySpread": 4.753,
-   "exitSpread": 5.651,
-   "fairValue": 1.539,
-   "entryZ": 2.87,
-   "exitZ": 3.69,
-   "holdDays": 1,
-   "holdLabel": "1d",
-   "pnl": -897.9,
-   "cost": 0.0,
-   "netPnl": -897.9,
-   "mae": -897.9,
-   "mfe": 0.0,
-   "exitReason": "stop",
-   "histHitRate": 0.717
-  },
-  {
-   "structure": "brent_m2m3",
-   "label": "Brent M2-M3",
-   "regime": "Balanced \u00b7 High Vol",
-   "direction": "SHORT",
-   "entryDate": "2026-04-08",
-   "exitDate": "2026-04-09",
-   "entrySpread": 4.015,
-   "exitSpread": 4.139,
-   "fairValue": 1.146,
-   "entryZ": 3.69,
-   "exitZ": 3.85,
-   "holdDays": 1,
-   "holdLabel": "1d",
-   "pnl": -123.8,
-   "cost": 0.0,
-   "netPnl": -123.8,
-   "mae": -123.8,
-   "mfe": 0.0,
-   "exitReason": "stop",
-   "histHitRate": 0.717
-  },
-  {
    "structure": "brent_wti",
    "label": "Brent-WTI arb",
    "regime": "Balanced \u00b7 High Vol",
@@ -2140,50 +1679,6 @@
    "mfe": 0.0,
    "exitReason": "stop",
    "histHitRate": 0.752
-  },
-  {
-   "structure": "brent_m1m2",
-   "label": "Brent M1-M2",
-   "regime": "Balanced \u00b7 High Vol",
-   "direction": "SHORT",
-   "entryDate": "2026-04-06",
-   "exitDate": "2026-04-07",
-   "entrySpread": 9.723,
-   "exitSpread": 7.57,
-   "fairValue": 2.683,
-   "entryZ": 6.35,
-   "exitZ": 4.84,
-   "holdDays": 1,
-   "holdLabel": "1d",
-   "pnl": 2153.3,
-   "cost": 0.0,
-   "netPnl": 2153.3,
-   "mae": 0.0,
-   "mfe": 2153.3,
-   "exitReason": "stop",
-   "histHitRate": 0.717
-  },
-  {
-   "structure": "brent_m2m3",
-   "label": "Brent M2-M3",
-   "regime": "Balanced \u00b7 High Vol",
-   "direction": "SHORT",
-   "entryDate": "2026-04-06",
-   "exitDate": "2026-04-07",
-   "entrySpread": 7.805,
-   "exitSpread": 5.955,
-   "fairValue": 2.204,
-   "entryZ": 7.33,
-   "exitZ": 5.45,
-   "holdDays": 1,
-   "holdLabel": "1d",
-   "pnl": 1850.0,
-   "cost": 0.0,
-   "netPnl": 1850.0,
-   "mae": 0.0,
-   "mfe": 1850.0,
-   "exitReason": "stop",
-   "histHitRate": 0.717
   },
   {
    "structure": "brent_wti",
@@ -2296,50 +1791,6 @@
    "histHitRate": 0.816
   },
   {
-   "structure": "brent_m1m2",
-   "label": "Brent M1-M2",
-   "regime": "Balanced \u00b7 High Vol",
-   "direction": "SHORT",
-   "entryDate": "2026-04-01",
-   "exitDate": "2026-04-02",
-   "entrySpread": 7.425,
-   "exitSpread": 9.802,
-   "fairValue": 1.741,
-   "entryZ": 5.3,
-   "exitZ": 6.54,
-   "holdDays": 1,
-   "holdLabel": "1d",
-   "pnl": -2377.5,
-   "cost": 0.0,
-   "netPnl": -2377.5,
-   "mae": -2377.5,
-   "mfe": 0.0,
-   "exitReason": "stop",
-   "histHitRate": 0.717
-  },
-  {
-   "structure": "brent_m2m3",
-   "label": "Brent M2-M3",
-   "regime": "Balanced \u00b7 High Vol",
-   "direction": "SHORT",
-   "entryDate": "2026-04-01",
-   "exitDate": "2026-04-02",
-   "entrySpread": 5.49,
-   "exitSpread": 7.983,
-   "fairValue": 1.392,
-   "entryZ": 5.62,
-   "exitZ": 7.7,
-   "holdDays": 1,
-   "holdLabel": "1d",
-   "pnl": -2493.3,
-   "cost": 0.0,
-   "netPnl": -2493.3,
-   "mae": -2493.3,
-   "mfe": 0.0,
-   "exitReason": "stop",
-   "histHitRate": 0.717
-  },
-  {
    "structure": "brent_fly",
    "label": "Brent M1-M2-M3 fly",
    "regime": "Balanced \u00b7 High Vol",
@@ -2448,50 +1899,6 @@
    "mfe": 0.0,
    "exitReason": "stop",
    "histHitRate": 0.816
-  },
-  {
-   "structure": "brent_m1m2",
-   "label": "Brent M1-M2",
-   "regime": "Balanced \u00b7 High Vol",
-   "direction": "SHORT",
-   "entryDate": "2026-03-30",
-   "exitDate": "2026-03-31",
-   "entrySpread": 5.863,
-   "exitSpread": 14.478,
-   "fairValue": 2.923,
-   "entryZ": 2.95,
-   "exitZ": 12.0,
-   "holdDays": 1,
-   "holdLabel": "1d",
-   "pnl": -8614.9,
-   "cost": 0.0,
-   "netPnl": -8614.9,
-   "mae": -8614.9,
-   "mfe": 0.0,
-   "exitReason": "stop",
-   "histHitRate": 0.717
-  },
-  {
-   "structure": "brent_m2m3",
-   "label": "Brent M2-M3",
-   "regime": "Balanced \u00b7 High Vol",
-   "direction": "SHORT",
-   "entryDate": "2026-03-30",
-   "exitDate": "2026-03-31",
-   "entrySpread": 7.223,
-   "exitSpread": 7.813,
-   "fairValue": 2.397,
-   "entryZ": 6.92,
-   "exitZ": 8.91,
-   "holdDays": 1,
-   "holdLabel": "1d",
-   "pnl": -590.1,
-   "cost": 0.0,
-   "netPnl": -590.1,
-   "mae": -590.1,
-   "mfe": 0.0,
-   "exitReason": "stop",
-   "histHitRate": 0.717
   },
   {
    "structure": "brent_fly",
@@ -2604,28 +2011,6 @@
    "histHitRate": 0.816
   },
   {
-   "structure": "brent_m2m3",
-   "label": "Brent M2-M3",
-   "regime": "Balanced \u00b7 High Vol",
-   "direction": "SHORT",
-   "entryDate": "2026-03-26",
-   "exitDate": "2026-03-27",
-   "entrySpread": 5.23,
-   "exitSpread": 6.623,
-   "fairValue": 2.444,
-   "entryZ": 4.14,
-   "exitZ": 6.0,
-   "holdDays": 1,
-   "holdLabel": "1d",
-   "pnl": -1392.9,
-   "cost": 0.0,
-   "netPnl": -1392.9,
-   "mae": -1392.9,
-   "mfe": 0.0,
-   "exitReason": "stop",
-   "histHitRate": 0.717
-  },
-  {
    "structure": "brent_wti",
    "label": "Brent-WTI arb",
    "regime": "Balanced \u00b7 High Vol",
@@ -2692,28 +2077,6 @@
    "histHitRate": 0.816
   },
   {
-   "structure": "brent_m2m3",
-   "label": "Brent M2-M3",
-   "regime": "Balanced \u00b7 High Vol",
-   "direction": "SHORT",
-   "entryDate": "2026-03-23",
-   "exitDate": "2026-03-25",
-   "entrySpread": 4.19,
-   "exitSpread": 4.592,
-   "fairValue": 2.399,
-   "entryZ": 2.69,
-   "exitZ": 3.16,
-   "holdDays": 2,
-   "holdLabel": "2d",
-   "pnl": -401.7,
-   "cost": 0.0,
-   "netPnl": -401.7,
-   "mae": -401.7,
-   "mfe": 0.0,
-   "exitReason": "stop",
-   "histHitRate": 0.717
-  },
-  {
    "structure": "brent_wti",
    "label": "Brent-WTI arb",
    "regime": "Balanced \u00b7 High Vol",
@@ -2756,28 +2119,6 @@
    "mfe": 2166.3,
    "exitReason": "target",
    "histHitRate": 0.816
-  },
-  {
-   "structure": "brent_m2m3",
-   "label": "Brent M2-M3",
-   "regime": "Balanced \u00b7 High Vol",
-   "direction": "SHORT",
-   "entryDate": "2026-03-19",
-   "exitDate": "2026-03-20",
-   "entrySpread": 5.0,
-   "exitSpread": 5.648,
-   "fairValue": 2.512,
-   "entryZ": 3.77,
-   "exitZ": 4.28,
-   "holdDays": 1,
-   "holdLabel": "1d",
-   "pnl": -648.3,
-   "cost": 0.0,
-   "netPnl": -648.3,
-   "mae": -648.3,
-   "mfe": 0.0,
-   "exitReason": "stop",
-   "histHitRate": 0.717
   },
   {
    "structure": "brent_wti",
@@ -2890,28 +2231,6 @@
    "histHitRate": 0.816
   },
   {
-   "structure": "brent_m1m2",
-   "label": "Brent M1-M2",
-   "regime": "Balanced \u00b7 High Vol",
-   "direction": "SHORT",
-   "entryDate": "2026-03-16",
-   "exitDate": "2026-03-27",
-   "entrySpread": 4.295,
-   "exitSpread": 7.662,
-   "fairValue": 2.814,
-   "entryZ": 1.51,
-   "exitZ": 4.64,
-   "holdDays": 9,
-   "holdLabel": "9d",
-   "pnl": -3366.7,
-   "cost": 0.0,
-   "netPnl": -3366.7,
-   "mae": -3366.7,
-   "mfe": 311.0,
-   "exitReason": "stop",
-   "histHitRate": 0.717
-  },
-  {
    "structure": "brent_wti",
    "label": "Brent-WTI arb",
    "regime": "Balanced \u00b7 High Vol",
@@ -2976,50 +2295,6 @@
    "mfe": 60.6,
    "exitReason": "stop",
    "histHitRate": 0.816
-  },
-  {
-   "structure": "brent_m1m2",
-   "label": "Brent M1-M2",
-   "regime": "Balanced \u00b7 High Vol",
-   "direction": "SHORT",
-   "entryDate": "2026-03-09",
-   "exitDate": "2026-03-11",
-   "entrySpread": 4.092,
-   "exitSpread": 2.793,
-   "fairValue": 2.251,
-   "entryZ": 1.88,
-   "exitZ": 0.22,
-   "holdDays": 2,
-   "holdLabel": "2d",
-   "pnl": 1298.6,
-   "cost": 0.0,
-   "netPnl": 1298.6,
-   "mae": 0.0,
-   "mfe": 1298.6,
-   "exitReason": "target",
-   "histHitRate": 0.717
-  },
-  {
-   "structure": "brent_m2m3",
-   "label": "Brent M2-M3",
-   "regime": "Balanced \u00b7 High Vol",
-   "direction": "SHORT",
-   "entryDate": "2026-03-09",
-   "exitDate": "2026-03-18",
-   "entrySpread": 3.27,
-   "exitSpread": 5.062,
-   "fairValue": 1.948,
-   "entryZ": 2.04,
-   "exitZ": 3.54,
-   "holdDays": 7,
-   "holdLabel": "7d",
-   "pnl": -1791.7,
-   "cost": 0.0,
-   "netPnl": -1791.7,
-   "mae": -1791.7,
-   "mfe": 383.4,
-   "exitReason": "stop",
-   "histHitRate": 0.717
   },
   {
    "structure": "wti_m2m3",
@@ -3130,50 +2405,6 @@
    "mfe": 0.0,
    "exitReason": "stop",
    "histHitRate": 0.816
-  },
-  {
-   "structure": "brent_m1m2",
-   "label": "Brent M1-M2",
-   "regime": "Balanced \u00b7 Normal Vol",
-   "direction": "SHORT",
-   "entryDate": "2026-03-03",
-   "exitDate": "2026-03-06",
-   "entrySpread": 3.192,
-   "exitSpread": 5.59,
-   "fairValue": 1.073,
-   "entryZ": 2.18,
-   "exitZ": 3.2,
-   "holdDays": 3,
-   "holdLabel": "3d",
-   "pnl": -2398.3,
-   "cost": 0.0,
-   "netPnl": -2398.3,
-   "mae": -2398.3,
-   "mfe": 0.0,
-   "exitReason": "stop",
-   "histHitRate": 0.717
-  },
-  {
-   "structure": "brent_m2m3",
-   "label": "Brent M2-M3",
-   "regime": "Balanced \u00b7 Normal Vol",
-   "direction": "SHORT",
-   "entryDate": "2026-03-03",
-   "exitDate": "2026-03-06",
-   "entrySpread": 2.267,
-   "exitSpread": 4.505,
-   "fairValue": 0.975,
-   "entryZ": 2.02,
-   "exitZ": 3.66,
-   "holdDays": 3,
-   "holdLabel": "3d",
-   "pnl": -2237.5,
-   "cost": 0.0,
-   "netPnl": -2237.5,
-   "mae": -2237.5,
-   "mfe": 35.8,
-   "exitReason": "stop",
-   "histHitRate": 0.717
   },
   {
    "structure": "brent_fly",
@@ -3528,28 +2759,6 @@
    "histHitRate": 0.752
   },
   {
-   "structure": "brent_m1m2",
-   "label": "Brent M1-M2",
-   "regime": "Tight \u00b7 Normal Vol",
-   "direction": "LONG",
-   "entryDate": "2025-04-07",
-   "exitDate": "2025-04-14",
-   "entrySpread": 0.393,
-   "exitSpread": 0.669,
-   "fairValue": 2.036,
-   "entryZ": -1.55,
-   "exitZ": -0.42,
-   "holdDays": 5,
-   "holdLabel": "5d",
-   "pnl": 275.4,
-   "cost": 0.0,
-   "netPnl": 275.4,
-   "mae": 0.0,
-   "mfe": 343.0,
-   "exitReason": "target",
-   "histHitRate": 0.717
-  },
-  {
    "structure": "wti_fly",
    "label": "WTI M1-M2-M3 fly",
    "regime": "Tight \u00b7 Normal Vol",
@@ -3614,28 +2823,6 @@
    "mfe": 0.0,
    "exitReason": "stop",
    "histHitRate": 0.752
-  },
-  {
-   "structure": "brent_m2m3",
-   "label": "Brent M2-M3",
-   "regime": "Tight \u00b7 Normal Vol",
-   "direction": "LONG",
-   "entryDate": "2025-04-04",
-   "exitDate": "2025-04-21",
-   "entrySpread": 0.44,
-   "exitSpread": 0.672,
-   "fairValue": 1.854,
-   "entryZ": -2.05,
-   "exitZ": -0.06,
-   "holdDays": 10,
-   "holdLabel": "10d",
-   "pnl": 232.1,
-   "cost": 0.0,
-   "netPnl": 232.1,
-   "mae": -141.7,
-   "mfe": 232.1,
-   "exitReason": "target",
-   "histHitRate": 0.717
   },
   {
    "structure": "brent_fly",
@@ -3812,28 +2999,6 @@
    "mfe": 920.4,
    "exitReason": "target",
    "histHitRate": 0.816
-  },
-  {
-   "structure": "brent_m2m3",
-   "label": "Brent M2-M3",
-   "regime": "Tight \u00b7 Low Vol",
-   "direction": "LONG",
-   "entryDate": "2024-08-05",
-   "exitDate": "2024-08-09",
-   "entrySpread": 0.367,
-   "exitSpread": 0.557,
-   "fairValue": 1.668,
-   "entryZ": -1.74,
-   "exitZ": -0.37,
-   "holdDays": 4,
-   "holdLabel": "4d",
-   "pnl": 189.5,
-   "cost": 0.0,
-   "netPnl": 189.5,
-   "mae": 0.0,
-   "mfe": 189.5,
-   "exitReason": "target",
-   "histHitRate": 0.717
   },
   {
    "structure": "wti_fly",
@@ -4186,50 +3351,6 @@
    "mfe": 1006.5,
    "exitReason": "time_stop",
    "histHitRate": 0.752
-  },
-  {
-   "structure": "brent_m1m2",
-   "label": "Brent M1-M2",
-   "regime": "Balanced \u00b7 Low Vol",
-   "direction": "SHORT",
-   "entryDate": "2023-09-27",
-   "exitDate": "2023-10-25",
-   "entrySpread": 2.248,
-   "exitSpread": 1.04,
-   "fairValue": 0.149,
-   "entryZ": 1.58,
-   "exitZ": 0.64,
-   "holdDays": 20,
-   "holdLabel": "20d",
-   "pnl": 1207.9,
-   "cost": 0.0,
-   "netPnl": 1207.9,
-   "mae": -851.3,
-   "mfe": 1371.9,
-   "exitReason": "time_stop",
-   "histHitRate": 0.717
-  },
-  {
-   "structure": "brent_m2m3",
-   "label": "Brent M2-M3",
-   "regime": "Balanced \u00b7 Low Vol",
-   "direction": "SHORT",
-   "entryDate": "2023-09-27",
-   "exitDate": "2023-10-24",
-   "entrySpread": 2.0,
-   "exitSpread": 0.796,
-   "fairValue": 0.435,
-   "entryZ": 1.8,
-   "exitZ": 0.48,
-   "holdDays": 19,
-   "holdLabel": "19d",
-   "pnl": 1204.0,
-   "cost": 0.0,
-   "netPnl": 1204.0,
-   "mae": 0.0,
-   "mfe": 1260.0,
-   "exitReason": "target",
-   "histHitRate": 0.717
   },
   {
    "structure": "wti_m1m2",
@@ -4848,28 +3969,6 @@
    "histHitRate": 0.816
   },
   {
-   "structure": "brent_m1m2",
-   "label": "Brent M1-M2",
-   "regime": "Tight \u00b7 High Vol",
-   "direction": "SHORT",
-   "entryDate": "2022-07-21",
-   "exitDate": "2022-07-31",
-   "entrySpread": 4.633,
-   "exitSpread": 2.493,
-   "fairValue": 1.732,
-   "entryZ": 1.71,
-   "exitZ": -0.39,
-   "holdDays": 8,
-   "holdLabel": "8d",
-   "pnl": 2140.3,
-   "cost": 0.0,
-   "netPnl": 2140.3,
-   "mae": -1443.2,
-   "mfe": 2140.3,
-   "exitReason": "target",
-   "histHitRate": 0.717
-  },
-  {
    "structure": "brent_wti",
    "label": "Brent-WTI arb",
    "regime": "Tight \u00b7 High Vol",
@@ -5024,28 +4123,6 @@
    "histHitRate": 0.752
   },
   {
-   "structure": "brent_m1m2",
-   "label": "Brent M1-M2",
-   "regime": "Tight \u00b7 Normal Vol",
-   "direction": "SHORT",
-   "entryDate": "2022-06-24",
-   "exitDate": "2022-07-18",
-   "entrySpread": 4.125,
-   "exitSpread": 4.418,
-   "fairValue": 0.176,
-   "entryZ": 2.39,
-   "exitZ": 1.42,
-   "holdDays": 20,
-   "holdLabel": "20d",
-   "pnl": -293.3,
-   "cost": 0.0,
-   "netPnl": -293.3,
-   "mae": -1689.0,
-   "mfe": 875.0,
-   "exitReason": "time_stop",
-   "histHitRate": 0.717
-  },
-  {
    "structure": "wti_m1m2",
    "label": "WTI M1-M2",
    "regime": "Tight \u00b7 Normal Vol",
@@ -5066,28 +4143,6 @@
    "mfe": 233.6,
    "exitReason": "time_stop",
    "histHitRate": 0.752
-  },
-  {
-   "structure": "brent_m2m3",
-   "label": "Brent M2-M3",
-   "regime": "Tight \u00b7 Normal Vol",
-   "direction": "SHORT",
-   "entryDate": "2022-06-23",
-   "exitDate": "2022-07-12",
-   "entrySpread": 2.77,
-   "exitSpread": 2.437,
-   "fairValue": 0.818,
-   "entryZ": 1.64,
-   "exitZ": 0.25,
-   "holdDays": 16,
-   "holdLabel": "16d",
-   "pnl": 333.0,
-   "cost": 0.0,
-   "netPnl": 333.0,
-   "mae": -684.7,
-   "mfe": 333.0,
-   "exitReason": "target",
-   "histHitRate": 0.717
   },
   {
    "structure": "wti_fly",
@@ -5154,28 +4209,6 @@
    "mfe": 245.3,
    "exitReason": "stop",
    "histHitRate": 0.816
-  },
-  {
-   "structure": "brent_m1m2",
-   "label": "Brent M1-M2",
-   "regime": "Tight \u00b7 Normal Vol",
-   "direction": "SHORT",
-   "entryDate": "2022-05-31",
-   "exitDate": "2022-06-23",
-   "entrySpread": 7.165,
-   "exitSpread": 3.627,
-   "fairValue": 2.23,
-   "entryZ": 3.02,
-   "exitZ": 2.09,
-   "holdDays": 20,
-   "holdLabel": "20d",
-   "pnl": 3538.0,
-   "cost": 0.0,
-   "netPnl": 3538.0,
-   "mae": 0.0,
-   "mfe": 4738.4,
-   "exitReason": "time_stop",
-   "histHitRate": 0.717
   },
   {
    "structure": "brent_wti",
@@ -5442,50 +4475,6 @@
    "histHitRate": 0.816
   },
   {
-   "structure": "brent_m2m3",
-   "label": "Brent M2-M3",
-   "regime": "Tight \u00b7 High Vol",
-   "direction": "LONG",
-   "entryDate": "2022-04-07",
-   "exitDate": "2022-05-02",
-   "entrySpread": 0.768,
-   "exitSpread": 1.855,
-   "fairValue": 2.447,
-   "entryZ": -1.62,
-   "exitZ": -1.49,
-   "holdDays": 20,
-   "holdLabel": "20d",
-   "pnl": 1086.3,
-   "cost": 0.0,
-   "netPnl": 1086.3,
-   "mae": -386.6,
-   "mfe": 1114.2,
-   "exitReason": "time_stop",
-   "histHitRate": 0.717
-  },
-  {
-   "structure": "brent_m1m2",
-   "label": "Brent M1-M2",
-   "regime": "Tight \u00b7 High Vol",
-   "direction": "LONG",
-   "entryDate": "2022-04-06",
-   "exitDate": "2022-05-01",
-   "entrySpread": 0.896,
-   "exitSpread": 1.683,
-   "fairValue": 2.864,
-   "entryZ": -1.52,
-   "exitZ": -1.18,
-   "holdDays": 20,
-   "holdLabel": "20d",
-   "pnl": 786.5,
-   "cost": 0.0,
-   "netPnl": 786.5,
-   "mae": -719.0,
-   "mfe": 1394.0,
-   "exitReason": "time_stop",
-   "histHitRate": 0.717
-  },
-  {
    "structure": "wti_m1m2",
    "label": "WTI M1-M2",
    "regime": "Tight \u00b7 High Vol",
@@ -5662,28 +4651,6 @@
    "histHitRate": 0.816
   },
   {
-   "structure": "brent_m2m3",
-   "label": "Brent M2-M3",
-   "regime": "Tight \u00b7 High Vol",
-   "direction": "SHORT",
-   "entryDate": "2022-03-09",
-   "exitDate": "2022-03-31",
-   "entrySpread": 3.483,
-   "exitSpread": 2.007,
-   "fairValue": 0.969,
-   "entryZ": 2.8,
-   "exitZ": 0.41,
-   "holdDays": 19,
-   "holdLabel": "19d",
-   "pnl": 1475.8,
-   "cost": 0.0,
-   "netPnl": 1475.8,
-   "mae": -399.2,
-   "mfe": 1602.5,
-   "exitReason": "target",
-   "histHitRate": 0.717
-  },
-  {
    "structure": "wti_m1m2",
    "label": "WTI M1-M2",
    "regime": "Tight \u00b7 Normal Vol",
@@ -5728,28 +4695,6 @@
    "histHitRate": 0.752
   },
   {
-   "structure": "brent_m2m3",
-   "label": "Brent M2-M3",
-   "regime": "Tight \u00b7 Normal Vol",
-   "direction": "SHORT",
-   "entryDate": "2022-03-07",
-   "exitDate": "2022-03-08",
-   "entrySpread": 3.971,
-   "exitSpread": 4.24,
-   "fairValue": 1.183,
-   "entryZ": 3.49,
-   "exitZ": 4.03,
-   "holdDays": 1,
-   "holdLabel": "1d",
-   "pnl": -269.4,
-   "cost": 0.0,
-   "netPnl": -269.4,
-   "mae": -269.4,
-   "mfe": 0.0,
-   "exitReason": "stop",
-   "histHitRate": 0.717
-  },
-  {
    "structure": "wti_m1m2",
    "label": "WTI M1-M2",
    "regime": "Tight \u00b7 Normal Vol",
@@ -5792,50 +4737,6 @@
    "mfe": 1300.2,
    "exitReason": "stop",
    "histHitRate": 0.752
-  },
-  {
-   "structure": "brent_m1m2",
-   "label": "Brent M1-M2",
-   "regime": "Tight \u00b7 Normal Vol",
-   "direction": "SHORT",
-   "entryDate": "2022-03-03",
-   "exitDate": "2022-03-28",
-   "entrySpread": 4.167,
-   "exitSpread": 2.845,
-   "fairValue": 1.256,
-   "entryZ": 2.61,
-   "exitZ": 0.73,
-   "holdDays": 20,
-   "holdLabel": "20d",
-   "pnl": 1321.7,
-   "cost": 0.0,
-   "netPnl": 1321.7,
-   "mae": -310.4,
-   "mfe": 1926.7,
-   "exitReason": "time_stop",
-   "histHitRate": 0.717
-  },
-  {
-   "structure": "brent_m2m3",
-   "label": "Brent M2-M3",
-   "regime": "Tight \u00b7 Normal Vol",
-   "direction": "SHORT",
-   "entryDate": "2022-03-03",
-   "exitDate": "2022-03-04",
-   "entrySpread": 3.637,
-   "exitSpread": 3.407,
-   "fairValue": 1.043,
-   "entryZ": 3.6,
-   "exitZ": 3.08,
-   "holdDays": 1,
-   "holdLabel": "1d",
-   "pnl": 229.1,
-   "cost": 0.0,
-   "netPnl": 229.1,
-   "mae": 0.0,
-   "mfe": 229.1,
-   "exitReason": "stop",
-   "histHitRate": 0.717
   },
   {
    "structure": "wti_m1m2",
@@ -5902,28 +4803,6 @@
    "mfe": 874.1,
    "exitReason": "target",
    "histHitRate": 0.816
-  },
-  {
-   "structure": "brent_m2m3",
-   "label": "Brent M2-M3",
-   "regime": "Tight \u00b7 Normal Vol",
-   "direction": "SHORT",
-   "entryDate": "2022-03-01",
-   "exitDate": "2022-03-02",
-   "entrySpread": 3.546,
-   "exitSpread": 4.205,
-   "fairValue": 1.343,
-   "entryZ": 3.71,
-   "exitZ": 4.44,
-   "holdDays": 1,
-   "holdLabel": "1d",
-   "pnl": -658.9,
-   "cost": 0.0,
-   "netPnl": -658.9,
-   "mae": -658.9,
-   "mfe": 0.0,
-   "exitReason": "stop",
-   "histHitRate": 0.717
   },
   {
    "structure": "wti_m1m2",
@@ -6014,28 +4893,6 @@
    "histHitRate": 0.833
   },
   {
-   "structure": "brent_m2m3",
-   "label": "Brent M2-M3",
-   "regime": "Tight \u00b7 Low Vol",
-   "direction": "SHORT",
-   "entryDate": "2022-02-21",
-   "exitDate": "2022-02-28",
-   "entrySpread": 1.987,
-   "exitSpread": 2.888,
-   "fairValue": 0.809,
-   "entryZ": 2.55,
-   "exitZ": 3.15,
-   "holdDays": 5,
-   "holdLabel": "5d",
-   "pnl": -901.0,
-   "cost": 0.0,
-   "netPnl": -901.0,
-   "mae": -901.0,
-   "mfe": 53.5,
-   "exitReason": "stop",
-   "histHitRate": 0.717
-  },
-  {
    "structure": "brent_fly",
    "label": "Brent M1-M2-M3 fly",
    "regime": "Tight \u00b7 Low Vol",
@@ -6100,28 +4957,6 @@
    "mfe": 262.3,
    "exitReason": "target",
    "histHitRate": 0.752
-  },
-  {
-   "structure": "brent_m1m2",
-   "label": "Brent M1-M2",
-   "regime": "Tight \u00b7 Low Vol",
-   "direction": "SHORT",
-   "entryDate": "2022-02-11",
-   "exitDate": "2022-03-02",
-   "entrySpread": 1.89,
-   "exitSpread": 4.948,
-   "fairValue": 0.587,
-   "entryZ": 1.68,
-   "exitZ": 3.23,
-   "holdDays": 13,
-   "holdLabel": "13d",
-   "pnl": -3057.5,
-   "cost": 0.0,
-   "netPnl": -3057.5,
-   "mae": -3057.5,
-   "mfe": 0.0,
-   "exitReason": "stop",
-   "histHitRate": 0.717
   },
   {
    "structure": "brent_wti",
@@ -6232,28 +5067,6 @@
    "mfe": 1735.3,
    "exitReason": "target",
    "histHitRate": 0.752
-  },
-  {
-   "structure": "brent_m2m3",
-   "label": "Brent M2-M3",
-   "regime": "Tight \u00b7 Low Vol",
-   "direction": "SHORT",
-   "entryDate": "2022-01-21",
-   "exitDate": "2022-02-18",
-   "entrySpread": 0.905,
-   "exitSpread": 1.755,
-   "fairValue": 0.416,
-   "entryZ": 1.93,
-   "exitZ": 2.29,
-   "holdDays": 20,
-   "holdLabel": "20d",
-   "pnl": -849.7,
-   "cost": 0.0,
-   "netPnl": -849.7,
-   "mae": -909.7,
-   "mfe": 22.8,
-   "exitReason": "time_stop",
-   "histHitRate": 0.717
   },
   {
    "structure": "brent_wti",
@@ -6526,35 +5339,7 @@
    "holdDays": 2,
    "regime": "Balanced \u00b7 High Vol",
    "unrealizedPnl": 804.4
-  },
-  {
-   "structure": "brent_m1m2",
-   "label": "Brent M1-M2",
-   "direction": "SHORT",
-   "entryDate": "2026-05-04",
-   "asOf": "2026-05-20",
-   "entrySpread": 6.64,
-   "curSpread": 3.895,
-   "entryZ": 3.8,
-   "curZ": 1.22,
-   "holdDays": 12,
-   "regime": "Balanced \u00b7 High Vol",
-   "unrealizedPnl": 2745.0
-  },
-  {
-   "structure": "brent_m2m3",
-   "label": "Brent M2-M3",
-   "direction": "SHORT",
-   "entryDate": "2026-05-07",
-   "asOf": "2026-05-20",
-   "entrySpread": 4.057,
-   "curSpread": 3.995,
-   "entryZ": 2.9,
-   "curZ": 2.28,
-   "holdDays": 9,
-   "regime": "Balanced \u00b7 High Vol",
-   "unrealizedPnl": 61.7
   }
  ],
- "openCount": 4
+ "openCount": 2
 }

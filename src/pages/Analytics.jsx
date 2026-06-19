@@ -53,7 +53,7 @@ const CrackSpreads = () => {
 
   const crack = cracks.find((c) => c.id === id) || cracks[0];
   const idx = cracks.findIndex((c) => c.id === id);
-  const value = crack.value;
+  const value = crack?.value;
 
   // Real daily crack history where the backend has it; else the synthetic placeholder.
   const real = chist[id]?.points;
@@ -64,6 +64,15 @@ const CrackSpreads = () => {
       : genAround(900 + idx, 60, value, Math.max(1, Math.abs(value) * 0.07))),
     [id, value, isReal, real]
   );
+  // No crack available (empty/missing API payload) — render a graceful fallback.
+  if (!crack) {
+    return (
+      <Card>
+        <div className="py-10 text-center text-[11px] text-zinc-600">No crack data available.</div>
+      </Card>
+    );
+  }
+
   const histSrc = isReal ? (chist[id].source || "dataset") : "modeled";
   const winLbl = isReal ? (hist.length >= 230 ? "1y" : `${hist.length}d`) : "60d";
 
@@ -212,9 +221,18 @@ const FuturesSpreads = () => {
   const [id, setId] = useState("brent");
   const { data: curves } = useLive("/api/curves", CURVES_FALLBACK, useLive.REFRESH.slow);
   const curveMap = { brent: curves.brent, wti: curves.wti, ho: curves.ho, rbob: curves.rbob, gasoil: curves.gasoil };
-  const curve = curveMap[id] || CURVES_FALLBACK[id];
+  const curve = curveMap[id] || CURVES_FALLBACK[id] || {};
   const d = curve.data;
   const inter = curves.inter || INTER_FALLBACK;
+
+  // Forward curve needs a 12-point strip; fall back gracefully if it's missing.
+  if (!Array.isArray(d) || d.length < 12) {
+    return (
+      <Card>
+        <div className="py-10 text-center text-[11px] text-zinc-600">No forward-curve data available.</div>
+      </Card>
+    );
+  }
 
   // Provenance: WTI/Brent/HO/RBOB curves are live Yahoo dated-contract strips
   // (source "yahoo"); Gas Oil carries the live front along the dataset's real
@@ -334,21 +352,24 @@ const pairsFrom = (m) => {
 const CorrelationInsight = () => {
   const { data } = useLive("/api/correlation", { labels: CORR_LABELS, matrix: CORR_MATRIX }, useLive.REFRESH.slow);
   const { data: regCur } = useLive("/api/regime/current", {}, useLive.REFRESH.slow);
-  const all = pairsFrom({ labels: data.labels || CORR_LABELS, matrix: data.matrix || CORR_MATRIX });
+  const all = pairsFrom({ labels: data.labels || CORR_LABELS, matrix: data.matrix || CORR_MATRIX }) || {};
 
   // Regime-conditioned correlation — how the complex moves together RIGHT NOW.
   const regMat = regCur.correlation?.regime;
   const reg = pairsFrom(regMat);
   const regLabel = regCur.correlation?.regimeLabel;
 
-  const Row = ({ label, pair, color, note }) => (
-    <div className="flex items-baseline justify-between">
-      <span className="text-[11px] text-zinc-300">{label}: {pair.a} · {pair.b}</span>
-      <span className={`font-mono text-[12px] ${color}`}>
-        <Sourced source="dataset" note={note} align="end">{pair.v.toFixed(2)}</Sourced>
-      </span>
-    </div>
-  );
+  const Row = ({ label, pair, color, note }) => {
+    if (!pair) return null;
+    return (
+      <div className="flex items-baseline justify-between">
+        <span className="text-[11px] text-zinc-300">{label}: {pair.a} · {pair.b}</span>
+        <span className={`font-mono text-[12px] ${color}`}>
+          <Sourced source="dataset" note={note} align="end">{fmt(pair.v, 2)}</Sourced>
+        </span>
+      </div>
+    );
+  };
 
   return (
     <Card className="col-span-12 lg:col-span-4">

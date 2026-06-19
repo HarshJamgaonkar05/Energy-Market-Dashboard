@@ -11,6 +11,12 @@ dist
 dist-ssr
 *.local
 
+# Python caches & virtualenv
+__pycache__/
+*.pyc
+*.pyo
+analytics/.venv/
+
 # Backend secrets
 .env
 server/.env

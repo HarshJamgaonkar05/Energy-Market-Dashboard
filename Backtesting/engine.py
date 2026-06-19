@@ -58,9 +58,10 @@ SIGNAL_LOG = SERVER_DATA / "signal_log.json"               # persistent journal
 # ---- Strategy parameters (intentionally few) -------------------------------
 LOOKBACK = 24          # bars in the rolling fair value (~6h of 15-min bars)
 Z_ENTRY = 2.0          # fade when |z| >= this (a 2-sigma dislocation)
-Z_EXIT = -1.0          # take profit after reverting THROUGH fair to ~1sigma the other side
-                       #   (entry_sign*z <= this). Spreads overshoot, so exiting at fair leaves money
-                       #   on the table; riding the overshoot lifts both gross and net (5y-validated).
+Z_EXIT = -1.5          # take profit after reverting THROUGH fair to ~1.5sigma the other side
+                       #   (entry_sign*z <= this). Spreads overshoot, so exiting at fair leaves money on
+                       #   the table; robustness testing (analytics/robustness.py) justified deepening
+                       #   from -1.0 to -1.5 (+net every year, no extra drawdown). 5y-validated.
 Z_STOP = 3.5           # stop if it stretches further to |z| >= this
 MAX_HOLD_BARS = 48     # time stop: never hold a single trade longer than ~12h
 SESSION_GAP_MIN = 90   # a gap to the next bar > this = session/weekend break -> flatten
@@ -75,6 +76,12 @@ SLIP_PER_LEG = 0.0     # per-leg, per-side slippage in price units; 0 = GROSS (t
 # 5y of 15-min history: net@1c $50k -> $1.12M, net drawdown -$242k -> -$16k.
 ASSUMED_SLIP = 0.01    # per-leg cost the entry gate must clear (independent of --slip reporting)
 EDGE_COST_MULT = 2.0   # require expected capture >= this x round-turn cost
+# ---- Position scaling (mirrors analytics/historical_intraday.py) ------------
+# Add a 2nd unit on the deepest (>=2.75sigma) dislocations — the highest-conviction
+# stretches. Validated on 5y: net $1.98M -> $2.62M, profitable every year. Toggle.
+SCALE_IN = False
+SCALE_ADD_Z = 2.75     # add a unit when |z| deepens past this (same side) while in a position
+SCALE_MAX_UNITS = 2    # cap on total units per trade
 # ---- LIVE panel display mode -----------------------------------------------
 # True (default): live mirrors the DISCIPLINED, actually-tradeable strategy (cost gate
 # + the 3 proven structures) that the 5-year historical backtest validates — a small
@@ -106,8 +113,9 @@ if LIVE_DISCIPLINED:
     STRATEGY_DESC = ("Estimate each crude spread's fair value as a rolling mean of its own recent "
                      "history; fade a >=2sigma dislocation ONLY when the expected $ move to fair clears "
                      "2x realistic cost (volatility-adaptive cost gate); ride the reversion through fair to "
-                     "~1sigma overshoot (z<=-1.0), with a 3.5sigma stop, a 12h time stop, or a session break. "
-                     "Universe pruned to the 3 structures with a persistent post-cost edge. Fixed 1 unit/trade, gross.")
+                     "~1.5sigma overshoot (z<=-1.5), with a 3.5sigma stop, a 12h time stop, or a session break. "
+                     "Universe pruned to the 3 structures with a persistent post-cost edge. 1 unit/trade "
+                     "(optional 2-unit scaling on the deepest >=2.75sigma dislocations). Gross.")
 else:
     STRATEGY_NAME = "RV mean-reversion — full live book (Phase-2 idea, intraday)"
     STRATEGY_DESC = ("Estimate each crude spread's fair value as a rolling mean of its own recent history; "
@@ -249,11 +257,15 @@ def backtest_structure(name, meta, closes, regime, edges):
         if pos is None:
             if abs(z) >= Z_ENTRY and abs(sp - fv) * MULT >= gate_cost:   # fade only if $ edge clears cost
                 pos = {"dir": "LONG" if z <= -Z_ENTRY else "SHORT", "i": i, "t": ts,
-                       "sp": sp, "z": z, "legs": legs_at(ts), "mae": 0.0, "mfe": 0.0}
+                       "sp": sp, "entries": [sp], "z": z, "legs": legs_at(ts), "mae": 0.0, "mfe": 0.0}
             continue
         sign = 1.0 if pos["dir"] == "LONG" else -1.0
         entry_sign = -sign                                    # +1 if SHORT (entered rich), -1 if LONG
-        upnl = sign * (sp - pos["sp"]) * MULT
+        # scale in: add a unit on a deeper, same-side dislocation (highest conviction)
+        if (SCALE_IN and len(pos["entries"]) < SCALE_MAX_UNITS and abs(z) >= SCALE_ADD_Z
+                and (z < 0) == (pos["dir"] == "LONG")):
+            pos["entries"].append(sp)
+        upnl = sign * sum(sp - e for e in pos["entries"]) * MULT
         pos["mae"], pos["mfe"] = min(pos["mae"], upnl), max(pos["mfe"], upnl)
         held = i - pos["i"]
 
@@ -264,7 +276,9 @@ def backtest_structure(name, meta, closes, regime, edges):
         if hit_target or hit_stop or hit_time or forced:
             reason = ("target" if hit_target else "stop" if hit_stop
                       else "time_stop" if hit_time else "session_end")
-            gross = sign * (sp - pos["sp"]) * MULT
+            units = len(pos["entries"])
+            gross = sign * sum(sp - e for e in pos["entries"]) * MULT
+            trade_cost = cost * units
             trades.append({
                 "structure": name, "label": meta["label"], "strategy": STRATEGY_NAME,
                 "phase2Key": meta["phase2"], "regime": regime, "direction": pos["dir"],
@@ -274,8 +288,8 @@ def backtest_structure(name, meta, closes, regime, edges):
                 "entryZ": round(pos["z"], 2), "exitZ": round(z, 2),
                 "entryLegs": pos["legs"], "exitLegs": legs_at(ts),
                 "holdBars": held, "holdMin": int((ts - pos["t"]).total_seconds() // 60),
-                "contracts": contracts, "pnl": round(gross, 2),
-                "cost": round(cost, 2), "netPnl": round(gross - cost, 2),
+                "contracts": contracts, "units": units, "pnl": round(gross, 2),
+                "cost": round(trade_cost, 2), "netPnl": round(gross - trade_cost, 2),
                 "mae": round(pos["mae"], 2), "mfe": round(pos["mfe"], 2),
                 "exitReason": reason, "histHitRate": round(edge, 3), "edgeSource": edge_src,
                 "confidence": confidence_score(edge, abs(pos["z"])),
@@ -291,8 +305,8 @@ def backtest_structure(name, meta, closes, regime, edges):
             "entryTime": pos["t"].strftime("%Y-%m-%d %H:%M"), "asOf": ts.strftime("%Y-%m-%d %H:%M"),
             "entrySpread": round(pos["sp"], 4), "curSpread": round(sp, 4),
             "entryZ": round(pos["z"], 2), "curZ": round(z, 2),
-            "holdBars": int(len(df) - 1 - pos["i"]),
-            "unrealizedPnl": round(sign * (sp - pos["sp"]) * MULT, 2),
+            "holdBars": int(len(df) - 1 - pos["i"]), "units": len(pos["entries"]),
+            "unrealizedPnl": round(sign * sum(sp - e for e in pos["entries"]) * MULT, 2),
             "regime": regime, "confidence": confidence_score(edge, abs(pos["z"])),
         }
     return trades, open_pos
@@ -529,7 +543,8 @@ def run_once(generated_at):
                                 "zStop": Z_STOP, "maxHoldBars": MAX_HOLD_BARS, "mult": MULT,
                                 "slipPerLeg": SLIP_PER_LEG, "assumedSlip": ASSUMED_SLIP,
                                 "edgeCostMult": EDGE_COST_MULT if LIVE_DISCIPLINED else 0.0,
-                                "costGate": LIVE_DISCIPLINED,
+                                "costGate": LIVE_DISCIPLINED, "scaleIn": SCALE_IN,
+                                "scaleAddZ": SCALE_ADD_Z, "scaleMaxUnits": SCALE_MAX_UNITS,
                                 "activeStructures": sorted(k for k, m in STRUCTURES.items()
                                                            if not LIVE_DISCIPLINED or m.get("active", True))}},
         "summary": summary, "byStructure": by_structure, "equityCurve": curve,

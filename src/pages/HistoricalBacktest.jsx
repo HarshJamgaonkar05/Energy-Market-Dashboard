@@ -28,7 +28,12 @@ const FALLBACK = {
 
 const dirColor = (d) => (d === "LONG" ? "text-emerald-400" : "text-red-400");
 const pnlColor = (n) => (n > 0 ? "text-emerald-400" : n < 0 ? "text-red-400" : "text-zinc-400");
-const pct = (n) => `${(n * 100).toFixed(0)}%`;
+const pct = (n) => (n == null || Number.isNaN(Number(n)) ? "—" : `${(n * 100).toFixed(0)}%`);
+// Profit factor: gross wins ÷ gross losses. null (no trades) → "—"; no losing trades → "Inf".
+const pf = (n) => (n == null ? "—" : !Number.isFinite(n) ? "Inf" : fmt(n, 2));
+// Tone: weak (1–1.5) amber, losing (<1) red, strong (≥1.5) neutral; missing → neutral.
+const pfTone = (n) => (n == null ? "text-zinc-400" : n < 1 ? "text-red-400/80" : n < 1.5 ? "text-amber-400" : "text-zinc-400");
+const PF_TITLE = "Profit factor = gross profit ÷ gross loss. >1 is profitable; higher is better. “Inf” means no losing trades.";
 
 // ----------------------------------------------------------------------------
 // Hero scoreboard
@@ -58,7 +63,7 @@ const Hero = ({ d, mode, setMode }) => {
     { k: "Win rate", v: pct(s.winRate),
       sub: hasCost ? `+${fmt(s.avgNetWin, 0)} / ${fmt(s.avgNetLoss, 0)} avg · net`
                    : `+${fmt(s.avgWin, 0)} / ${fmt(s.avgLoss, 0)} avg` },
-    { k: "Profit factor", v: s.profitFactor ?? "∞", sub: `Sharpe ${s.perTradeSharpe} · DD ${fmtSigned(s.maxDrawdown, 0)}` },
+    { k: "Profit factor", v: pf(s.profitFactor), title: PF_TITLE, sub: `Sharpe ${s.perTradeSharpe} · DD ${fmtSigned(s.maxDrawdown, 0)}` },
   ];
   return (
     <Card padding={false}>
@@ -86,7 +91,7 @@ const Hero = ({ d, mode, setMode }) => {
       </div>
       <div className="grid grid-cols-2 lg:grid-cols-4 divide-x divide-[#1c1d22]">
         {stats.map((m) => (
-          <div key={m.k} className="p-4">
+          <div key={m.k} className="p-4" title={m.title}>
             <div className="text-[9px] uppercase tracking-[0.16em] text-zinc-500">{m.k}</div>
             <div className={`text-2xl font-semibold tabular-nums mt-1 ${m.color || "text-zinc-100"}`}>{m.v}</div>
             <div className="text-[10px] text-zinc-600 mt-0.5">{m.sub}</div>
@@ -161,6 +166,7 @@ const TradeLog = ({ trades, total }) => {
             </tr>
           </thead>
           <tbody>
+            {trades.length === 0 && <tr><td colSpan={9} className="px-3 py-8 text-center text-zinc-600">No trades — run the backtest to populate the log.</td></tr>}
             {trades.map((t, i) => {
               const id = t.structure + t.entryDate + i;
               const isOpen = open === id;
@@ -175,7 +181,7 @@ const TradeLog = ({ trades, total }) => {
                         {t.direction === "LONG" ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}{t.direction}
                       </span>
                     </td>
-                    <td className="px-2 py-2 text-right font-mono text-zinc-400 tabular-nums">{fmtSigned(t.entryZ, 2)}</td>
+                    <td className="px-2 py-2 text-right font-mono text-zinc-400 tabular-nums">{fmtSigned(t.entryZ, 2)}σ</td>
                     <td className="px-2 py-2 text-right font-mono text-zinc-500 tabular-nums">{t.holdLabel || `${t.holdDays}d`}</td>
                     <td className="px-2 py-2 text-zinc-500 whitespace-nowrap">{t.regime || "—"}</td>
                     <td className="px-2 py-2 text-zinc-500 whitespace-nowrap">{t.exitReason}</td>
@@ -192,7 +198,7 @@ const TradeLog = ({ trades, total }) => {
                         <div className="flex flex-wrap gap-x-5 gap-y-1 text-[10px] font-mono text-zinc-500">
                           <span>spread {t.entrySpread} → {t.exitSpread}</span>
                           <span>fair value {t.fairValue}</span>
-                          <span>z {fmtSigned(t.entryZ, 2)} → {fmtSigned(t.exitZ, 2)}</span>
+                          <span>z {fmtSigned(t.entryZ, 2)}σ → {fmtSigned(t.exitZ, 2)}σ</span>
                           <span>held {t.holdLabel || `${t.holdDays} days`}</span>
                           <span>MAE/MFE {fmtSigned(t.mae, 0)} / {fmtSigned(t.mfe, 0)}</span>
                           {t.cost > 0 && <span>cost {fmt(t.cost, 0)} · net {fmtSigned(t.netPnl, 0)}</span>}
@@ -242,7 +248,7 @@ const Breakdown = ({ byStructure, byRegime }) => {
                   <td className="px-2 py-2 text-right font-mono text-zinc-400 tabular-nums">{s.trades}</td>
                   <td className="px-2 py-2 text-right font-mono text-zinc-400 tabular-nums">{pct(s.winRate)}</td>
                   <td className={`px-2 py-2 text-right font-mono tabular-nums ${pnlColor(s.pnl)}`}>{fmtSigned(s.pnl, 0)}</td>
-                  <td className={`px-2 py-2 text-right font-mono tabular-nums ${s.profitFactor && s.profitFactor < 1 ? "text-red-400/80" : "text-zinc-400"}`}>{s.profitFactor ?? "∞"}</td>
+                  <td className={`px-2 py-2 text-right font-mono tabular-nums ${pfTone(s.profitFactor)}`} title={PF_TITLE}>{pf(s.profitFactor)}</td>
                   <td className="px-3 py-2 text-right font-mono text-emerald-400/70 tabular-nums">{s.histHitRate != null ? pct(s.histHitRate) : "—"}</td>
                 </tr>
               ))}
@@ -274,7 +280,7 @@ const Breakdown = ({ byStructure, byRegime }) => {
                   <td className="px-2 py-2 text-right font-mono text-zinc-400 tabular-nums">{s.trades}</td>
                   <td className="px-2 py-2 text-right font-mono text-zinc-400 tabular-nums">{pct(s.winRate)}</td>
                   <td className={`px-2 py-2 text-right font-mono tabular-nums ${pnlColor(s.pnl)}`}>{fmtSigned(s.pnl, 0)}</td>
-                  <td className={`px-3 py-2 text-right font-mono tabular-nums ${s.profitFactor && s.profitFactor < 1 ? "text-red-400/80" : "text-zinc-400"}`}>{s.profitFactor ?? "∞"}</td>
+                  <td className={`px-3 py-2 text-right font-mono tabular-nums ${pfTone(s.profitFactor)}`} title={PF_TITLE}>{pf(s.profitFactor)}</td>
                 </tr>
               ))}
             </tbody>

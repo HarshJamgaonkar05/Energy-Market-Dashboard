@@ -2,7 +2,7 @@ import {
   LineChart, Line, AreaChart, Area, Bar, ComposedChart, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine,
 } from "recharts";
 import { ResponsiveContainer } from "../lib/ResponsiveContainer";
-import { TrendingUp, Anchor, CloudSnow, Wind, Gauge, Activity } from "lucide-react";
+import { TrendingUp, Anchor, CloudSnow, Wind, Gauge, Activity, CheckCircle2 } from "lucide-react";
 import { Card } from "../components/primitives/Card";
 import { Band } from "../components/primitives/Band";
 import { SectionTitle } from "../components/primitives/SectionTitle";
@@ -79,8 +79,8 @@ export const PageDrivers = () => {
   const quotas = opecData.quotas || OPEC_QUOTAS;
   const opecTotal = opecData.total || OPEC_TOTAL;
   const opecComp = opecData.compliance ?? OPEC_FALLBACK.compliance;
-  const compTone = (c) => (c >= 99.5 ? "#10b981" : c >= 97 ? "#f59e0b" : "#ef4444");
-  const memberComp = (m) => +((m.quota / m.prod) * 100).toFixed(1);
+  const compTone = (c) => (!Number.isFinite(c) ? "#71717a" : c >= 99.5 ? "#10b981" : c >= 97 ? "#f59e0b" : "#ef4444");
+  const memberComp = (m) => (m?.prod ? +((m.quota / m.prod) * 100).toFixed(1) : NaN);
 
   const crudeStk = (inv.heroes || []).find((h) => h.sym === "US CRUDE");
 
@@ -226,7 +226,7 @@ export const PageDrivers = () => {
                   <span className={`font-mono text-[11px] text-right py-1 border-t border-[#15161a] ${delta > 0 ? "text-red-400" : "text-emerald-400"}`}>{fmtSigned(delta)}</span>
                   <div className="flex items-center gap-2 py-1 border-t border-[#15161a]">
                     <div className="flex-1 h-1.5 bg-[#15161a]">
-                      <div className="h-full" style={{ width: `${Math.min(comp, 100)}%`, background: c, opacity: 0.7 }} />
+                      <div className="h-full" style={{ width: `${Math.min(Math.max(0, comp || 0), 100)}%`, background: c, opacity: 0.7 }} />
                     </div>
                     <span className="font-mono text-[10px] w-12 text-right" style={{ color: c }}>
                       <Sourced source="derived" note="Compliance = target ÷ output × 100" align="end">{fmt(comp, 1)}%</Sourced>
@@ -333,9 +333,9 @@ export const PageDrivers = () => {
             <Card>
               <SectionTitle sub={storms.length ? `${storms.length} active` : "Atlantic · E/C Pacific"} action={<SourceTag live={stormsLive} source="noaa" note="NOAA National Hurricane Center — active tropical cyclones (Atlantic + East/Central Pacific basins)." />}>Storm Tracker</SectionTitle>
               {storms.length === 0 ? (
-                <div className="flex flex-col items-center justify-center gap-1 py-6 text-center">
-                  <Wind size={16} className="text-zinc-600" />
-                  <span className="text-[11px] text-zinc-400">No active tropical cyclones</span>
+                <div className="flex flex-col items-center justify-center gap-1.5 py-6 text-center">
+                  <CheckCircle2 size={18} className="text-emerald-400" />
+                  <span className="text-[11px] text-emerald-300/90">No active tropical systems</span>
                   <span className="text-[9px] text-zinc-600 uppercase tracking-wider">NOAA NHC · live</span>
                 </div>
               ) : (
