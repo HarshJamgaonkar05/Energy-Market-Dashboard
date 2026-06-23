@@ -108,10 +108,19 @@ export function historicalBacktest() {
   return loadJson("historical_backtest.json");
 }
 
-/** The intraday historical backtest feed: rolling-mean fair value traded over 5
- *  years of 15-min WTI/Brent bars. Written by analytics/historical_intraday.py. */
+/** The intraday historical backtest feed: a regime-parameterized adaptive fair value
+ *  traded over 5 years of 15-min WTI/Brent bars, head-to-head vs a regime-blind control.
+ *  Written by analytics/historical_intraday.py. */
 export function historicalIntraday() {
   return loadJson("historical_intraday.json");
+}
+
+// ---- Shock-absorption study (Phase 3 — regime-aware vs blind through shocks) ----
+/** The consolidated shock study: per-shock-window drawdown & recovery (aware vs blind),
+ *  the synthetic vol×{1.5,2,3}+gap stress curve, and the de-lever evidence. Written by
+ *  analytics/shock_analysis.py. Returns null until it has been run once. */
+export function shockAnalysis() {
+  return loadJson("shock_analysis.json");
 }
 
 // ---- Narrative -------------------------------------------------------------

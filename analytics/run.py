@@ -6,9 +6,10 @@ run.py — run the Phase 2 analytics pipeline end to end.
   models       → server/data/models.json        (regressions)
   backtest     → server/data/backtest.json      (signal validation / hit-rates)
   signals      → server/data/signals.json       (ranked opportunities)
-  historical_backtest → server/data/historical_backtest.json (5y daily trade sim)
-  historical_intraday → server/data/historical_intraday.json (5y intraday trade sim)
-  robustness          → server/data/robustness.json          (per-year/MC/walk-forward stress tests)
+  historical_backtest → server/data/historical_backtest.json (5y daily, regime-driven + blind)
+  historical_intraday → server/data/historical_intraday.json (5y intraday, regime-driven + blind)
+  shock_analysis      → server/data/shock_analysis.json       (shock windows + synthetic stress)
+  robustness          → server/data/robustness.json           (per-year/MC/walk-forward stress tests)
 
 The JSON artifacts land in server/data/ next to history.json, so the Node backend
 serves them with no path juggling. Run after the dataset or EIA data refreshes:
@@ -21,9 +22,10 @@ import sys
 import time
 
 # Stages run in order; later stages are skipped gracefully until they exist.
-# historical_intraday builds a 15-min cache on first run; robustness reads that cache.
+# historical_intraday builds a 15-min cache on first run; shock_analysis re-runs the
+# daily engine under stress; robustness re-runs the intraday engine per-year / Monte-Carlo.
 STAGES = ["build_panel", "regimes", "models", "backtest", "signals",
-          "historical_backtest", "historical_intraday", "robustness"]
+          "historical_backtest", "historical_intraday", "shock_analysis", "robustness"]
 
 
 def main():

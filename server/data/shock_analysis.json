@@ -1,0 +1,965 @@
+{
+ "generatedAt": "2026-06-22T04:59:57Z",
+ "asOf": "2026-05-22",
+ "horizon": "daily",
+ "method": "Shock dates are data-driven (vol jump vs trailing median, or a transition into a high-vol regime). For each, the regime-aware book and the regime-blind control are compared head-to-head on drawdown and recovery; the synthetic stress re-runs both with the shock windows amplified vol\u00d7{1.5,2,3}+gap. Daily engine, out-of-sample.",
+ "base": {
+  "aware": {
+   "sharpe": 0.824,
+   "sortino": 1.208,
+   "calmar": 0.687,
+   "cagr": 0.1473,
+   "maxDrawdown": -54772.45,
+   "maxDrawdownPct": -0.2145,
+   "cvar5": -5719.58,
+   "volAnn": 0.2295,
+   "downDevAnn": 0.1566,
+   "days": 1457
+  },
+  "blind": {
+   "sharpe": 0.384,
+   "sortino": 0.391,
+   "calmar": 0.275,
+   "cagr": 0.1683,
+   "maxDrawdown": -175508.52,
+   "maxDrawdownPct": -0.6111,
+   "cvar5": -15531.99,
+   "volAnn": 0.5889,
+   "downDevAnn": 0.5784,
+   "days": 1457
+  }
+ },
+ "windows": [
+  {
+   "start": "2021-03-11",
+   "kind": "vol_jump",
+   "severity": 0.564,
+   "horizonDays": 20,
+   "aware": {
+    "drawdown": 0.0,
+    "drawdownPct": 0.0,
+    "endPnl": 0.0,
+    "recoveredDays": null
+   },
+   "blind": {
+    "drawdown": 0.0,
+    "drawdownPct": 0.0,
+    "endPnl": 0.0,
+    "recoveredDays": null
+   },
+   "awareDeeperDDavoided": 0.0
+  },
+  {
+   "start": "2021-03-24",
+   "kind": "vol_jump",
+   "severity": 1.803,
+   "horizonDays": 20,
+   "aware": {
+    "drawdown": 0.0,
+    "drawdownPct": 0.0,
+    "endPnl": 0.0,
+    "recoveredDays": null
+   },
+   "blind": {
+    "drawdown": 0.0,
+    "drawdownPct": 0.0,
+    "endPnl": 0.0,
+    "recoveredDays": null
+   },
+   "awareDeeperDDavoided": 0.0
+  },
+  {
+   "start": "2021-04-05",
+   "kind": "vol_jump",
+   "severity": 1.598,
+   "horizonDays": 20,
+   "aware": {
+    "drawdown": 0.0,
+    "drawdownPct": 0.0,
+    "endPnl": 0.0,
+    "recoveredDays": null
+   },
+   "blind": {
+    "drawdown": 0.0,
+    "drawdownPct": 0.0,
+    "endPnl": 0.0,
+    "recoveredDays": null
+   },
+   "awareDeeperDDavoided": 0.0
+  },
+  {
+   "start": "2021-07-21",
+   "kind": "vol_jump",
+   "severity": 0.821,
+   "horizonDays": 20,
+   "aware": {
+    "drawdown": 0.0,
+    "drawdownPct": 0.0,
+    "endPnl": 0.0,
+    "recoveredDays": null
+   },
+   "blind": {
+    "drawdown": 0.0,
+    "drawdownPct": 0.0,
+    "endPnl": 0.0,
+    "recoveredDays": null
+   },
+   "awareDeeperDDavoided": 0.0
+  },
+  {
+   "start": "2021-08-06",
+   "kind": "vol_jump",
+   "severity": 0.734,
+   "horizonDays": 20,
+   "aware": {
+    "drawdown": 0.0,
+    "drawdownPct": 0.0,
+    "endPnl": 0.0,
+    "recoveredDays": null
+   },
+   "blind": {
+    "drawdown": 0.0,
+    "drawdownPct": 0.0,
+    "endPnl": 0.0,
+    "recoveredDays": null
+   },
+   "awareDeeperDDavoided": 0.0
+  },
+  {
+   "start": "2021-11-26",
+   "kind": "vol_jump",
+   "severity": 1.578,
+   "horizonDays": 20,
+   "aware": {
+    "drawdown": 0.0,
+    "drawdownPct": 0.0,
+    "endPnl": 0.0,
+    "recoveredDays": 0
+   },
+   "blind": {
+    "drawdown": -1989.0,
+    "drawdownPct": -0.008,
+    "endPnl": 2285.0,
+    "recoveredDays": 0
+   },
+   "awareDeeperDDavoided": 1989.0
+  },
+  {
+   "start": "2021-12-07",
+   "kind": "vol_jump",
+   "severity": 1.994,
+   "horizonDays": 20,
+   "aware": {
+    "drawdown": 0.0,
+    "drawdownPct": 0.0,
+    "endPnl": 0.0,
+    "recoveredDays": 0
+   },
+   "blind": {
+    "drawdown": -2761.3,
+    "drawdownPct": -0.011,
+    "endPnl": -1062.7,
+    "recoveredDays": null
+   },
+   "awareDeeperDDavoided": 2761.3
+  },
+  {
+   "start": "2021-12-20",
+   "kind": "vol_jump",
+   "severity": 1.21,
+   "horizonDays": 20,
+   "aware": {
+    "drawdown": 0.0,
+    "drawdownPct": 0.0,
+    "endPnl": 0.0,
+    "recoveredDays": 0
+   },
+   "blind": {
+    "drawdown": -2075.6,
+    "drawdownPct": -0.0083,
+    "endPnl": -1583.28,
+    "recoveredDays": null
+   },
+   "awareDeeperDDavoided": 2075.6
+  },
+  {
+   "start": "2022-03-09",
+   "kind": "vol_jump",
+   "severity": 1.471,
+   "horizonDays": 20,
+   "aware": {
+    "drawdown": 0.0,
+    "drawdownPct": 0.0,
+    "endPnl": 0.0,
+    "recoveredDays": 0
+   },
+   "blind": {
+    "drawdown": -97183.17,
+    "drawdownPct": -0.3887,
+    "endPnl": 133401.39,
+    "recoveredDays": 0
+   },
+   "awareDeeperDDavoided": 97183.17
+  },
+  {
+   "start": "2022-03-21",
+   "kind": "vol_jump",
+   "severity": 1.876,
+   "horizonDays": 20,
+   "aware": {
+    "drawdown": 0.0,
+    "drawdownPct": 0.0,
+    "endPnl": 0.0,
+    "recoveredDays": 0
+   },
+   "blind": {
+    "drawdown": -60336.37,
+    "drawdownPct": -0.2413,
+    "endPnl": 25643.52,
+    "recoveredDays": 7
+   },
+   "awareDeeperDDavoided": 60336.37
+  },
+  {
+   "start": "2022-04-01",
+   "kind": "vol_jump",
+   "severity": 0.996,
+   "horizonDays": 20,
+   "aware": {
+    "drawdown": -4231.4,
+    "drawdownPct": -0.0169,
+    "endPnl": -2921.06,
+    "recoveredDays": null
+   },
+   "blind": {
+    "drawdown": -40773.25,
+    "drawdownPct": -0.1631,
+    "endPnl": -16451.85,
+    "recoveredDays": null
+   },
+   "awareDeeperDDavoided": 36541.85
+  },
+  {
+   "start": "2022-04-12",
+   "kind": "regime_to_high",
+   "severity": 0.5,
+   "horizonDays": 20,
+   "aware": {
+    "drawdown": -52908.26,
+    "drawdownPct": -0.2116,
+    "endPnl": -29229.1,
+    "recoveredDays": null
+   },
+   "blind": {
+    "drawdown": -163276.64,
+    "drawdownPct": -0.6531,
+    "endPnl": 23684.84,
+    "recoveredDays": 1
+   },
+   "awareDeeperDDavoided": 110368.38
+  },
+  {
+   "start": "2022-07-05",
+   "kind": "regime_to_high",
+   "severity": 0.5,
+   "horizonDays": 20,
+   "aware": {
+    "drawdown": -518.25,
+    "drawdownPct": -0.0021,
+    "endPnl": 1293.22,
+    "recoveredDays": 4
+   },
+   "blind": {
+    "drawdown": -10410.6,
+    "drawdownPct": -0.0416,
+    "endPnl": 3135.6,
+    "recoveredDays": 10
+   },
+   "awareDeeperDDavoided": 9892.35
+  },
+  {
+   "start": "2022-07-23",
+   "kind": "vol_jump",
+   "severity": 0.566,
+   "horizonDays": 20,
+   "aware": {
+    "drawdown": -908.95,
+    "drawdownPct": -0.0036,
+    "endPnl": 918.58,
+    "recoveredDays": 1
+   },
+   "blind": {
+    "drawdown": -3635.8,
+    "drawdownPct": -0.0145,
+    "endPnl": 6937.9,
+    "recoveredDays": 0
+   },
+   "awareDeeperDDavoided": 2726.85
+  },
+  {
+   "start": "2023-10-13",
+   "kind": "vol_jump",
+   "severity": 0.834,
+   "horizonDays": 20,
+   "aware": {
+    "drawdown": 0.0,
+    "drawdownPct": 0.0,
+    "endPnl": 0.0,
+    "recoveredDays": 0
+   },
+   "blind": {
+    "drawdown": -5974.8,
+    "drawdownPct": -0.0239,
+    "endPnl": 6040.2,
+    "recoveredDays": 0
+   },
+   "awareDeeperDDavoided": 5974.8
+  },
+  {
+   "start": "2023-10-27",
+   "kind": "vol_jump",
+   "severity": 0.933,
+   "horizonDays": 20,
+   "aware": {
+    "drawdown": 0.0,
+    "drawdownPct": 0.0,
+    "endPnl": 904.79,
+    "recoveredDays": 0
+   },
+   "blind": {
+    "drawdown": -5974.8,
+    "drawdownPct": -0.0239,
+    "endPnl": 4006.1,
+    "recoveredDays": 1
+   },
+   "awareDeeperDDavoided": 5974.8
+  },
+  {
+   "start": "2024-08-12",
+   "kind": "vol_jump",
+   "severity": 0.579,
+   "horizonDays": 20,
+   "aware": {
+    "drawdown": 0.0,
+    "drawdownPct": 0.0,
+    "endPnl": 0.0,
+    "recoveredDays": 0
+   },
+   "blind": {
+    "drawdown": -12839.01,
+    "drawdownPct": -0.0514,
+    "endPnl": -3471.72,
+    "recoveredDays": null
+   },
+   "awareDeeperDDavoided": 12839.01
+  },
+  {
+   "start": "2025-04-04",
+   "kind": "vol_jump",
+   "severity": 0.677,
+   "horizonDays": 20,
+   "aware": {
+    "drawdown": -155.69,
+    "drawdownPct": -0.0006,
+    "endPnl": -155.69,
+    "recoveredDays": null
+   },
+   "blind": {
+    "drawdown": -5485.05,
+    "drawdownPct": -0.0219,
+    "endPnl": 7605.65,
+    "recoveredDays": 1
+   },
+   "awareDeeperDDavoided": 5329.36
+  },
+  {
+   "start": "2025-04-17",
+   "kind": "vol_jump",
+   "severity": 1.224,
+   "horizonDays": 20,
+   "aware": {
+    "drawdown": 0.0,
+    "drawdownPct": 0.0,
+    "endPnl": 0.0,
+    "recoveredDays": 0
+   },
+   "blind": {
+    "drawdown": -1793.27,
+    "drawdownPct": -0.0072,
+    "endPnl": 5349.18,
+    "recoveredDays": 3
+   },
+   "awareDeeperDDavoided": 1793.27
+  },
+  {
+   "start": "2025-04-28",
+   "kind": "vol_jump",
+   "severity": 0.819,
+   "horizonDays": 20,
+   "aware": {
+    "drawdown": 0.0,
+    "drawdownPct": 0.0,
+    "endPnl": 0.0,
+    "recoveredDays": 0
+   },
+   "blind": {
+    "drawdown": -1408.0,
+    "drawdownPct": -0.0056,
+    "endPnl": 593.8,
+    "recoveredDays": 0
+   },
+   "awareDeeperDDavoided": 1408.0
+  },
+  {
+   "start": "2025-06-24",
+   "kind": "vol_jump",
+   "severity": 0.73,
+   "horizonDays": 20,
+   "aware": {
+    "drawdown": -274.99,
+    "drawdownPct": -0.0011,
+    "endPnl": 1666.67,
+    "recoveredDays": 1
+   },
+   "blind": {
+    "drawdown": -1306.89,
+    "drawdownPct": -0.0052,
+    "endPnl": 6459.73,
+    "recoveredDays": 1
+   },
+   "awareDeeperDDavoided": 1031.9
+  },
+  {
+   "start": "2025-07-07",
+   "kind": "vol_jump",
+   "severity": 0.638,
+   "horizonDays": 20,
+   "aware": {
+    "drawdown": -1026.44,
+    "drawdownPct": -0.0041,
+    "endPnl": 13155.93,
+    "recoveredDays": 0
+   },
+   "blind": {
+    "drawdown": -1306.89,
+    "drawdownPct": -0.0052,
+    "endPnl": 6459.73,
+    "recoveredDays": 1
+   },
+   "awareDeeperDDavoided": 280.45
+  },
+  {
+   "start": "2026-01-23",
+   "kind": "vol_jump",
+   "severity": 0.504,
+   "horizonDays": 20,
+   "aware": {
+    "drawdown": -1177.42,
+    "drawdownPct": -0.0047,
+    "endPnl": 2396.75,
+    "recoveredDays": 1
+   },
+   "blind": {
+    "drawdown": -4896.3,
+    "drawdownPct": -0.0196,
+    "endPnl": 11623.9,
+    "recoveredDays": 1
+   },
+   "awareDeeperDDavoided": 3718.88
+  },
+  {
+   "start": "2026-02-04",
+   "kind": "vol_jump",
+   "severity": 0.707,
+   "horizonDays": 20,
+   "aware": {
+    "drawdown": -4252.34,
+    "drawdownPct": -0.017,
+    "endPnl": -3886.64,
+    "recoveredDays": null
+   },
+   "blind": {
+    "drawdown": -18938.9,
+    "drawdownPct": -0.0758,
+    "endPnl": -13161.4,
+    "recoveredDays": null
+   },
+   "awareDeeperDDavoided": 14686.56
+  },
+  {
+   "start": "2026-02-18",
+   "kind": "vol_jump",
+   "severity": 0.628,
+   "horizonDays": 20,
+   "aware": {
+    "drawdown": -6585.2,
+    "drawdownPct": -0.0263,
+    "endPnl": -1714.42,
+    "recoveredDays": null
+   },
+   "blind": {
+    "drawdown": -67686.88,
+    "drawdownPct": -0.2707,
+    "endPnl": -42625.84,
+    "recoveredDays": 3
+   },
+   "awareDeeperDDavoided": 61101.68
+  },
+  {
+   "start": "2026-03-12",
+   "kind": "vol_jump",
+   "severity": 1.01,
+   "horizonDays": 20,
+   "aware": {
+    "drawdown": 0.0,
+    "drawdownPct": 0.0,
+    "endPnl": 0.0,
+    "recoveredDays": 0
+   },
+   "blind": {
+    "drawdown": -95680.09,
+    "drawdownPct": -0.3827,
+    "endPnl": -49619.36,
+    "recoveredDays": null
+   },
+   "awareDeeperDDavoided": 95680.09
+  },
+  {
+   "start": "2026-03-23",
+   "kind": "vol_jump",
+   "severity": 1.372,
+   "horizonDays": 20,
+   "aware": {
+    "drawdown": -94.75,
+    "drawdownPct": -0.0004,
+    "endPnl": -94.75,
+    "recoveredDays": null
+   },
+   "blind": {
+    "drawdown": -69849.14,
+    "drawdownPct": -0.2794,
+    "endPnl": 126228.6,
+    "recoveredDays": 0
+   },
+   "awareDeeperDDavoided": 69754.39
+  },
+  {
+   "start": "2026-04-09",
+   "kind": "vol_jump",
+   "severity": 1.292,
+   "horizonDays": 20,
+   "aware": {
+    "drawdown": -5955.4,
+    "drawdownPct": -0.0238,
+    "endPnl": 2019.7,
+    "recoveredDays": 2
+   },
+   "blind": {
+    "drawdown": -57721.53,
+    "drawdownPct": -0.2309,
+    "endPnl": 42969.05,
+    "recoveredDays": 0
+   },
+   "awareDeeperDDavoided": 51766.13
+  }
+ ],
+ "windowSummary": {
+  "count": 28,
+  "avgAwareDD": -2788.9,
+  "avgBlindDD": -26189.4,
+  "awareShallowerPct": 1.0
+ },
+ "stress": [
+  {
+   "factor": 1.0,
+   "aware": {
+    "sharpe": 0.824,
+    "sortino": 1.208,
+    "calmar": 0.687,
+    "cagr": 0.1473,
+    "maxDrawdown": -54772.45,
+    "maxDrawdownPct": -0.2145,
+    "cvar5": -5719.58,
+    "volAnn": 0.2295,
+    "downDevAnn": 0.1566,
+    "days": 1457
+   },
+   "blind": {
+    "sharpe": 0.384,
+    "sortino": 0.391,
+    "calmar": 0.275,
+    "cagr": 0.1683,
+    "maxDrawdown": -175508.52,
+    "maxDrawdownPct": -0.6111,
+    "cvar5": -15531.99,
+    "volAnn": 0.5889,
+    "downDevAnn": 0.5784,
+    "days": 1457
+   },
+   "ddRatioAwareVsBlind": 0.312
+  },
+  {
+   "factor": 1.5,
+   "aware": {
+    "sharpe": 0.747,
+    "sortino": 0.843,
+    "calmar": 0.364,
+    "cagr": 0.1636,
+    "maxDrawdown": -115142.22,
+    "maxDrawdownPct": -0.4493,
+    "cvar5": -7255.02,
+    "volAnn": 0.2915,
+    "downDevAnn": 0.2583,
+    "days": 1457
+   },
+   "blind": {
+    "sharpe": 1.214,
+    "sortino": 1.077,
+    "calmar": 3.198,
+    "cagr": 0.6319,
+    "maxDrawdown": -560359.21,
+    "maxDrawdownPct": -0.1976,
+    "cvar5": -27560.44,
+    "volAnn": 1.8409,
+    "downDevAnn": 2.0744,
+    "days": 1457
+   },
+   "ddRatioAwareVsBlind": 0.205
+  },
+  {
+   "factor": 2.0,
+   "aware": {
+    "sharpe": 0.885,
+    "sortino": 0.957,
+    "calmar": 0.539,
+    "cagr": 0.2098,
+    "maxDrawdown": -121669.15,
+    "maxDrawdownPct": -0.3892,
+    "cvar5": -7929.42,
+    "volAnn": 0.3488,
+    "downDevAnn": 0.3223,
+    "days": 1457
+   },
+   "blind": {
+    "sharpe": 1.063,
+    "sortino": 0.678,
+    "calmar": 3.064,
+    "cagr": 0.724,
+    "maxDrawdown": -911513.25,
+    "maxDrawdownPct": -0.2363,
+    "cvar5": -46163.39,
+    "volAnn": 2.8802,
+    "downDevAnn": 4.5182,
+    "days": 1457
+   },
+   "ddRatioAwareVsBlind": 0.133
+  },
+  {
+   "factor": 3.0,
+   "aware": {
+    "sharpe": 0.731,
+    "sortino": 1.379,
+    "calmar": 0.752,
+    "cagr": 0.2756,
+    "maxDrawdown": -94277.62,
+    "maxDrawdownPct": -0.3666,
+    "cvar5": -8039.64,
+    "volAnn": 0.6394,
+    "downDevAnn": 0.3388,
+    "days": 1457
+   },
+   "blind": {
+    "sharpe": 0.796,
+    "sortino": 0.412,
+    "calmar": 2.684,
+    "cagr": 0.8703,
+    "maxDrawdown": -1947108.86,
+    "maxDrawdownPct": -0.3242,
+    "cvar5": -106333.13,
+    "volAnn": 6.0788,
+    "downDevAnn": 11.7569,
+    "days": 1457
+   },
+   "ddRatioAwareVsBlind": 0.048
+  }
+ ],
+ "deLeverDuringWorstShock": {
+  "window": "2021-03-11",
+  "worstShock": "2021-12-07",
+  "series": [
+   {
+    "t": "2021-11-29",
+    "size": 0.556,
+    "severity": 0.444
+   },
+   {
+    "t": "2021-11-30",
+    "size": 0.556,
+    "severity": 0.444
+   },
+   {
+    "t": "2021-12-01",
+    "size": 0.079,
+    "severity": 0.628
+   },
+   {
+    "t": "2021-12-02",
+    "size": 0.112,
+    "severity": 0.472
+   },
+   {
+    "t": "2021-12-03",
+    "size": 0.118,
+    "severity": 0.444
+   },
+   {
+    "t": "2021-12-04",
+    "size": 0.0,
+    "severity": 1.0
+   },
+   {
+    "t": "2021-12-06",
+    "size": 0.118,
+    "severity": 0.445
+   },
+   {
+    "t": "2021-12-07",
+    "size": 0.094,
+    "severity": 0.556
+   },
+   {
+    "t": "2021-12-08",
+    "size": 0.094,
+    "severity": 0.556
+   },
+   {
+    "t": "2021-12-09",
+    "size": 0.094,
+    "severity": 0.556
+   },
+   {
+    "t": "2021-12-10",
+    "size": 0.094,
+    "severity": 0.556
+   },
+   {
+    "t": "2021-12-11",
+    "size": 0.0,
+    "severity": 1.0
+   },
+   {
+    "t": "2021-12-13",
+    "size": 0.094,
+    "severity": 0.556
+   },
+   {
+    "t": "2021-12-14",
+    "size": 0.094,
+    "severity": 0.556
+   },
+   {
+    "t": "2021-12-15",
+    "size": 0.099,
+    "severity": 0.532
+   },
+   {
+    "t": "2021-12-16",
+    "size": 0.103,
+    "severity": 0.514
+   },
+   {
+    "t": "2021-12-17",
+    "size": 0.098,
+    "severity": 0.538
+   },
+   {
+    "t": "2021-12-18",
+    "size": 0.0,
+    "severity": 1.0
+   },
+   {
+    "t": "2021-12-20",
+    "size": 0.104,
+    "severity": 0.512
+   },
+   {
+    "t": "2021-12-21",
+    "size": 0.278,
+    "severity": 0.43
+   },
+   {
+    "t": "2021-12-22",
+    "size": 0.337,
+    "severity": 0.316
+   },
+   {
+    "t": "2021-12-23",
+    "size": 0.185,
+    "severity": 0.69
+   },
+   {
+    "t": "2021-12-24",
+    "size": 0.215,
+    "severity": 0.626
+   },
+   {
+    "t": "2021-12-27",
+    "size": 0.355,
+    "severity": 0.391
+   },
+   {
+    "t": "2021-12-28",
+    "size": 0.58,
+    "severity": 0.092
+   },
+   {
+    "t": "2021-12-29",
+    "size": 0.447,
+    "severity": 0.081
+   },
+   {
+    "t": "2021-12-30",
+    "size": 0.453,
+    "severity": 0.047
+   },
+   {
+    "t": "2021-12-31",
+    "size": 0.477,
+    "severity": 0.006
+   },
+   {
+    "t": "2022-01-01",
+    "size": 0.526,
+    "severity": 0.0
+   },
+   {
+    "t": "2022-01-03",
+    "size": 0.48,
+    "severity": 0.0
+   },
+   {
+    "t": "2022-01-04",
+    "size": 0.485,
+    "severity": 0.0
+   },
+   {
+    "t": "2022-01-05",
+    "size": 0.489,
+    "severity": 0.0
+   },
+   {
+    "t": "2022-01-06",
+    "size": 0.436,
+    "severity": 0.069
+   },
+   {
+    "t": "2022-01-07",
+    "size": 0.477,
+    "severity": 0.0
+   },
+   {
+    "t": "2022-01-08",
+    "size": 0.503,
+    "severity": 0.0
+   },
+   {
+    "t": "2022-01-10",
+    "size": 0.447,
+    "severity": 0.048
+   },
+   {
+    "t": "2022-01-11",
+    "size": 0.467,
+    "severity": 0.0
+   },
+   {
+    "t": "2022-01-12",
+    "size": 0.402,
+    "severity": 0.111
+   },
+   {
+    "t": "2022-01-13",
+    "size": 0.786,
+    "severity": 0.111
+   },
+   {
+    "t": "2022-01-14",
+    "size": 0.787,
+    "severity": 0.111
+   },
+   {
+    "t": "2022-01-15",
+    "size": 0.917,
+    "severity": 0.0
+   }
+  ]
+ },
+ "attribution": {
+  "awareByRegime": {
+   "Balanced \u00b7 High Vol": {
+    "trades": 4,
+    "wins": 2,
+    "winRate": 0.5,
+    "pnl": -1034.47,
+    "profitFactor": 0.758,
+    "avgSize": 0.25
+   },
+   "Balanced \u00b7 Low Vol": {
+    "trades": 85,
+    "wins": 49,
+    "winRate": 0.576,
+    "pnl": 186082.78,
+    "profitFactor": 3.042,
+    "avgSize": 1.14
+   },
+   "Balanced \u00b7 Normal Vol": {
+    "trades": 16,
+    "wins": 9,
+    "winRate": 0.562,
+    "pnl": 11651.0,
+    "profitFactor": 1.563,
+    "avgSize": 0.36
+   },
+   "Oversupplied \u00b7 Low Vol": {
+    "trades": 20,
+    "wins": 9,
+    "winRate": 0.45,
+    "pnl": -650.56,
+    "profitFactor": 0.972,
+    "avgSize": 1.18
+   },
+   "Oversupplied \u00b7 Normal Vol": {
+    "trades": 1,
+    "wins": 0,
+    "winRate": 0.0,
+    "pnl": -2248.77,
+    "profitFactor": 0.0,
+    "avgSize": 0.39
+   },
+   "Tight \u00b7 High Vol": {
+    "trades": 5,
+    "wins": 3,
+    "winRate": 0.6,
+    "pnl": -15641.14,
+    "profitFactor": 0.146,
+    "avgSize": 0.25
+   },
+   "Tight \u00b7 Low Vol": {
+    "trades": 96,
+    "wins": 59,
+    "winRate": 0.615,
+    "pnl": 97654.57,
+    "profitFactor": 2.079,
+    "avgSize": 1.03
+   },
+   "Tight \u00b7 Normal Vol": {
+    "trades": 37,
+    "wins": 19,
+    "winRate": 0.514,
+    "pnl": -2298.55,
+    "profitFactor": 0.951,
+    "avgSize": 0.36
+   }
+  }
+ }
+}

@@ -16,7 +16,7 @@ dotenv.config({ path: join(__dirname, ".env") });
 
 import { instruments, ticker, movers, seriesAndCorrelation, cracks, crackHistory, forwardCurves, interSpreads, macro } from "./compute/markets.js";
 import { calendar, opec, freight, rigs, sentiment } from "./compute/derive.js";
-import { currentRegime, regimeCatalog, regimeHistory, regressionList, regression, signals, buildNarrative, signalEngine, historicalBacktest, historicalIntraday } from "./compute/regime.js";
+import { currentRegime, regimeCatalog, regimeHistory, regressionList, regression, signals, buildNarrative, signalEngine, historicalBacktest, historicalIntraday, shockAnalysis } from "./compute/regime.js";
 import * as eia from "./sources/eia.js";
 import { weather, tempForecast } from "./sources/openmeteo.js";
 import { storms, enso } from "./sources/noaa.js";
@@ -108,6 +108,9 @@ app.get("/api/signals", route(() => signals(), "/api/signals"));
 app.get("/api/signal-engine", route(() => signalEngine(), "/api/signal-engine"));
 app.get("/api/historical-backtest", route(() => historicalBacktest(), "/api/historical-backtest"));
 app.get("/api/historical-intraday", route(() => historicalIntraday(), "/api/historical-intraday"));
+// Shock-absorption study — per-shock-window drawdown/recovery (regime-aware vs blind) +
+// the synthetic vol-stress curve. Backs the Historical Backtest page's shock section.
+app.get("/api/shock-analysis", route(() => shockAnalysis(), "/api/shock-analysis"));
 // Market-narrative briefing — fuses the regime, the top signal and the biggest
 // live mover into one headline for the Dashboard.
 app.get("/api/narrative", route(async () => buildNarrative(movers(await instruments())), "/api/narrative"));

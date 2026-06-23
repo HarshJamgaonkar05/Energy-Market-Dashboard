@@ -1,13 +1,23 @@
 import { useState } from "react";
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine } from "recharts";
+import { AreaChart, Area, ComposedChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine } from "recharts";
 import { ResponsiveContainer } from "../lib/ResponsiveContainer";
-import { TrendingUp, Layers, ListChecks, ChevronDown, Circle, ArrowUpRight, ArrowDownRight, Download, Award } from "lucide-react";
+import { TrendingUp, Layers, ListChecks, ChevronDown, Circle, ArrowUpRight, ArrowDownRight, Download, Award, Shield, Activity } from "lucide-react";
 import { Card } from "../components/primitives/Card";
 import { Band } from "../components/primitives/Band";
 import { SourceTag } from "../components/primitives/SourceTag";
 import { chartProps, ChartTooltip } from "../lib/chart-theme";
 import { useLive } from "../lib/useLive";
 import { fmt, fmtSigned } from "../lib/format";
+
+const usdK = (n) => {
+  if (n == null || Number.isNaN(Number(n))) return "—";
+  const a = Math.abs(n), s = n < 0 ? "-" : "";
+  if (a >= 1e6) return `${s}$${(a / 1e6).toFixed(2)}M`;
+  if (a >= 1e3) return `${s}$${Math.round(a / 1e3)}k`;
+  return `${s}$${Math.round(a)}`;
+};
+const num = (n, d = 2) => (n == null || Number.isNaN(Number(n)) ? "—" : Number(n).toFixed(d));
+const pctOf = (n, d = 0) => (n == null || Number.isNaN(Number(n)) ? "—" : `${(n * 100).toFixed(d)}%`);
 
 // ----------------------------------------------------------------------------
 // Strategy Backtest — the Phase-2 relative-value mean-reversion strategy run
@@ -17,12 +27,14 @@ import { fmt, fmtSigned } from "../lib/format";
 
 const FALLBACK = {
   generatedAt: "—", mode: "local", live: false, firstBar: "—", lastBar: "—", bars: 0,
-  regime: "—", strategy: { name: "Regime-conditioned RV mean-reversion", params: {} },
+  regime: "—", strategy: { name: "Regime-driven RV mean-reversion", params: {} },
   summary: { trades: 0, grossPnl: 0, netPnl: 0, costs: 0, winRate: 0, avgWin: 0, avgLoss: 0,
     profitFactor: null, expectancy: 0, netExpectancy: 0, avgNetWin: 0, avgNetLoss: 0,
-    perTradeSharpe: 0, avgHoldMin: 0, maxDrawdown: 0,
+    perTradeSharpe: 0, avgHoldMin: 0, maxDrawdown: 0, sharpe: 0, calmar: null, cvar5: 0,
+    maxDrawdownPct: 0, pctTimeInMarket: 0, avgSize: 1,
     endingEquity: 250000, initialCapital: 250000, byExitReason: {}, byDirection: {} },
-  byStructure: {}, equityCurve: [], trades: [], openPositions: [], openCount: 0,
+  blind: { summary: {}, equityCurve: [] }, comparison: {}, sizingSeries: [],
+  byStructure: {}, equityCurve: [], equityCurveBlind: [], trades: [], openPositions: [], openCount: 0,
 };
 
 const regimeText = (r) => (typeof r === "string" ? r : r?.label ?? "—");
@@ -78,15 +90,13 @@ const ProvenStrip = ({ ctx }) => {
 const Hero = ({ d, live, stale }) => {
   const s = d.summary;
   const hasCost = (s.costs || 0) > 0;
+  // Risk-led (gross is the by-product). NB the live window is a few days — the 5-year proven
+  // strip below carries the statistical weight; these are a small live demo.
   const stats = [
-    { k: "Trades", v: s.trades, sub: `${d.openCount} still open` },
-    { k: "Gross P&L", v: fmtSigned(s.grossPnl, 0),
-      sub: hasCost ? `net ${fmtSigned(s.netPnl, 0)} after costs` : `exp ${fmtSigned(s.expectancy, 0)}/trade`,
-      color: pnlColor(s.grossPnl) },
-    { k: "Win rate", v: pct(s.winRate),
-      sub: hasCost ? `+${fmt(s.avgNetWin, 0)} / ${fmt(s.avgNetLoss, 0)} avg · net`
-                   : `+${fmt(s.avgWin, 0)} / ${fmt(s.avgLoss, 0)} avg` },
-    { k: "Profit factor", v: pf(s.profitFactor), title: PF_TITLE, sub: `Sharpe ${s.perTradeSharpe} · max DD ${fmtSigned(s.maxDrawdown, 0)}` },
+    { k: "Sharpe", v: num(s.sharpe, 2), sub: `${fmt(s.trades, 0)} trades · ${d.openCount} open` },
+    { k: "Max drawdown", v: usdK(s.maxDrawdown), sub: `${pctOf(s.maxDrawdownPct)} · MTM` },
+    { k: "Tail · CVaR 5%", v: usdK(s.cvar5), sub: `${pct(s.winRate)} win` },
+    { k: "Net P&L", v: usdK(s.netPnl), sub: "few-day live demo", color: pnlColor(s.netPnl) },
   ];
   return (
     <Card padding={false}>
@@ -305,6 +315,91 @@ const Bottom = ({ byStructure, openPositions }) => {
   );
 };
 
+// ----------------------------------------------------------------------------
+// Risk strip — lead with risk + the regime-aware vs regime-blind head-to-head.
+// ----------------------------------------------------------------------------
+const RiskStrip = ({ s, cmp }) => {
+  const has = cmp && Object.keys(cmp).length > 0;
+  const stats = [
+    { k: "Sharpe", v: num(s.sharpe, 2) },
+    { k: "Max DD", v: usdK(s.maxDrawdown), sub: s.maxDrawdownPct ? `${(s.maxDrawdownPct * 100).toFixed(1)}%` : null },
+    { k: "CVaR 5%", v: usdK(s.cvar5) },
+    { k: "Time in mkt", v: pctOf(s.pctTimeInMarket) },
+    { k: "Avg size", v: `${num(s.avgSize, 2)}×` },
+  ];
+  const cmpRows = [["Sharpe", "sharpe", (v) => num(v, 2), true], ["Max DD", "maxDrawdown", usdK, true],
+    ["CVaR 5%", "cvar5", usdK, true], ["Net P&L", "netPnl", usdK, null]];
+  return (
+    <Card padding={false}>
+      <div className="px-4 py-2.5 border-b border-[#1c1d22] flex items-center gap-2">
+        <Shield size={13} className="text-amber-400" />
+        <span className="text-[11px] uppercase tracking-[0.14em] text-zinc-300">Risk profile</span>
+        <span className="text-[10px] text-zinc-600 normal-case">· this few-day live window — the 5-year backtest above is the proven result</span>
+      </div>
+      <div className="grid grid-cols-3 md:grid-cols-5 divide-x divide-[#1c1d22]">
+        {stats.map((m) => (
+          <div key={m.k} className="p-3">
+            <div className="text-[9px] uppercase tracking-[0.16em] text-zinc-500">{m.k}</div>
+            <div className="text-lg font-semibold tabular-nums mt-0.5 text-zinc-100">{m.v}</div>
+            {m.sub && <div className="text-[10px] text-zinc-600">{m.sub}</div>}
+          </div>
+        ))}
+      </div>
+      {has && (
+        <div className="border-t border-[#1c1d22] flex flex-wrap divide-x divide-[#1c1d22]">
+          {cmpRows.map(([label, key, f, betterHigher]) => {
+            const a = cmp[key]?.aware, b = cmp[key]?.blind;
+            const win = betterHigher && a != null && b != null ? a > b : null;
+            return (
+              <div key={key} className="flex-1 min-w-[140px] px-3 py-2">
+                <div className="text-[9px] uppercase tracking-[0.14em] text-zinc-500">{label} · aware vs blind</div>
+                <div className="text-[12px] font-mono tabular-nums">
+                  <span className={win === true ? "text-emerald-400" : "text-zinc-200"}>{f(a)}</span>
+                  <span className="text-zinc-600"> / </span>
+                  <span className={win === false ? "text-emerald-400" : "text-zinc-500"}>{f(b)}</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </Card>
+  );
+};
+
+const SizingChart = ({ series }) => {
+  if (!series || series.length < 2) return null;
+  const data = series.map((p, i) => ({ ...p, i }));
+  return (
+    <Card padding={false}>
+      <div className="px-4 py-2.5 border-b border-[#1c1d22] flex items-center gap-2">
+        <Activity size={13} className="text-amber-400" />
+        <span className="text-[11px] uppercase tracking-[0.14em] text-zinc-400">Vol-target &amp; shock sizing</span>
+        <span className="text-[10px] text-zinc-600 normal-case">· size de-levers as shock severity rises</span>
+      </div>
+      <div className="h-36 p-2">
+        <ResponsiveContainer width="100%" height="100%">
+          <ComposedChart data={data} margin={{ top: 8, right: 12, bottom: 4, left: 0 }}>
+            <defs>
+              <linearGradient id="ssev" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#f43f5e" stopOpacity={0.35} />
+                <stop offset="100%" stopColor="#f43f5e" stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid {...chartProps.grid} />
+            <XAxis dataKey="i" {...chartProps.axis} tick={false} />
+            <YAxis yAxisId="sz" {...chartProps.axis} width={40} domain={[0, "auto"]} tickFormatter={(v) => `${v.toFixed(1)}x`} />
+            <YAxis yAxisId="sv" orientation="right" {...chartProps.axis} width={32} domain={[0, 1]} tickFormatter={(v) => v.toFixed(1)} />
+            <Tooltip content={<ChartTooltip />} />
+            <Area yAxisId="sv" type="monotone" name="shock severity" dataKey="severity" stroke="#f43f5e" strokeWidth={1} fill="url(#ssev)" />
+            <Line yAxisId="sz" type="monotone" name="avg size" dataKey="size" stroke="#fbbf24" strokeWidth={1.4} dot={false} />
+          </ComposedChart>
+        </ResponsiveContainer>
+      </div>
+    </Card>
+  );
+};
+
 // ============================================================================
 // PAGE
 // ============================================================================
@@ -324,7 +419,9 @@ export const PageSignalEngine = () => {
       </div>
       <Hero d={d} live={live} stale={stale} />
       <ProvenStrip ctx={ctx} />
+      <RiskStrip s={d.summary || {}} cmp={d.comparison || {}} />
       <Equity curve={d.equityCurve} initial={d.summary?.initialCapital || 250000} />
+      <SizingChart series={d.sizingSeries} />
       <div className="space-y-2">
         <Band icon={TrendingUp} title="Trade Log" sub="every trade · full detail · gross PnL" />
         <TradeLog trades={d.trades || []} />

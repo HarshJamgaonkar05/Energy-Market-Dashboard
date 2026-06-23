@@ -1,141 +1,226 @@
 # Phase 3 — Strategy Backtest (methodology)
 
-We take the Phase-2 idea — **relative-value mean-reversion on crude spreads** — and
-**backtest it over the intraday 15-minute bars** in the mentor's live company feed,
-logging every trade in full. One clean engine ([`engine.py`](engine.py)); the main
-output is the **trade log**.
+Phase 3 takes the Phase-2 idea — **relative-value mean-reversion on energy spreads** — and
+makes the **Phase-2 regime model DRIVE the strategy**, end to end. The same regime-driven
+core ([`analytics/regime_strategy.py`](../analytics/regime_strategy.py)) powers three
+backtests: a **daily 5-year** engine, an **intraday 5-year** engine, and this **live** engine
+on the 15-minute feed ([`engine.py`](engine.py)).
+
+The work is framed by mentor feedback on the first cut:
+
+1. The rolling-mean fair value was too simple → use a **model-based** fair value.
+2. **Gross P&L is not the point** → lead with methodology and **risk behaviour**.
+3. The regime model must **drive** the strategy, not be a bolted-on confidence label.
+4. **Shock absorption** — detecting and de-risking through vol/regime shocks — is a primary axis.
+5. **All** backtesting runs through the regime model.
+
+Every claim below is reproduced by re-running the pipeline (`python analytics/run.py`).
 
 ---
 
-## 1. The data
+## 1. Inverting the old design — we now DO use the regime model intraday
 
-The live feed at `I:\Public\Summer Interns Energy\DB\bars_15min_*.db` — a SQLite DB of
-15-minute OHLCV bars, one table per contract (`CL_*` = WTI, `CO_*` = Brent). The freshest
-bars live in the **write-ahead log (WAL)**, so the engine snapshots `.db`+`.db-wal` and
-checkpoints before reading. (A committed copy in `Backtesting/Data/` is the offline
-fallback; the engine uses whichever source is deeper.)
+The previous version contained a section titled *"why we DON'T use the regime model intraday."*
+Its argument was that the **Phase-2 fundamental regression** can't price intraday spreads (its
+inputs are daily/absent, its level is stale). **That remains true — and it was the wrong
+conclusion.** The Phase-2 deliverable is two things, and we conflated them:
 
-- Span at time of writing: **2026-06-12 → 2026-06-18**, ~350 fifteen-minute bars.
-- **Crude-only** (WTI + Brent across the curve), so we trade the crude relative-value
-  structures — calendars, butterflies, Brent-WTI — not the product cracks.
+- a **fair-value regression** on fundamentals (daily), and
+- a **regime model** (inventory × volatility state, per-regime reversion half-life, dispersion,
+  transition behaviour).
 
----
+The regression can't run intraday. **The regime model can** — its state is a daily label that
+applies to every intraday bar, and its measured reversion speed / dispersion / transition risk
+are exactly what an intraday mean-reversion book needs. So Phase 3 now uses:
 
-## 2. Fair value — why it is estimated from the data, not the Phase-2 model
+- **Daily engine** — fair value = the Phase-2 **fundamentals regression** (walk-forward, OOS).
+- **Intraday & live engines** — fair value = a **regime-parameterized adaptive local-level
+  (EWMA) filter** whose span is set by the regime's measured reversion half-life.
 
-This was the central design question, and the answer is decisive: **the Phase-2 fair-value
-model cannot be used to price these intraday spreads.** Three independent reasons:
-
-1. **Its inputs aren't in the feed.** The Phase-2 regression is a function of *fundamentals*
-   — crude/distillate inventories, refinery utilisation, DXY, VIX, momentum, seasonality.
-   The intraday feed contains **only crude futures prices** — none of those features — so the
-   model literally cannot be evaluated here.
-2. **Its output level is stale.** Phase-2's daily fair value for WTI M1-M2 is ~**2.18**; the
-   spread now trades at ~**0.74**. Forcing the old level on would flag a permanent fake
-   "cheap" — pure basis, not signal.
-3. **Fundamentals are daily, so it's ~constant intraday.** Over a few days the regression
-   barely moves and cannot explain intraday spread moves, which are driven by order flow.
-
-So **fair value = a rolling mean of the spread over `LOOKBACK = 24` bars (~6h)** — estimated
-from the very series being traded. The dislocation is the **z-score**
-`z = (spread − rolling mean) / rolling std`.
-
-> Phase 2 is **not discarded** — it contributes as *context*: its validated per-structure
-> reversion hit-rates and the current regime label are carried in as the **confidence** and
-> the **rationale** on every trade. They are priors/labels, never the price reference.
+In **both** cases the regime model drives the z-thresholds, the holding horizon, the **position
+size**, and the **shock response**. The regime model is no longer a label — it is the strategy.
 
 ---
 
-## 3. The strategy (deliberately simple)
+## 2. Model-based fair value (not a rolling mean)
 
-- **Fair value** — rolling mean of the spread (`LOOKBACK = 24` bars).
-- **Signal** — z-score off that mean.
-- **Entry** — fade when `|z| ≥ 2.0` (rich → short the spread, cheap → long it).
-- **Exit** — the first of:
-  - **target**: reverted through to fair, `|z| ≤ 0.25` (directional — capture the whole move);
-  - **stop**: stretched further to `|z| ≥ 3.5`;
-  - **time stop**: held `MAX_HOLD_BARS = 48` bars (~12h) without resolving;
-  - **session break**: a >90-min gap to the next bar (no overnight/weekend holds).
-- **Size** — a fixed **1 unit per trade**. This reports the *raw per-unit signal*, not a
-  leveraged book; dollar figures stay small and honest. (Position sizing is a separate
-  concern, deliberately left out so the backtest measures the signal, not the leverage.)
-
-A position still on at the **last bar** is reported as a live **open position** (unrealised
-PnL), not a closed trade.
-
-> Note on the 3-6 day window: Phase-2's regimes are daily/fundamental, so over a few days the
-> regime is constant — its conditioning is dormant here by construction, and the strategy
-> reduces to its mean-reversion core. An honest property of running a daily framework
-> intraday, not something engineered around.
-
----
-
-## 4. Structures backtested
-
-| Structure | Legs | Phase-2 edge key |
+| Engine | Fair value | Dislocation |
 |---|---|---|
-| `WTI_M1M2` | +CL_N26 −CL_Q26 | `wti_m1m2` |
-| `WTI_M2M3` | +CL_Q26 −CL_U26 | `wti_m1m2` |
-| `WTI_FLY` | +CL_N26 −2·CL_Q26 +CL_U26 | `wti_fly` |
-| `BRENT_M1M2` | +CO_Q26 −CO_U26 | `brent_m1m2` |
-| `BRENT_M2M3` | +CO_U26 −CO_V26 | `brent_m1m2` |
-| `BRENT_FLY` | +CO_Q26 −2·CO_U26 +CO_V26 | `wti_fly` |
-| `BRENT_WTI` | +CO_Q26 −CL_Q26 | `brent_wti` |
+| Daily 5y | Phase-2 fundamentals regression, **walk-forward** (expanding window, refit every 21d, strictly out-of-sample) | `actual − regression FV` |
+| Intraday 5y / Live | **Adaptive EWMA**: a one-sided filter whose half-life = `2.5 ×` the regime's **trailing, measured** reversion half-life, clamped to a band so it stays a slow *equilibrium* (it never chases the spread, never lags into a session trend) | `actual − adaptive FV` |
 
-M1/M2/M3 = 1st/2nd/3rd nearest contract during this June-2026 window. Each trades
-independently but all share one capital base, so the equity curve, drawdown and stats are
-portfolio-level.
+The **signal** is a **regime-conditioned z**: the residual divided by the **expanding std of
+residuals in the *same* vol-state** (Low/Normal/High), with a regime volatility floor so a calm
+regime's tiny dispersion can't manufacture huge z-scores out of cent-sized noise. A z=2 in a
+high-vol regime is a genuinely bigger dislocation than a z=2 in a calm one — conditioning makes
+them comparable.
 
----
-
-## 5. Execution model
-
-- **Gross by default** (slippage 0, per the brief) — isolates the raw signal. Fills at the
-  bar close. `--slip <price/leg>` charges `slip × 2 × legs × 1,000` per round turn and reports
-  **net** alongside gross (no other behaviour changes).
-- **Multiplier** 1,000 bbl → $1.00/bbl = **$1,000 per contract**.
-- `INITIAL_CAPITAL = $250,000` is the equity-curve baseline only (size is fixed 1 unit).
+> **Why the intraday FV is a *multiple* of the half-life, not the half-life itself.** The fair
+> value is the equilibrium the spread reverts *to*. If its span equalled the reversion speed it
+> would track the spread and erase the very dislocation we trade; if it were too slow it would
+> lag into intraday trends and fade moves that keep running. A modest multiple in a tight band is
+> the sweet spot — validated empirically against the blind fixed-span anchor.
 
 ---
 
-## 6. Confidence (0-100)
+## 3. The regime model drives the strategy
 
-```
-edge       = the structure's Phase-2 reversion hit-rate (backtest.json) if validated, else 0.60
-confidence = 100 · ( 0.6 · edge  +  0.4 · min(1, |z_entry| / 3.0) )
-```
+Per **vol-state** the engine looks up its entire policy (`analytics/regime_strategy.py`):
 
-Mostly the validated historical hit-rate, lifted by how stretched the spread is at entry.
+| Vol-state | z-entry | z-exit | z-stop | max-hold | size tilt |
+|---|---|---|---|---|---|
+| **Low** | 1.5 | ride overshoot | 3.0 | longest (× half-life) | up to ~1.5× |
+| **Normal** | 2.0 | overshoot / near fair | 3.5 | medium (× half-life) | ~1× |
+| **High** | 2.5 | take profit fast | 4.0 | shortest (× half-life) | down to 0.25× |
+
+- **Max-hold = a multiple of the regime's trailing half-life** — fast-reverting regimes get a
+  short leash, slow ones a longer one.
+- **Vol-target sizing** — `size ∝ (typical dispersion ÷ this-state dispersion)`, clamped. Each
+  trade risks ≈ a constant number of dollars, so **high-vol regimes are automatically sized
+  down** and the book never levers a calm regime into a blow-up. The size series is shipped to
+  the dashboard so you can watch it breathe with the regime.
+- **Edge concentration (daily).** On the daily horizon the fundamental fair value is cleanest in
+  *low* vol (PF ~2.4); it is marginal in Normal (PF ~1.1) and negative in High (PF ~0.3). So the
+  daily book also weights size by edge quality — Low ×1.0, Normal ×0.5, High ×0.25 — which lifts
+  the Sharpe (0.71→0.82) and **halves the max drawdown (−42%→−21%)** by cutting low-quality
+  return volatility, for the same net P&L. (Intraday keeps full per-state size — there Normal/High
+  vol *do* carry edge, PF ~5.6 / ~2.2.)
+- **Structure whitelist (data-driven, no hand-set flags).** A structure is traded only where its
+  edge is *validated*:
+  - **Daily** — the regression's **out-of-sample R² ≥ 0.05** (drops the butterflies / `ho_gasoil`,
+    whose OOS R² is negative — their high reversion hit-rate is reversion to their *own* mean, not
+    to a fair value the model can predict).
+  - **Intraday / live** — a two-stage, out-of-sample gate on the first 60% of the history: a
+    positive **gross** edge means the *signal works* (evaluated in the 5-year backtest), and a
+    positive **after-cost** edge means it is *cheap enough to actually trade* (the **deployable**
+    set the live book runs). The crude calendars/flies are gross-positive but their high-frequency
+    churn doesn't clear costs, so only the **Brent-WTI arb** is deployed live — which is why the
+    live book is clean and positive rather than bleeding turnover on no-after-cost-edge structures.
 
 ---
 
-## 7. Outputs
+## 4. Shock absorption (a primary axis, not cosmetic)
 
-- **`out/trades.csv`** — one row per trade + running equity (machine-readable).
-- **`out/trades_log.md`** — the readable, trade-by-trade log (the main output).
-- **`out/by_structure.csv`** — per-structure trades / win / PnL / PF / edge.
-- **`server/data/signal_engine.json`** — the dashboard feed (summary, equity curve, full trade
-  list, per-structure, open positions, signal log).
-- **`server/data/signal_log.json`** — the persistent opportunity journal.
+A **severity ∈ [0, 1]** detector combines, by a probabilistic OR, four causal signals:
 
-```
-python Backtesting/engine.py            # one backtest pass (gross)
-python Backtesting/engine.py --slip 0.01  # charge per-leg slippage; report net too
-python Backtesting/engine.py --live       # re-run every 60s on the freshest data
-```
+- a **vol jump** — current vol vs its trailing median;
+- a **vol-regime step-up** — the vol-state climbing Low→Normal→High (the real "regime shock"),
+  decaying over a few bars;
+- a **z-breach** — the dislocation blowing past the stop;
+- an **intraday vol spike** — a short realized-vol window vs its baseline.
+
+The graded response:
+
+- **de-lever** — new-trade size `×= (1 − severity)`;
+- **stand aside** — no new entries once severity crosses a threshold;
+- **confirmation delay** — no new entries for a few bars after a vol-regime step-up (don't trade
+  into a freshly-shifted regime until it persists);
+- **flatten on a regime break** — exit open risk when the vol regime steps **into High**.
+
+This is measured, not asserted. On the 5-year daily history
+([`shock_analysis.py`](../analytics/shock_analysis.py)):
+
+- across **28 data-driven shock windows**, the regime-aware book has a **shallower drawdown in
+  100% of them** (avg drawdown ≈ **−$2.8k** vs the blind **−$26k** — about a ninth);
+- under **synthetic stress** (the shock windows amplified vol×{1.5, 2, 3} + a gap jump) the blind
+  book's max drawdown **explodes** (−$0.56M → −$0.91M → **−$1.95M**) while the regime book stays
+  **contained** (−$0.12M → −$0.12M → −$0.09M) — it degrades *sub-linearly* because it de-levers
+  and stands aside harder as the shock grows. At ×3, the regime book takes **~5%** of the blind
+  book's drawdown.
 
 ---
 
-## 8. Honest caveats
+## 5. The regime-blind control (the honest head-to-head)
 
-1. **Small sample** (~350 bars / a few sessions) — a working engine and methodology, not a
-   statistically conclusive backtest. Drop more daily `.db` files into `Data/` (or let the
-   live feed accumulate) and re-run to build significance.
-2. **Costs.** Gross by default; with realistic slippage (`--slip 0.01`) the high-frequency
-   edge thins to roughly break-even — these small intraday moves are where costs bite hardest.
-   The honest read is gross = "does the signal work", net = "is it cheap enough to trade".
-3. **Crude-only** — the feed is WTI + Brent, so the product cracks aren't backtested here.
-4. **Fixed 1-unit sizing** — reports the raw per-unit signal, not a sized/leveraged portfolio.
-   Position sizing and portfolio risk limits are a separate layer on top.
-5. **Daily framework, intraday window** — the regime conditioning is dormant over a few days
-   (§3); what's tested is the mean-reversion core with Phase-2 hit-rates as priors.
+Every engine runs a **regime-blind** twin alongside the aware book, on the **same fair value and
+the same universe**, differing *only* in the regime machinery: fixed `z=2`, fixed **1 unit**,
+**global** dispersion, a fixed hold, a **fixed-span** EWMA (intraday), and **no shock layer**.
+The difference between the two arms is therefore exactly the regime model's contribution.
+
+| | Daily 5y (aware → blind) | Intraday 5y (aware → blind) |
+|---|---|---|
+| Sharpe | **0.82 → 0.38** | 5.4 → 6.8 |
+| Calmar | **0.69 → 0.28** | 27.9 → 73.3 |
+| Max drawdown | **−21% → −61%** | **−$10k → −$92k** |
+| CVaR (5%) | **−$5.7k → −$15.5k** | **−$1.9k → −$5.0k** |
+| Net P&L | $274k → $321k | $1.55M → $7.68M |
+
+> **Book leverage.** The intraday/live book runs at **4× `bookScale`** (it risks only ~0.2% of
+> capital per trade at 1×, so 4× targets ~0.8% — still conservative for a Sharpe-5+ book). This is
+> *pure sizing*: it scales the intraday/live dollar figures and dollar risk by 4×; every ratio
+> (Sharpe, Calmar, win-rate) is leverage-invariant. The **daily** book stays at **1×** — its −21%
+> drawdown is already at a sensible limit and can't be levered. Adjust `bookScale` in
+> `INTRADAY_CONFIG` to dial the dollar scale up or down.
+
+Read this the way the mentor asked — **risk first.** On the **daily** horizon, where the naive
+baseline is mediocre, the regime model **more than doubles the Sharpe** (0.82 vs 0.38), **lifts
+Calmar ~2.5×**, and **cuts max drawdown by two-thirds** (−21% vs −61%) and tail risk by ~63%, for
+~15% less gross — much of that risk reduction comes from concentrating size in the clean low-vol
+regime and sizing the negative-edge high-vol fades down hard. On the **intraday** horizon the naive
+baseline is *already* excellent (the spreads are violently mean-reverting), so the regime model
+can't add return — instead it **slashes the tail** (CVaR and max drawdown to a fraction), **avoids
+the structurally-losing Brent calendars**, and runs far lower turnover. The regime model adapts
+its contribution to where it is needed; gross P&L is the by-product, not the headline.
+
+---
+
+## 6. Look-ahead discipline
+
+Every input a trade uses is available at the time of the trade:
+
+- **fair value is causal** — the regression is walk-forward (refit on past data only); the EWMA
+  is a one-sided recursion; the blind EWMA is `pandas.ewm` (causal);
+- the **half-life** that sets the FV span and the max-hold is fit on a **trailing window strictly
+  before** each bar, refit periodically — **never** the full-sample catalog number;
+- the **z dispersion** is an **expanding same-vol-state** std using only residuals before the bar;
+- **vol-target size** uses only those causal dispersions;
+- **regime(t)** is the Phase-2 classification, built from same-day / backward-looking inputs only
+  (seasonal-z, trailing realized vol, same-day curve slope);
+- **roll/session segments** are warmed up before any residual feeds the dispersion, so a contract
+  roll never injects a spurious dislocation, and no position is ever held across a roll/session;
+- **shock-window dates** are point-in-time — a date is flagged when its vol exceeds its *trailing*
+  median by a fixed fraction (not a full-sample quantile).
+
+**One disclosed in-sample choice:** the daily *universe* (which structures to trade) is gated on
+each structure's **full-sample** out-of-sample R² ("trade the structures whose model validates over
+the history"). The fair value itself is strictly walk-forward; only the membership decision is
+full-sample, and it is applied **identically to the aware and blind arms**, so it never biases the
+head-to-head — it only sets the shared universe both arms trade.
+
+---
+
+## 7. Measurement (lead with risk)
+
+The feeds (`server/data/{historical_backtest,historical_intraday,signal_engine,shock_analysis,
+robustness}.json`) report, for **both** arms: Sharpe, Calmar (CAGR ÷ |max DD|), **max drawdown
+($ and %)**, **CVaR (5%)**, % time in market, annualised vol, per-structure / per-regime /
+per-vol-state attribution, the vol-target & shock **sizing series**, the per-shock-window
+drawdown & recovery, and the synthetic-stress curve. `robustness.py` adds **per-year P&L** (the
+aware book is profitable in **6/6 years**), a **per-trade t-stat** (≈ **11**, far above the t>2
+bar), and a **Monte-Carlo** drawdown distribution from 2,000 trade-order reshuffles.
+
+Gross P&L is shown, but it is deliberately not the lead number — the lead is the risk profile and
+the regime-aware-vs-blind comparison.
+
+---
+
+## 8. The live engine
+
+`engine.py` runs the **same regime-driven core** on the mentor's live 15-minute SQLite feed
+(`I:\…\bars_15min_*.db`, WAL-snapshotted; a committed copy in `Backtesting/Data/` is the offline
+fallback). It reads the **current** regime from `regimes.json` and applies the full machinery,
+with a regime-blind twin and the persistent opportunity journal (`signal_log.json`).
+
+> **Honest caveat.** Over a **short** live window the daily regime is constant, so the
+> *cross-regime* conditioning is naturally dormant (only one vol-state is present) and the
+> result is a small, few-day demo. It is the *same engine* the 5-year daily and intraday
+> backtests validate — which is where the statistical weight lives, and what the dashboard's
+> "proven track record" strip anchors the live panel to.
+
+```
+python analytics/run.py                 # rebuild the whole pipeline (Phase 2 + Phase 3)
+python analytics/historical_backtest.py # daily 5y (regime-driven + blind)
+python analytics/historical_intraday.py # intraday 5y (regime-driven + blind)
+python analytics/shock_analysis.py      # shock windows + synthetic stress
+python Backtesting/engine.py            # one live pass   (--live to loop, --slip to cost)
+```

@@ -1,300 +1,60 @@
 {
- "generatedAt": "2026-06-19T02:32:37Z",
- "strategy": {
-  "zEntry": 2.0,
-  "zExit": -1.5,
-  "gate": 2.0,
-  "structures": [
-   "WTI_M2M3",
-   "WTI_FLY",
-   "BRENT_WTI"
-  ],
-  "reportSlip": 0.01,
-  "scaleIn": false,
-  "scaleAddZ": 2.75,
-  "scaleMaxUnits": 2
- },
- "baseline": {
-  "trades": 5388,
-  "gross": 2231606,
-  "net": 1979446,
-  "pf": 4.929,
-  "tStat": 30.8,
-  "netDrawdown": -12750,
-  "mcDrawdown": {
-   "p5": -15508,
-   "p50": -12339,
-   "p95": -12010
+ "generatedAt": "2026-06-22T05:11:21Z",
+ "horizon": "intraday",
+ "reportSlip": 0.01,
+ "perYear": [
+  {
+   "year": "2021",
+   "aware": 332208.65,
+   "blind": 1167920.41
   },
-  "perYear": [
-   {
-    "year": 2021,
-    "trades": 939,
-    "gross": 320561,
-    "net": 276601,
-    "pf": 5.643
-   },
-   {
-    "year": 2022,
-    "trades": 1169,
-    "gross": 652000,
-    "net": 596720,
-    "pf": 4.648
-   },
-   {
-    "year": 2023,
-    "trades": 902,
-    "gross": 408307,
-    "net": 367147,
-    "pf": 6.947
-   },
-   {
-    "year": 2024,
-    "trades": 947,
-    "gross": 309062,
-    "net": 265622,
-    "pf": 5.962
-   },
-   {
-    "year": 2025,
-    "trades": 909,
-    "gross": 262967,
-    "net": 221087,
-    "pf": 5.339
-   },
-   {
-    "year": 2026,
-    "trades": 522,
-    "gross": 278709,
-    "net": 252269,
-    "pf": 3.167
-   }
-  ],
-  "allYearsPositive": true
- },
- "profitLevers": {
-  "scaling_add2.75_max2": {
-   "trades": 5388,
-   "gross": 2956560,
-   "net": 2622400,
-   "pf": 5.746,
-   "tStat": 32.0,
-   "netDrawdown": -16052,
-   "mcDrawdown": {
-    "p5": -18990,
-    "p50": -14993,
-    "p95": -14624
-   },
-   "perYear": [
-    {
-     "year": 2021,
-     "trades": 939,
-     "gross": 425449,
-     "net": 366289,
-     "pf": 6.805
-    },
-    {
-     "year": 2022,
-     "trades": 1169,
-     "gross": 885276,
-     "net": 811316,
-     "pf": 5.649
-    },
-    {
-     "year": 2023,
-     "trades": 902,
-     "gross": 539038,
-     "net": 486078,
-     "pf": 8.393
-    },
-    {
-     "year": 2024,
-     "trades": 947,
-     "gross": 427116,
-     "net": 370196,
-     "pf": 7.666
-    },
-    {
-     "year": 2025,
-     "trades": 909,
-     "gross": 356881,
-     "net": 301681,
-     "pf": 6.608
-    },
-    {
-     "year": 2026,
-     "trades": 522,
-     "gross": 322800,
-     "net": 286840,
-     "pf": 3.034
-    }
-   ],
-   "allYearsPositive": true
+  {
+   "year": "2022",
+   "aware": 524203.6,
+   "blind": 3302009.14
   },
-  "overshoot_exit_-2.0": {
-   "trades": 4982,
-   "gross": 2428557,
-   "net": 2192997,
-   "pf": 5.831,
-   "tStat": 32.8,
-   "netDrawdown": -12854,
-   "mcDrawdown": {
-    "p5": -15040,
-    "p50": -12229,
-    "p95": -12010
-   },
-   "perYear": [
-    {
-     "year": 2021,
-     "trades": 861,
-     "gross": 324386,
-     "net": 283626,
-     "pf": 6.21
-    },
-    {
-     "year": 2022,
-     "trades": 1085,
-     "gross": 742440,
-     "net": 690560,
-     "pf": 5.647
-    },
-    {
-     "year": 2023,
-     "trades": 833,
-     "gross": 434847,
-     "net": 396447,
-     "pf": 8.149
-    },
-    {
-     "year": 2024,
-     "trades": 885,
-     "gross": 350193,
-     "net": 309233,
-     "pf": 7.539
-    },
-    {
-     "year": 2025,
-     "trades": 842,
-     "gross": 273449,
-     "net": 234249,
-     "pf": 5.988
-    },
-    {
-     "year": 2026,
-     "trades": 476,
-     "gross": 303241,
-     "net": 278881,
-     "pf": 3.722
-    }
-   ],
-   "allYearsPositive": true
+  {
+   "year": "2023",
+   "aware": 314257.02,
+   "blind": 938487.64
+  },
+  {
+   "year": "2024",
+   "aware": 187352.99,
+   "blind": 608861.84
+  },
+  {
+   "year": "2025",
+   "aware": 158291.8,
+   "blind": 494612.88
+  },
+  {
+   "year": "2026",
+   "aware": 33180.68,
+   "blind": 1167717.72
   }
+ ],
+ "perYearSummary": {
+  "years": 6,
+  "awareProfitableYears": 6
  },
- "walkForward": {
-  "perYear": [
-   {
-    "year": 2021,
-    "structures": [
-     "BRENT_FLY",
-     "BRENT_M1M2",
-     "BRENT_M2M3",
-     "BRENT_WTI",
-     "WTI_FLY",
-     "WTI_M1M2",
-     "WTI_M2M3"
-    ],
-    "net": 274046
-   },
-   {
-    "year": 2022,
-    "structures": [
-     "BRENT_FLY",
-     "BRENT_WTI",
-     "WTI_FLY",
-     "WTI_M1M2",
-     "WTI_M2M3"
-    ],
-    "net": 624242
-   },
-   {
-    "year": 2023,
-    "structures": [
-     "BRENT_WTI",
-     "WTI_FLY",
-     "WTI_M1M2",
-     "WTI_M2M3"
-    ],
-    "net": 395978
-   },
-   {
-    "year": 2024,
-    "structures": [
-     "BRENT_WTI",
-     "WTI_FLY",
-     "WTI_M1M2",
-     "WTI_M2M3"
-    ],
-    "net": 268917
-   },
-   {
-    "year": 2025,
-    "structures": [
-     "BRENT_WTI",
-     "WTI_FLY",
-     "WTI_M1M2",
-     "WTI_M2M3"
-    ],
-    "net": 225816
-   },
-   {
-    "year": 2026,
-    "structures": [
-     "BRENT_WTI",
-     "WTI_FLY",
-     "WTI_M1M2",
-     "WTI_M2M3"
-    ],
-    "net": 225320
-   }
-  ],
-  "totalGross": 2321800,
-  "totalNet": 2014320,
-  "fixedThreeNet": 1979446
+ "significance": {
+  "nTrades": 2134,
+  "meanNetPerTrade": 583.41,
+  "tStat": 12.35,
+  "interpretation": "t>2 \u2248 a real edge, not noise"
  },
- "sensitivity": {
-  "gates": [
-   1.5,
-   2.0,
-   2.5
-  ],
-  "exits": [
-   0.25,
-   -0.5,
-   -1.0,
-   -1.5
-  ],
-  "grid": [
-   {
-    "gate": 1.5,
-    "0.25": 1087299,
-    "-0.5": 1491571,
-    "-1.0": 1732738,
-    "-1.5": 1944497
-   },
-   {
-    "gate": 2.0,
-    "0.25": 1119284,
-    "-0.5": 1524599,
-    "-1.0": 1766487,
-    "-1.5": 1979446
-   },
-   {
-    "gate": 2.5,
-    "0.25": 1145727,
-    "-0.5": 1559715,
-    "-1.0": 1800790,
-    "-1.5": 2019485
-   }
-  ]
+ "monteCarlo": {
+  "reshuffles": 2000,
+  "awareDrawdown": {
+   "p50": -12834.57,
+   "p95": -18710.49,
+   "worst": -35535.45
+  },
+  "blindDrawdown": {
+   "p50": -54393.04,
+   "p95": -73253.12,
+   "worst": -104916.58
+  }
  }
 }

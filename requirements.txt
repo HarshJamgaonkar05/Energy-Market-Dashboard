@@ -1,0 +1,10 @@
+# Python dependencies for the analytics/ and Backtesting/ packages.
+# Install with:  pip install -r requirements.txt
+#
+# The web app (Vite + Express) uses Node dependencies instead — those live in
+# package.json and are installed separately with `npm install`.
+
+numpy>=1.24
+pandas>=2.0
+requests>=2.31
+scikit-learn>=1.3

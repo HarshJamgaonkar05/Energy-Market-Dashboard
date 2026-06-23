@@ -1,24 +1,29 @@
 """
-historical_intraday.py — INTRADAY historical backtest over 5 years of 1-minute
-WTI/Brent data (Data/CL_data.csv, Data/LCO_data.csv).
+historical_intraday.py — INTRADAY 5-year backtest, fully REGIME-DRIVEN, over 1-minute
+WTI/Brent data resampled to 15-minute bars (Data/CL_data.csv, Data/LCO_data.csv).
 
-Fair value here is estimated from each spread's OWN recent history (a rolling mean →
-z-score) — the Phase-3 method — NOT the Phase-2 fundamental model, which cannot price
-intraday (its fundamental inputs are daily/absent). The difference from the live Phase 3
-is the sample: 5 YEARS of 15-minute bars instead of a few days, so the intraday edge is
-measured on a statistically real history. WTI & Brent crude structures only.
+Intraday the Phase-2 fundamentals regression cannot price the spread (its inputs are
+daily/absent). The redesign replaces the old fixed rolling-mean fair value with a
+REGIME-PARAMETERIZED ADAPTIVE LOCAL-LEVEL (EWMA) FILTER:
 
-Correctness:
-  • The 1-min curve is resampled to 15-minute bars (last mid in each bin) and cached.
-  • The cN columns are the 1st/2nd/3rd-nearest contracts, which ROLL ~monthly. A roll
-    makes a continuous spread jump, so we segment the series at every roll AND every
-    session/weekend gap; the rolling window never spans a break and no trade is held
-    across one (purely intraday, within-session).
-  • Each trade's day is mapped to its daily regime (from regimes.json) for the by-regime
-    breakdown. 1 unit/trade, gross (— --slip adds cost).
+  • Fair value  = a one-sided EWMA whose half-life is the regime's MEASURED, TRAILING
+                  reversion half-life (estimated per vol-state on a trailing window, refit
+                  periodically — never full-sample). Faster reversion ⇒ a more responsive
+                  fair value; slower ⇒ a smoother one. (See regime_strategy.adaptive_ewma.)
+  • Signal      = a REGIME-CONDITIONED z: residual ÷ the EXPANDING std of residuals in the
+                  SAME vol-state, with a regime volatility floor (no cent-sized churn).
+  • Policy      = per vol-state zEntry/zExit/zStop and a max-hold = (× the regime half-life).
+  • Sizing      = vol-target (constant $-risk; high-vol bars auto-sized down).
+  • Shock layer = de-lever / stand-aside / confirmation-delay through vol-regime step-ups,
+                  on top of the always-on session/roll flatten.
 
-Reads  Data/CL_data.csv + Data/LCO_data.csv (+ caches out/intraday_15min.parquet)
-       server/data/regimes.json + backtest.json (context)
+The daily vol-state and regime label per bar come from the Phase-2 regimes.json (built on
+same-day / backward-looking inputs only). A REGIME-BLIND control (fixed-span EWMA fair
+value, global dispersion, fixed z=2 / 1 unit, no shock layer) runs head-to-head on the same
+universe so the comparison isolates the regime model's contribution. We lead with RISK.
+
+Reads  Data/CL_data.csv + Data/LCO_data.csv (+ caches out/intraday_15min.parquet),
+       server/data/regimes.json + backtest.json
 Writes server/data/historical_intraday.json (+ out/historical_intraday_trades.csv)
 Run:   python analytics/historical_intraday.py            # gross (builds cache 1st run)
        python analytics/historical_intraday.py --slip 0.01
@@ -34,72 +39,57 @@ import numpy as np
 import pandas as pd
 
 from common import OUT_DIR, DATA_DIR, ROOT
+import regime_strategy as rs
 
 CL_CSV = ROOT / "Data" / "CL_data.csv"
 LCO_CSV = ROOT / "Data" / "LCO_data.csv"
 CACHE = OUT_DIR / "intraday_15min.parquet"
 BAR = "15min"
 
-# ---- Strategy parameters (intraday, mirror the live Phase 3) ----------------
-LOOKBACK = 24          # bars in the rolling fair value (~6h of 15-min bars)
-Z_ENTRY = 2.0          # fade when |z| >= this (2-sigma dislocation)
-Z_EXIT = -1.5          # take profit after the spread reverts THROUGH fair to ~1.5sigma the other
-                       #   side (entry_sign*z <= this). Spreads routinely overshoot, so exiting at
-                       #   fair leaves money on the table. Robustness testing (per-year + Monte-Carlo,
-                       #   see robustness.py) showed deepening from -1.0 to -1.5 earns +$213k net with
-                       #   NO extra drawdown and stays profitable every year — while keeping a 0.5sigma
-                       #   margin before the opposite (-2sigma) entry. Net 1.12M->1.98M, gross 1.40M->2.23M.
-Z_STOP = 3.5           # stop if it stretches further to |z| >= this
-MAX_HOLD_BARS = 48     # time stop (~12h) within a session
-SESSION_GAP_MIN = 90   # gap to next bar > this = session/weekend break -> segment + flatten
-MULT = 1000
 INITIAL_CAPITAL = 250_000
-SLIP_PER_LEG = 0.0
-# ---- Cost discipline (the net-P&L improvement) ------------------------------
-# A z>=2 dislocation in a LOW-volatility spread is only a few cents — too small to
-# clear trading costs, so taking it just bleeds turnover. The gate fixes that: only
-# fade when the expected $ move back to fair (|spread-fair| x MULT) clears a multiple
-# of a realistic round-turn cost. ASSUMED_SLIP is the *design-time* cost (always on,
-# even when we report gross) so the same disciplined trade set is what we'd actually
-# trade. This is volatility-adaptive: big-$ moves pass, cent-sized churn is skipped.
-ASSUMED_SLIP = 0.01    # per-leg cost the entry gate must clear (independent of --slip reporting)
-EDGE_COST_MULT = 2.0   # require expected capture >= this x round-turn cost
-# ---- Position scaling (add a 2nd unit on the deepest dislocations) ----------
-# Validated in robustness.py: pyramiding a 2nd unit when |z| deepens to 2.75 (the
-# highest-conviction stretches) lifts net $1.98M -> $2.62M and stays profitable EVERY
-# year, for a small drawdown rise (-$12.8k -> -$16k). It DOES change sizing (up to 2
-# units/trade), so it is a toggle — set SCALE_IN=True to realize the bigger book.
-SCALE_IN = False
-SCALE_ADD_Z = 2.75     # add a unit when |z| deepens past this (same side) while in a position
-SCALE_MAX_UNITS = 2    # cap on total units per trade
+MULT = 1000
+REF_SLIP = 0.01            # reference per-leg cost for the always-shown after-cost number
+MIN_EDGE = 0.15           # 1st gate: a validated daily Phase-2 reversion edge
+TRAIN_FRAC = 0.60         # 2nd gate (OOS): trade only structures whose AWARE book is profitable on
+                          # the first 60% of the history — drops structures with a daily edge but no
+                          # intraday edge (e.g. the Brent calendars). Validated out-of-sample.
+SLOW_HL = 96              # bars (~1 session) — the slow reference the half-life is measured against
+# The fair value is the local EQUILIBRIUM the spread reverts TO. Its EWMA half-life is a
+# modest multiple of the measured reversion half-life, kept in a tight band: too SLOW and the
+# anchor lags into session trends (it would fade trends that keep running); too FAST and it
+# chases the spread and erases the dislocation. Regime-adaptive within the band — faster-
+# reverting regimes get a more responsive anchor, slower ones a smoother one.
+FV_SPAN_MULT = 2.5
+FV_MIN_HL, FV_MAX_HL = 16.0, 28.0   # never TIGHTER than the blind anchor; adapt slower in calm
+SESSION_GAP_MIN = 90
+DISPLAY = 600             # cap the trade list shipped to the dashboard (full stats use all)
+BAR_VOL_WIN = 8          # short realized-vol window for the shock detector (bars)
 
-# WTI & Brent only. legs = (product, cN, weight); hitkey = Phase-2 context edge.
-# `active` = traded. The other four (Brent calendars/fly, WTI front calendar) had no
-# persistent net edge after costs in EITHER the 2021-23 train or 2024+ test halves
-# (PF ~0.9-1.2), so they are evaluated but NOT traded. The three kept survive costs
-# strongly in both halves.
+# WTI & Brent crude only (the feed contains crude). legs = (product, cN, weight); the
+# whitelist is data-driven (Phase-2 reversion edge ≥ MIN_EDGE — see backtest.json).
 STRUCTURES = [
-    ("WTI_M1M2",   "WTI M1-M2",          [("wti", "c1", 1), ("wti", "c2", -1)], "wti_m1m2",   False),
-    ("WTI_M2M3",   "WTI M2-M3",          [("wti", "c2", 1), ("wti", "c3", -1)], "wti_m1m2",   True),
-    ("WTI_FLY",    "WTI M1-M2-M3 fly",   [("wti", "c1", 1), ("wti", "c2", -2), ("wti", "c3", 1)], "wti_fly", True),
-    ("BRENT_M1M2", "Brent M1-M2",        [("brent", "c1", 1), ("brent", "c2", -1)], "brent_m1m2", False),
-    ("BRENT_M2M3", "Brent M2-M3",        [("brent", "c2", 1), ("brent", "c3", -1)], "brent_m1m2", False),
-    ("BRENT_FLY",  "Brent M1-M2-M3 fly", [("brent", "c1", 1), ("brent", "c2", -2), ("brent", "c3", 1)], "wti_fly", False),
-    ("BRENT_WTI",  "Brent-WTI arb",      [("brent", "c1", 1), ("wti", "c1", -1)], "brent_wti", True),
+    ("WTI_M1M2",   "WTI M1-M2",          [("wti", "c1", 1), ("wti", "c2", -1)], "wti_m1m2"),
+    ("WTI_M2M3",   "WTI M2-M3",          [("wti", "c2", 1), ("wti", "c3", -1)], "wti_m1m2"),
+    ("WTI_FLY",    "WTI M1-M2-M3 fly",   [("wti", "c1", 1), ("wti", "c2", -2), ("wti", "c3", 1)], "wti_fly"),
+    ("BRENT_M1M2", "Brent M1-M2",        [("brent", "c1", 1), ("brent", "c2", -1)], "brent_m1m2"),
+    ("BRENT_M2M3", "Brent M2-M3",        [("brent", "c2", 1), ("brent", "c3", -1)], "brent_m1m2"),
+    ("BRENT_FLY",  "Brent M1-M2-M3 fly", [("brent", "c1", 1), ("brent", "c2", -2), ("brent", "c3", 1)], "wti_fly"),
+    ("BRENT_WTI",  "Brent-WTI arb",      [("brent", "c1", 1), ("wti", "c1", -1)], "brent_wti"),
 ]
-ACTIVE = {key for key, _, _, _, on in STRUCTURES if on}
 
-STRATEGY_NAME = "Intraday RV mean-reversion + cost gate (WTI & Brent, 15-min, 5y)"
-STRATEGY_DESC = ("Rolling-mean fair value on 15-min bars; fade a >=2sigma dislocation ONLY when the "
-                 "expected $ move to fair clears 2x realistic cost (volatility-adaptive cost gate); ride "
-                 "the reversion THROUGH fair to ~1.5sigma overshoot (z<=-1.5), with a 3.5sigma stop, a 12h "
-                 "time stop, or a session/roll break. Traded universe pruned to the 3 crude structures "
-                 "with a persistent post-cost edge (Brent-WTI arb, WTI fly, WTI M2-M3). 1 unit/trade "
-                 "(optional 2-unit scaling on the deepest >=2.75sigma dislocations). 5 years.")
+STRATEGY_NAME = "Regime-driven intraday RV mean-reversion (15-min, 5y)"
+STRATEGY_DESC = (
+    "Fair value = a REGIME-PARAMETERIZED adaptive EWMA whose half-life is the regime's measured, "
+    "trailing reversion speed (not a fixed window). The regime model drives a regime-conditioned z "
+    "(residual vs same-vol-state expanding std + vol floor), per-vol-state z-thresholds and max-hold "
+    "(× the regime half-life), vol-target sizing, a cost gate, and a shock layer (de-lever / "
+    "stand-aside through vol-regime step-ups, plus the session/roll flatten). A regime-blind control "
+    "(fixed-span EWMA, global dispersion, fixed z=2 / 1 unit, no shock layer) runs head-to-head."
+)
 
 
 # ============================================================================
-# Data: 1-min CSV -> cached 15-min curve (mids + contract codes per leg)
+# Data: 1-min CSV → cached 15-min curve (mids + contract codes per leg)
 # ============================================================================
 def _load_product(csv_path, prefix):
     use = ["timestamp", "c1||contract", "c1||weighted_mid", "c2||contract",
@@ -121,8 +111,7 @@ def build_cache():
     print("  building 15-min cache from 1-min CSVs (one-time, ~1-2 min)...")
     wti = _load_product(CL_CSV, "wti")
     brent = _load_product(LCO_CSV, "brent")
-    df = wti.join(brent, how="outer").sort_index()
-    df = df.dropna(how="all")
+    df = wti.join(brent, how="outer").sort_index().dropna(how="all")
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     df.to_parquet(CACHE)
     print(f"  cached {len(df):,} 15-min bars -> {CACHE}")
@@ -139,19 +128,27 @@ def load_curve(rebuild=False):
 
 
 # ============================================================================
-# Context (Phase-2 labels only)
+# Phase-2 context: daily vol-state + regime label per calendar date
 # ============================================================================
 def regime_by_date():
     try:
         hist = json.loads((DATA_DIR / "regimes.json").read_text(encoding="utf8")).get("history", [])
-        return {h["date"]: h.get("regimeLabel") for h in hist}
+        return {h["date"]: {"vol": h.get("volatility"), "rid": h.get("regimeId"),
+                            "label": h.get("regimeLabel")} for h in hist}
+    except Exception:
+        return {}
+
+
+def edges_map():
+    try:
+        return json.loads((DATA_DIR / "backtest.json").read_text(encoding="utf8")).get("spreads", {})
     except Exception:
         return {}
 
 
 def edge_for(hitkey, edges):
     bt = edges.get(hitkey)
-    return round(float(bt["hitRate"]), 3) if bt and bt.get("sufficient") else None
+    return (round(float(bt["hitRate"]), 3), float(bt.get("edge") or 0.0)) if bt and bt.get("sufficient") else (None, 0.0)
 
 
 # ============================================================================
@@ -174,186 +171,66 @@ def spread_frame(df, legs):
     return sub
 
 
-# ============================================================================
-# Simulate one structure (segment-aware, intraday)
-# ============================================================================
-def simulate(df, key, label, legs, hitkey, edges, reg_map):
-    sub = spread_frame(df, legs)
-    if len(sub) < LOOKBACK + 3:
+def prep_frames(df, legs, reg_map, cfg):
+    """Build the aware (adaptive-EWMA FV) and blind (fixed-EWMA FV) frames + the trailing
+    half-life array. Everything here is causal."""
+    base = spread_frame(df, legs)
+    if base.empty or len(base) < cfg.warmup + 20:
+        return None
+    spread = base["spread"]
+    seg = base["seg"].to_numpy()
+    dates = base.index.strftime("%Y-%m-%d")
+    vol_state = np.array([reg_map.get(d, {}).get("vol") for d in dates], dtype=object)
+    regime_id = np.array([reg_map.get(d, {}).get("rid") for d in dates], dtype=object)
+    regime_lab = np.array([reg_map.get(d, {}).get("label") for d in dates], dtype=object)
+
+    # measure the trailing per-vol-state reversion half-life off the deviation from a SLOW ref
+    slow = rs.fixed_ewma(spread, SLOW_HL, seg)
+    dev = (spread - slow).to_numpy(float)
+    hl = rs.trailing_halflife(dev, vol_state, seg, cfg)        # reversion HL (drives maxHold)
+
+    # adaptive fair value (aware): EWMA whose span is FV_SPAN_MULT × the reversion half-life
+    # (the slow equilibrium) vs the blind fixed-span fair value
+    fv_span = np.clip(FV_SPAN_MULT * hl, FV_MIN_HL, FV_MAX_HL)
+    fv_aware = rs.adaptive_ewma(spread.to_numpy(float), fv_span, seg)
+    fv_blind = rs.fixed_ewma(spread, rs.INTRADAY_BLIND_HL, seg).to_numpy(float)
+
+    # short causal realized vol of the spread → the shock detector's per-bar vol proxy
+    bar_vol = (base.groupby("seg")["spread"]
+               .transform(lambda s: s.diff().abs().rolling(BAR_VOL_WIN, min_periods=2).mean())
+               .to_numpy(float))
+
+    common = {"vol_state": vol_state, "regime_id": regime_id, "regime": regime_lab,
+              "bar_vol": bar_vol, "seg": seg}
+    fa = pd.DataFrame({"spread": spread.to_numpy(float), "fv": fv_aware, **common}, index=base.index)
+    fb = pd.DataFrame({"spread": spread.to_numpy(float), "fv": fv_blind, **common}, index=base.index)
+    return fa, fb, hl
+
+
+def comparison(aware_sum, blind_sum) -> dict:
+    def pair(key):
+        return {"aware": aware_sum.get(key), "blind": blind_sum.get(key)}
+    return {k: pair(k) for k in
+            ["sharpe", "calmar", "maxDrawdown", "maxDrawdownPct", "cvar5", "volAnn",
+             "netPnl", "grossPnl", "profitFactor", "trades", "pctTimeInMarket", "cagr"]}
+
+
+def sizing_series(size_map, sev_map):
+    if not size_map:
         return []
-    n_legs = sum(abs(w) for _, _, w in legs)
-    cost = SLIP_PER_LEG * 2 * n_legs * MULT
-    gate_cost = EDGE_COST_MULT * 2 * n_legs * ASSUMED_SLIP * MULT   # min $ capture to take a trade
-    hit = edge_for(hitkey, edges)
-    trades = []
-
-    for _, g in sub.groupby("seg", sort=False):
-        if len(g) < LOOKBACK + 2:
-            continue
-        m = g["spread"].rolling(LOOKBACK).mean()
-        s = g["spread"].rolling(LOOKBACK).std()
-        z = (g["spread"] - m) / s
-        gg = pd.DataFrame({"spread": g["spread"], "mean": m, "std": s, "z": z}).dropna()
-        gg = gg[gg["std"] > 0]
-        if gg.empty:
-            continue
-        ts = list(gg.index)
-        sp = gg["spread"].values
-        zv = gg["z"].values
-        mv = gg["mean"].values
-        last = len(ts) - 1
-        pos = None
-        for i in range(len(ts)):
-            zi, spi = float(zv[i]), float(sp[i])
-            if pos is None:
-                if i < last and abs(zi) >= Z_ENTRY:
-                    capture = abs(spi - float(mv[i])) * MULT       # expected $ move back to fair
-                    if capture < gate_cost:                         # too small to clear cost -> skip
-                        continue
-                    pos = {"dir": "LONG" if zi <= -Z_ENTRY else "SHORT", "i": i, "t": ts[i],
-                           "sp": spi, "entries": [spi], "z": zi, "fv": float(mv[i]), "mae": 0.0, "mfe": 0.0}
-                continue
-            sign = 1.0 if pos["dir"] == "LONG" else -1.0
-            entry_sign = -sign
-            # scale in: add a unit on a deeper, same-side dislocation (highest conviction)
-            if (SCALE_IN and len(pos["entries"]) < SCALE_MAX_UNITS and abs(zi) >= SCALE_ADD_Z
-                    and (zi < 0) == (pos["dir"] == "LONG")):
-                pos["entries"].append(spi)
-            upnl = sign * sum(spi - e for e in pos["entries"]) * MULT
-            pos["mae"], pos["mfe"] = min(pos["mae"], upnl), max(pos["mfe"], upnl)
-            held = i - pos["i"]
-            hit_t = entry_sign * zi <= Z_EXIT
-            hit_s = abs(zi) >= Z_STOP
-            hit_time = held >= MAX_HOLD_BARS
-            forced = i == last                      # flatten at the segment (session/roll) end
-            if hit_t or hit_s or hit_time or forced:
-                reason = ("target" if hit_t else "stop" if hit_s
-                          else "time_stop" if hit_time else "session_end")
-                units = len(pos["entries"])
-                gross = sign * sum(spi - e for e in pos["entries"]) * MULT
-                trade_cost = cost * units
-                hold_min = int((ts[i] - pos["t"]).total_seconds() // 60)
-                day = pos["t"].strftime("%Y-%m-%d")
-                trades.append({
-                    "structure": key, "label": label, "regime": reg_map.get(day),
-                    "direction": pos["dir"],
-                    "entryDate": pos["t"].strftime("%Y-%m-%d %H:%M"),
-                    "exitDate": ts[i].strftime("%Y-%m-%d %H:%M"),
-                    "entrySpread": round(pos["sp"], 3), "exitSpread": round(spi, 3),
-                    "fairValue": round(pos["fv"], 3),
-                    "entryZ": round(pos["z"], 2), "exitZ": round(zi, 2),
-                    "holdBars": held, "holdMin": hold_min,
-                    "holdLabel": f"{hold_min // 60}h{hold_min % 60:02d}" if hold_min >= 60 else f"{hold_min}m",
-                    "pnl": round(gross, 2), "cost": round(trade_cost, 2), "netPnl": round(gross - trade_cost, 2),
-                    "nLegs": n_legs, "units": units, "mae": round(pos["mae"], 2), "mfe": round(pos["mfe"], 2),
-                    "exitReason": reason, "histHitRate": hit,
-                })
-                pos = None
-    return trades
-
-
-# ============================================================================
-# Aggregation (intraday)
-# ============================================================================
-def pf(rows):
-    gw = sum(t["pnl"] for t in rows if t["pnl"] > 0)
-    gl = -sum(t["pnl"] for t in rows if t["pnl"] <= 0)
-    return round(gw / gl, 3) if gl > 0 else None
-
-
-def _counts(rows, key):
-    out = {}
-    for r in rows:
-        out[r[key]] = out.get(r[key], 0) + 1
-    return out
-
-
-def equity_curve(all_trades):
-    rows = sorted(all_trades, key=lambda t: t["exitDate"])
-    eq = INITIAL_CAPITAL
-    curve = [{"t": rows[0]["entryDate"][:10], "equity": eq}] if rows else []
-    for t in rows:
-        eq += t["pnl"]
-        curve.append({"t": t["exitDate"][:10], "equity": round(eq, 2)})
-    return curve
-
-
-def max_drawdown(curve):
-    peak, mdd = -1e18, 0.0
-    for p in curve:
-        peak = max(peak, p["equity"])
-        mdd = min(mdd, p["equity"] - peak)
-    return round(mdd, 2)
-
-
-def summarize(all_trades, curve, years):
-    n = len(all_trades)
-    gross = sum(t["pnl"] for t in all_trades)
-    net = sum(t["netPnl"] for t in all_trades)
-    costs = sum(t["cost"] for t in all_trades)
-    wins = [t for t in all_trades if t["pnl"] > 0]
-    losses = [t for t in all_trades if t["pnl"] <= 0]
-    gw, gl = sum(t["pnl"] for t in wins), -sum(t["pnl"] for t in losses)
-    nwins = [t for t in all_trades if t["netPnl"] > 0]
-    nlosses = [t for t in all_trades if t["netPnl"] <= 0]
-    pnls = np.array([t["pnl"] for t in all_trades], float) if n else np.array([])
-    sharpe = float(pnls.mean() / pnls.std()) if n > 1 and pnls.std() > 0 else 0.0
-    # Reference net at a realistic 1c/leg — ALWAYS computed (even when reporting gross),
-    # so the dashboard can always show the honest after-cost number / % of gross kept.
-    REF = 0.01
-    ref_costs = sum(2 * t.get("nLegs", 2) * t.get("units", 1) * REF * MULT for t in all_trades)
-    ref_net = gross - ref_costs
-    return {
-        "trades": n, "grossPnl": round(gross, 2), "netPnl": round(net, 2), "costs": round(costs, 2),
-        "refNet": round(ref_net, 2), "refSlip": REF,
-        "refKeepPct": round(ref_net / gross, 3) if gross > 0 else 0.0,
-        "winRate": round(len(wins) / n, 4) if n else 0.0,
-        "avgWin": round(gw / len(wins), 2) if wins else 0.0,
-        "avgLoss": round(-gl / len(losses), 2) if losses else 0.0,
-        "avgNetWin": round(sum(t["netPnl"] for t in nwins) / len(nwins), 2) if nwins else 0.0,
-        "avgNetLoss": round(sum(t["netPnl"] for t in nlosses) / len(nlosses), 2) if nlosses else 0.0,
-        "profitFactor": pf(all_trades), "expectancy": round(gross / n, 2) if n else 0.0,
-        "netExpectancy": round(net / n, 2) if n else 0.0,
-        "perTradeSharpe": round(sharpe, 3),
-        "avgHoldMin": round(float(np.mean([t["holdMin"] for t in all_trades])), 0) if n else 0.0,
-        "tradesPerYear": round(n / years, 0) if years else 0.0,
-        "maxDrawdown": max_drawdown(curve),
-        "endingEquity": round(INITIAL_CAPITAL + gross, 2), "initialCapital": INITIAL_CAPITAL,
-        "byExitReason": _counts(all_trades, "exitReason"), "byDirection": _counts(all_trades, "direction"),
-    }
-
-
-def per_structure(all_trades):
-    out = {}
-    for key, label, _, _, _ in STRUCTURES:
-        ts = [t for t in all_trades if t["structure"] == key]
-        if not ts:
-            continue
-        wins = [t for t in ts if t["pnl"] > 0]
-        out[key] = {
-            "label": label, "trades": len(ts), "wins": len(wins),
-            "winRate": round(len(wins) / len(ts), 3), "pnl": round(sum(t["pnl"] for t in ts), 2),
-            "profitFactor": pf(ts), "avgHoldMin": round(float(np.mean([t["holdMin"] for t in ts])), 0),
-            "histHitRate": ts[0]["histHitRate"],
-        }
-    return out
-
-
-def per_regime(all_trades):
-    out = {}
-    for lab in sorted({t["regime"] for t in all_trades if t["regime"]}):
-        ts = [t for t in all_trades if t["regime"] == lab]
-        wins = [t for t in ts if t["pnl"] > 0]
-        out[lab] = {"trades": len(ts), "wins": len(wins),
-                    "winRate": round(len(wins) / len(ts), 3), "pnl": round(sum(t["pnl"] for t in ts), 2),
-                    "profitFactor": pf(ts)}
-    return out
+    sizes = pd.concat(size_map.values(), axis=1, sort=True).mean(axis=1)
+    sevs = pd.concat(sev_map.values(), axis=1, sort=True).mean(axis=1)
+    bd_size = sizes.groupby(sizes.index.normalize()).mean()
+    bd_sev = sevs.groupby(sevs.index.normalize()).mean()
+    return [{"t": ts.strftime("%Y-%m-%d"), "size": round(float(bd_size[ts]), 3),
+             "severity": round(float(bd_sev.get(ts, 0.0)), 3)} for ts in bd_size.index]
 
 
 def write_csv(all_trades):
-    cols = ["structure", "label", "regime", "direction", "entryDate", "exitDate", "holdLabel",
-            "entrySpread", "exitSpread", "fairValue", "entryZ", "exitZ", "pnl", "cost", "netPnl",
-            "mae", "mfe", "exitReason", "histHitRate", "equityAfter"]
+    cols = ["structure", "label", "regime", "volState", "direction", "entryDate", "exitDate",
+            "holdLabel", "entrySpread", "exitSpread", "fairValue", "entryZ", "exitZ", "size",
+            "entrySeverity", "pnl", "cost", "netPnl", "mae", "mfe", "exitReason", "histHitRate",
+            "equityAfter"]
     with open(OUT_DIR / "historical_intraday_trades.csv", "w", newline="", encoding="utf8") as f:
         w = csv.DictWriter(f, fieldnames=cols, extrasaction="ignore")
         w.writeheader(); eq = INITIAL_CAPITAL
@@ -362,64 +239,122 @@ def write_csv(all_trades):
             w.writerow(row)
 
 
-# ============================================================================
-# Main
-# ============================================================================
 def main():
-    global SLIP_PER_LEG
     ap = argparse.ArgumentParser()
-    ap.add_argument("--slip", type=float, default=SLIP_PER_LEG)
+    ap.add_argument("--slip", type=float, default=0.0)
     ap.add_argument("--rebuild", action="store_true", help="force-rebuild the 15-min cache")
     args = ap.parse_args()
-    SLIP_PER_LEG = args.slip
+
+    cfg = rs.INTRADAY_CONFIG
+    cfg.slip_per_leg = args.slip
+    cfg.mult = MULT
 
     df = load_curve(rebuild=args.rebuild)
-    edges = json.loads((DATA_DIR / "backtest.json").read_text(encoding="utf8")).get("spreads", {}) \
-        if (DATA_DIR / "backtest.json").exists() else {}
     reg_map = regime_by_date()
+    edges = edges_map()
 
     first, last = df.index.min(), df.index.max()
     years = max((last - first).days / 365.25, 1e-9)
 
-    all_trades = []
-    for key, label, legs, hitkey, on in STRUCTURES:
-        if not on:                       # evaluated but not traded (no persistent post-cost edge)
-            continue
-        trades = simulate(df, key, label, legs, hitkey, edges, reg_map)
-        all_trades += trades
-        if trades:
-            print(f"  {key:11} trades={len(trades):5} pnl=${sum(t['pnl'] for t in trades):>9,.0f} "
-                  f"win={sum(1 for t in trades if t['pnl']>0)/len(trades):.0%} PF={pf(trades)}")
+    aware_trades, blind_trades = [], []
+    aware_pnls, blind_pnls = [], []
+    aware_inmkt, blind_inmkt = [], []
+    size_map, sev_map = {}, {}
+    traded, skipped, deployable = [], [], []
 
-    curve = equity_curve(all_trades)
-    summary = summarize(all_trades, curve, years)
-    # Cap the trade list shipped to the dashboard (full stats already computed on all).
-    DISPLAY = 600
-    shown = sorted(all_trades, key=lambda t: t["entryDate"], reverse=True)[:DISPLAY]
+    for key, label, legs, hitkey in STRUCTURES:
+        hit, edge = edge_for(hitkey, edges)
+        if hit is None or edge < MIN_EDGE:
+            skipped.append((key, label, edge, "no validated reversion edge"))
+            continue
+        prepped = prep_frames(df, legs, reg_map, cfg)
+        if prepped is None:
+            skipped.append((key, label, edge, "insufficient bars"))
+            continue
+        fa, fb, hl = prepped
+        legs_count = sum(abs(w) for _, _, w in legs)
+
+        # Two OOS gates on the TRAIN window (brief's gross/net philosophy):
+        #   • GROSS edge > 0  → the SIGNAL works → evaluated in the 5-year backtest.
+        #   • AFTER-COST edge > 0 → cheap enough to actually trade → DEPLOYABLE (the live book
+        #     trades only these). The calendar/fly structures are gross-positive but net-negative
+        #     (high-frequency churn that stops out too often to clear costs).
+        ntr = int(len(fa) * TRAIN_FRAC)
+        at = rs.simulate_structure(fa.iloc[:ntr], cfg, mode="aware", legs_count=legs_count,
+                                   structure=key, label=label, hit_rate=hit, halflife=hl[:ntr])
+        train_gross = sum(t["pnl"] for t in at["trades"])
+        if train_gross <= 0:
+            skipped.append((key, label, edge, f"no intraday signal on train (${train_gross:,.0f})"))
+            continue
+        ref_cost = 2 * legs_count * REF_SLIP * MULT
+        train_net = sum(t["pnl"] - ref_cost * t.get("size", 1.0) for t in at["trades"])
+        if train_net > 0:
+            deployable.append(key)
+        traded.append((key, label))
+
+        a = rs.simulate_structure(fa, cfg, mode="aware", legs_count=legs_count,
+                                  structure=key, label=label, hit_rate=hit, halflife=hl)
+        b = rs.simulate_structure(fb, cfg, mode="blind", legs_count=legs_count,
+                                  structure=key, label=label, hit_rate=hit, halflife=hl)
+        aware_trades += a["trades"]; blind_trades += b["trades"]
+        aware_pnls.append(a["pnl"]); blind_pnls.append(b["pnl"])
+        aware_inmkt.append(a["in_market"]); blind_inmkt.append(b["in_market"])
+        size_map[key] = a["size"]; sev_map[key] = a["severity"]
+        print(f"  {key:11} edge={edge:+.0%} aware n={len(a['trades']):5} "
+              f"pnl=${sum(t['pnl'] for t in a['trades']):>10,.0f} | blind n={len(b['trades']):5} "
+              f"pnl=${sum(t['pnl'] for t in b['trades']):>10,.0f}")
+
+    for key, label, edge, why in skipped:
+        print(f"  {key:11} edge={edge:+.0%}  SKIP ({why})")
+
+    aware_daily = rs.portfolio_daily_pnl(aware_pnls)
+    blind_daily = rs.portfolio_daily_pnl(blind_pnls)
+    aware_sum = rs.summarize(aware_trades, aware_daily, INITIAL_CAPITAL, years, MULT, REF_SLIP, "intraday")
+    blind_sum = rs.summarize(blind_trades, blind_daily, INITIAL_CAPITAL, years, MULT, REF_SLIP, "intraday")
+    aware_sum["pctTimeInMarket"] = rs.pct_time_in_market(aware_inmkt)
+    blind_sum["pctTimeInMarket"] = rs.pct_time_in_market(blind_inmkt)
+
+    curve = rs.equity_from_daily(aware_daily, INITIAL_CAPITAL)
+    curve_blind = rs.equity_from_daily(blind_daily, INITIAL_CAPITAL)
+    shown = sorted(aware_trades, key=lambda t: t["entryDate"], reverse=True)[:DISPLAY]
+
     feed = {
         "generatedAt": pd.Timestamp.now("UTC").strftime("%Y-%m-%dT%H:%M:%SZ"),
         "mode": "intraday", "horizon": "15-min bars",
         "span": {"first": first.strftime("%Y-%m-%d"), "last": last.strftime("%Y-%m-%d")},
         "years": round(years, 1), "bars": int(len(df)),
         "strategy": {"name": STRATEGY_NAME, "desc": STRATEGY_DESC,
-                     "params": {"lookback": LOOKBACK, "zEntry": Z_ENTRY, "zExit": Z_EXIT,
-                                "zStop": Z_STOP, "maxHoldBars": MAX_HOLD_BARS, "mult": MULT,
-                                "slipPerLeg": SLIP_PER_LEG, "assumedSlip": ASSUMED_SLIP,
-                                "edgeCostMult": EDGE_COST_MULT, "activeStructures": sorted(ACTIVE),
-                                "scaleIn": SCALE_IN, "scaleAddZ": SCALE_ADD_Z, "scaleMaxUnits": SCALE_MAX_UNITS}},
-        "summary": summary, "byStructure": per_structure(all_trades),
-        "byRegime": per_regime(all_trades), "equityCurve": curve,
+                     "params": {"slowHL": SLOW_HL, "blindHL": rs.INTRADAY_BLIND_HL, "mult": MULT,
+                                "slipPerLeg": args.slip, "minEdge": MIN_EDGE, "trainFrac": TRAIN_FRAC,
+                                "bookScale": cfg.size.book_scale,
+                                "assumedSlip": cfg.assumed_slip, "edgeCostMult": cfg.edge_cost_mult,
+                                "volStateParams": {s: vars(p) for s, p in cfg.params.items()},
+                                "sizing": "vol-target (constant $-risk, ×typical/state dispersion)",
+                                "tradedStructures": [t for t, _ in traded],
+                                "deployableStructures": deployable}},
+        "summary": aware_sum,
+        "blind": {"summary": blind_sum, "equityCurve": curve_blind},
+        "comparison": comparison(aware_sum, blind_sum),
+        "byStructure": rs.per_structure(aware_trades, traded),
+        "byRegime": rs.per_regime(aware_trades),
+        "byVolState": rs.per_volstate(aware_trades),
+        "equityCurve": curve, "equityCurveBlind": curve_blind,
+        "sizingSeries": sizing_series(size_map, sev_map),
         "trades": shown, "tradesShown": len(shown),
         "openPositions": [], "openCount": 0,
     }
     (DATA_DIR / "historical_intraday.json").write_text(json.dumps(feed, indent=1), encoding="utf8")
-    write_csv(all_trades)
-    net = f" | net ${summary['netPnl']:,.0f}" if summary["costs"] > 0 else ""
-    print(f"\n{first.date()} -> {last.date()} ({years:.1f}y, {len(df):,} bars) | "
-          f"trades {summary['trades']:,} | gross ${summary['grossPnl']:,.0f}{net} | "
-          f"win {summary['winRate']*100:.0f}% | PF {summary['profitFactor']} | "
-          f"exp ${summary['netExpectancy' if summary['costs'] > 0 else 'expectancy']:,.0f} | "
-          f"DD ${summary['maxDrawdown']:,.0f}")
+    write_csv(aware_trades)
+
+    print(f"\n{first.date()} -> {last.date()} ({years:.1f}y, {len(df):,} bars) | traded {len(traded)}")
+    print(f"  AWARE  trades {aware_sum['trades']:5} | net ${aware_sum['netPnl']:>11,.0f} | "
+          f"Sharpe {aware_sum['sharpe']:.2f} | Calmar {aware_sum['calmar']} | "
+          f"maxDD ${aware_sum['maxDrawdown']:,.0f} ({aware_sum['maxDrawdownPct']*100:.1f}%) | "
+          f"CVaR ${aware_sum['cvar5']:,.0f} | TIM {aware_sum['pctTimeInMarket']*100:.0f}%")
+    print(f"  BLIND  trades {blind_sum['trades']:5} | net ${blind_sum['netPnl']:>11,.0f} | "
+          f"Sharpe {blind_sum['sharpe']:.2f} | Calmar {blind_sum['calmar']} | "
+          f"maxDD ${blind_sum['maxDrawdown']:,.0f} ({blind_sum['maxDrawdownPct']*100:.1f}%) | "
+          f"CVaR ${blind_sum['cvar5']:,.0f}")
     print(f"  -> {DATA_DIR / 'historical_intraday.json'}")
 
 

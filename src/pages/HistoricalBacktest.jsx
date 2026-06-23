@@ -1,12 +1,23 @@
 import { useState } from "react";
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine } from "recharts";
+import { AreaChart, Area, ComposedChart, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine } from "recharts";
 import { ResponsiveContainer } from "../lib/ResponsiveContainer";
-import { History, Layers, Gauge, ChevronDown, ArrowUpRight, ArrowDownRight, Download } from "lucide-react";
+import { History, Layers, Gauge, ChevronDown, ArrowUpRight, ArrowDownRight, Download, Shield, Zap, Activity } from "lucide-react";
 import { Card } from "../components/primitives/Card";
 import { Band } from "../components/primitives/Band";
 import { chartProps, ChartTooltip } from "../lib/chart-theme";
 import { useLive } from "../lib/useLive";
 import { fmt, fmtSigned } from "../lib/format";
+
+// Compact $ (e.g. -$133k, +$1.2M) for risk figures.
+const usdK = (n) => {
+  if (n == null || Number.isNaN(Number(n))) return "—";
+  const a = Math.abs(n), s = n < 0 ? "-" : "";
+  if (a >= 1e6) return `${s}$${(a / 1e6).toFixed(2)}M`;
+  if (a >= 1e3) return `${s}$${Math.round(a / 1e3)}k`;
+  return `${s}$${Math.round(a)}`;
+};
+const pctOf = (n, d = 1) => (n == null || Number.isNaN(Number(n)) ? "—" : `${(n * 100).toFixed(d)}%`);
+const num = (n, d = 2) => (n == null || Number.isNaN(Number(n)) ? "—" : Number(n).toFixed(d));
 
 // ----------------------------------------------------------------------------
 // Historical Backtest — the Phase-2 FUNDAMENTAL fair value, traded as a daily
@@ -18,12 +29,15 @@ import { fmt, fmtSigned } from "../lib/format";
 
 const FALLBACK = {
   generatedAt: "—", span: { first: "—", last: "—" }, years: 0, days: 0,
-  strategy: { name: "Phase-2 fundamental RV mean-reversion", desc: "", params: {} },
+  strategy: { name: "Regime-driven RV mean-reversion", desc: "", params: {} },
   summary: { trades: 0, grossPnl: 0, netPnl: 0, costs: 0, winRate: 0, avgWin: 0, avgLoss: 0,
     profitFactor: null, expectancy: 0, netExpectancy: 0, avgNetWin: 0, avgNetLoss: 0,
-    perTradeSharpe: 0, avgHoldDays: 0, tradesPerYear: 0,
+    perTradeSharpe: 0, avgHoldDays: 0, tradesPerYear: 0, avgSize: 1,
+    sharpe: 0, calmar: null, cagr: 0, maxDrawdownPct: 0, cvar5: 0, volAnn: 0, pctTimeInMarket: 0,
     maxDrawdown: 0, endingEquity: 250000, initialCapital: 250000, byExitReason: {}, byDirection: {} },
-  byStructure: {}, byRegime: {}, equityCurve: [], trades: [], openPositions: [], openCount: 0,
+  blind: { summary: {}, equityCurve: [] }, comparison: {}, byVolState: {},
+  byStructure: {}, byRegime: {}, equityCurve: [], equityCurveBlind: [], sizingSeries: [],
+  trades: [], openPositions: [], openCount: 0,
 };
 
 const dirColor = (d) => (d === "LONG" ? "text-emerald-400" : "text-red-400");
@@ -54,16 +68,15 @@ const Hero = ({ d, mode, setMode }) => {
   const hasCost = (s.costs || 0) > 0;
   const intraday = d.mode === "intraday";
   const obs = intraday ? `${fmt(d.bars || 0, 0)} 15-min bars` : `${d.days || 0} trading days`;
-  const fvText = intraday ? "rolling-mean fair value (price-derived)" : "Phase-2 fundamental fair value · walk-forward (out-of-sample)";
+  const fvText = intraday
+    ? "regime-adaptive fair value (EWMA · span set by the regime's half-life)"
+    : "Phase-2 fundamentals regression · walk-forward (out-of-sample)";
+  // Lead with RISK (the mentor's mandate); gross P&L is the by-product, shown last.
   const stats = [
-    { k: "Trades", v: fmt(s.trades, 0), sub: `${fmt(s.tradesPerYear || 0, 0)}/yr` },
-    { k: "Gross P&L", v: fmtSigned(s.grossPnl, 0),
-      sub: hasCost ? `net ${fmtSigned(s.netPnl, 0)} after costs` : `exp ${fmtSigned(s.expectancy, 0)}/trade`,
-      color: pnlColor(s.grossPnl) },
-    { k: "Win rate", v: pct(s.winRate),
-      sub: hasCost ? `+${fmt(s.avgNetWin, 0)} / ${fmt(s.avgNetLoss, 0)} avg · net`
-                   : `+${fmt(s.avgWin, 0)} / ${fmt(s.avgLoss, 0)} avg` },
-    { k: "Profit factor", v: pf(s.profitFactor), title: PF_TITLE, sub: `Sharpe ${s.perTradeSharpe} · DD ${fmtSigned(s.maxDrawdown, 0)}` },
+    { k: "Sharpe", v: num(s.sharpe, 2), sub: `Calmar ${s.calmar == null ? "—" : num(s.calmar, 2)}`, big: true },
+    { k: "Max drawdown", v: usdK(s.maxDrawdown), sub: `${pctOf(s.maxDrawdownPct)} · MTM` },
+    { k: "Tail risk · CVaR 5%", v: usdK(s.cvar5), sub: `${pctOf(s.pctTimeInMarket, 0)} time in market` },
+    { k: "Net P&L", v: usdK(s.netPnl), sub: `${fmt(s.trades, 0)} trades · ${pct(s.winRate)} win`, color: pnlColor(s.netPnl) },
   ];
   return (
     <Card padding={false}>
@@ -71,10 +84,10 @@ const Hero = ({ d, mode, setMode }) => {
         <div className="flex items-center gap-3">
           <div className="w-1 h-12 rounded-sm bg-sky-500" />
           <div>
-            <div className="text-[10px] uppercase tracking-[0.16em] text-zinc-500">Historical Backtest · WTI &amp; Brent · {fvText.split(" ·")[0]}</div>
+            <div className="text-[10px] uppercase tracking-[0.16em] text-zinc-500">Historical Backtest · WTI &amp; Brent · regime-driven</div>
             <div className="text-2xl font-semibold text-zinc-100 leading-tight">{d.years}-year {intraday ? "intraday" : "daily"} simulation <span className="text-zinc-600 text-base">2021–2026</span></div>
             <div className="text-[10px] text-zinc-600 mt-0.5 font-mono">
-              {obs} · {d.span?.first} → {d.span?.last} · {fvText} · 1 unit/trade · {hasCost ? "net of cost" : "gross"}
+              {obs} · {d.span?.first} → {d.span?.last} · {fvText} · vol-target sizing · {hasCost ? "net of cost" : "gross"}
             </div>
           </div>
         </div>
@@ -105,17 +118,27 @@ const Hero = ({ d, mode, setMode }) => {
 // ----------------------------------------------------------------------------
 // Equity curve (5-year)
 // ----------------------------------------------------------------------------
-const Equity = ({ curve, initial }) => {
+const Equity = ({ curve, blindCurve, initial }) => {
   if (!curve || curve.length < 2) return null;
-  const data = curve.map((p, i) => ({ ...p, i }));
+  const blindByT = new Map((blindCurve || []).map((p) => [p.t, p.equity]));
+  const data = curve.map((p, i) => ({ ...p, i, blind: blindByT.get(p.t) }));
+  const hasBlind = (blindCurve || []).length > 1;
   return (
     <Card padding={false}>
-      <div className="px-4 py-2.5 border-b border-[#1c1d22] text-[11px] uppercase tracking-[0.14em] text-zinc-400">
-        Equity curve <span className="text-zinc-600 normal-case tracking-normal">· realised, gross · {curve[0].t} → {curve[curve.length - 1].t}</span>
+      <div className="px-4 py-2.5 border-b border-[#1c1d22] flex items-center justify-between flex-wrap gap-2">
+        <span className="text-[11px] uppercase tracking-[0.14em] text-zinc-400">
+          Equity curve <span className="text-zinc-600 normal-case tracking-normal">· mark-to-market, gross · {curve[0].t} → {curve[curve.length - 1].t}</span>
+        </span>
+        {hasBlind && (
+          <span className="flex items-center gap-3 text-[10px]">
+            <span className="flex items-center gap-1.5 text-sky-300"><span className="w-3 h-0.5 bg-sky-400 inline-block" /> Regime-aware</span>
+            <span className="flex items-center gap-1.5 text-zinc-500"><span className="w-3 h-0 border-t border-dashed border-zinc-500 inline-block" /> Regime-blind</span>
+          </span>
+        )}
       </div>
       <div className="h-56 p-2">
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={data} margin={{ top: 8, right: 12, bottom: 4, left: 0 }}>
+          <ComposedChart data={data} margin={{ top: 8, right: 12, bottom: 4, left: 0 }}>
             <defs>
               <linearGradient id="heq" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="#38bdf8" stopOpacity={0.22} />
@@ -124,12 +147,101 @@ const Equity = ({ curve, initial }) => {
             </defs>
             <CartesianGrid {...chartProps.grid} />
             <XAxis dataKey="i" {...chartProps.axis} tick={false} />
-            <YAxis {...chartProps.axis} width={64} domain={["dataMin - 5000", "dataMax + 5000"]}
+            <YAxis {...chartProps.axis} width={64} domain={["auto", "auto"]}
               tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
             <ReferenceLine y={initial} stroke="#3f3f46" strokeDasharray="3 3" />
             <Tooltip content={<ChartTooltip formatter={(v) => `$${fmt(v, 0)}`} />} />
-            <Area type="monotone" dataKey="equity" stroke="#38bdf8" strokeWidth={1.5} fill="url(#heq)" />
-          </AreaChart>
+            <Area type="monotone" name="Regime-aware" dataKey="equity" stroke="#38bdf8" strokeWidth={1.5} fill="url(#heq)" />
+            {hasBlind && <Line type="monotone" name="Regime-blind" dataKey="blind" stroke="#71717a" strokeWidth={1.2} strokeDasharray="4 3" dot={false} />}
+          </ComposedChart>
+        </ResponsiveContainer>
+      </div>
+    </Card>
+  );
+};
+
+// ----------------------------------------------------------------------------
+// Verdict scorecard — the ONE digestible takeaway: regime-aware vs an identical
+// regime-blind baseline (same fair value & universe), isolating the regime model's
+// contribution. Three risk tiles + a plain-English headline.
+// ----------------------------------------------------------------------------
+const DeltaBadge = ({ good, text }) => (
+  <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium ${good ? "bg-emerald-500/15 text-emerald-400" : "bg-zinc-600/20 text-zinc-400"}`}>{text}</span>
+);
+
+const Verdict = ({ s, cmp, intraday }) => {
+  if (!cmp || !cmp.sharpe) return null;
+  const a = (k) => cmp[k]?.aware, b = (k) => cmp[k]?.blind;
+  const reduction = (x, y) => (y && x != null ? 1 - Math.abs(x) / Math.abs(y) : null);
+  const sa = a("sharpe"), sb = b("sharpe");
+  const ddRed = reduction(a("maxDrawdown"), b("maxDrawdown"));
+  const cvRed = reduction(a("cvar5"), b("cvar5"));
+  const shX = sb ? sa / sb : null;
+  const tiles = [
+    { k: "Sharpe", hint: "risk-adjusted return", aware: num(sa, 2), blind: num(sb, 2),
+      good: sa >= sb, delta: shX == null ? "—" : sa >= sb ? `${num(shX, 1)}× higher` : `${num(shX, 2)}×` },
+    { k: "Max drawdown", hint: "peak-to-trough, incl. open risk", aware: usdK(a("maxDrawdown")), blind: usdK(b("maxDrawdown")),
+      good: ddRed != null && ddRed >= 0, delta: ddRed == null ? "—" : `${(ddRed * 100).toFixed(0)}% smaller` },
+    { k: "Tail risk · CVaR 5%", hint: "worst-5%-of-days loss", aware: usdK(a("cvar5")), blind: usdK(b("cvar5")),
+      good: cvRed != null && cvRed >= 0, delta: cvRed == null ? "—" : `${(cvRed * 100).toFixed(0)}% smaller` },
+  ];
+  const sentence = intraday
+    ? "Intraday the naive baseline is already strong, so the regime model holds the edge while cutting drawdown and tail risk to a fraction — risk reduction, not extra return."
+    : "The regime model nearly doubles the Sharpe and cuts drawdown and tail risk by a third to a half — a better risk-adjusted book, not just a bigger one.";
+  return (
+    <Card padding={false}>
+      <div className="px-4 py-2.5 border-b border-[#1c1d22] flex items-center gap-2">
+        <Shield size={13} className="text-sky-400" />
+        <span className="text-[11px] uppercase tracking-[0.14em] text-zinc-200">Regime model vs blind baseline</span>
+        <span className="text-[10px] text-zinc-600 normal-case hidden sm:inline">· same fair value &amp; universe — isolates the regime layer</span>
+      </div>
+      <div className="px-4 py-3 text-[12px] text-zinc-300 leading-snug border-b border-[#1c1d22]">{sentence}</div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-[#1c1d22]">
+        {tiles.map((t) => (
+          <div key={t.k} className="p-4" title={t.hint}>
+            <div className="flex items-center justify-between">
+              <span className="text-[9px] uppercase tracking-[0.16em] text-zinc-500">{t.k}</span>
+              <DeltaBadge good={t.good} text={t.delta} />
+            </div>
+            <div className="text-2xl font-semibold tabular-nums mt-1 text-sky-300">{t.aware}</div>
+            <div className="text-[10px] text-zinc-600 mt-0.5">vs <span className="text-zinc-400 tabular-nums">{t.blind}</span> blind</div>
+          </div>
+        ))}
+      </div>
+    </Card>
+  );
+};
+
+// ----------------------------------------------------------------------------
+// Sizing / shock series — the vol-target + shock layer DE-LEVERING over time.
+// ----------------------------------------------------------------------------
+const SizingChart = ({ series }) => {
+  if (!series || series.length < 2) return null;
+  const data = series.map((p, i) => ({ ...p, i }));
+  return (
+    <Card padding={false}>
+      <div className="px-4 py-2.5 border-b border-[#1c1d22] flex items-center gap-2">
+        <Activity size={13} className="text-amber-400" />
+        <span className="text-[11px] uppercase tracking-[0.14em] text-zinc-400">Vol-target &amp; shock sizing</span>
+        <span className="text-[10px] text-zinc-600 normal-case">· book size shrinks as shock severity rises</span>
+      </div>
+      <div className="h-40 p-2">
+        <ResponsiveContainer width="100%" height="100%">
+          <ComposedChart data={data} margin={{ top: 8, right: 12, bottom: 4, left: 0 }}>
+            <defs>
+              <linearGradient id="hsev" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#f43f5e" stopOpacity={0.35} />
+                <stop offset="100%" stopColor="#f43f5e" stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid {...chartProps.grid} />
+            <XAxis dataKey="i" {...chartProps.axis} tick={false} />
+            <YAxis yAxisId="sz" {...chartProps.axis} width={40} domain={[0, "auto"]} tickFormatter={(v) => `${v.toFixed(1)}x`} />
+            <YAxis yAxisId="sv" orientation="right" {...chartProps.axis} width={36} domain={[0, 1]} tickFormatter={(v) => v.toFixed(1)} />
+            <Tooltip content={<ChartTooltip />} />
+            <Area yAxisId="sv" type="monotone" name="shock severity" dataKey="severity" stroke="#f43f5e" strokeWidth={1} fill="url(#hsev)" />
+            <Line yAxisId="sz" type="monotone" name="avg size (units)" dataKey="size" stroke="#fbbf24" strokeWidth={1.4} dot={false} />
+          </ComposedChart>
         </ResponsiveContainer>
       </div>
     </Card>
@@ -219,9 +331,10 @@ const TradeLog = ({ trades, total }) => {
 // ----------------------------------------------------------------------------
 // By structure + by regime
 // ----------------------------------------------------------------------------
-const Breakdown = ({ byStructure, byRegime }) => {
+const Breakdown = ({ byStructure, byRegime, byVolState = {} }) => {
   const rows = Object.entries(byStructure);
   const regimes = Object.entries(byRegime);
+  const volStates = Object.entries(byVolState);
   return (
     <div className="grid grid-cols-12 gap-3">
       <Card className="col-span-12 lg:col-span-7" padding={false}>
@@ -286,6 +399,108 @@ const Breakdown = ({ byStructure, byRegime }) => {
             </tbody>
           </table>
         </div>
+        {volStates.length > 0 && (
+          <div className="border-t border-[#1c1d22]">
+            <div className="px-4 py-2 text-[10px] uppercase tracking-[0.14em] text-zinc-500">By vol-state <span className="normal-case text-zinc-600">· avg size shows the vol-target de-risking</span></div>
+            <div className="flex divide-x divide-[#1c1d22]">
+              {volStates.map(([k, s]) => (
+                <div key={k} className="flex-1 px-3 py-2">
+                  <div className="text-[10px] text-zinc-400">{k} vol</div>
+                  <div className={`text-[13px] font-mono tabular-nums ${pnlColor(s.pnl)}`}>{fmtSigned(s.pnl, 0)}</div>
+                  <div className="text-[9px] text-zinc-600 font-mono">{s.trades} tr · {pct(s.winRate)} · {fmt(s.avgSize, 2)}× size</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </Card>
+    </div>
+  );
+};
+
+// ----------------------------------------------------------------------------
+// Shock-absorption study (server/data/shock_analysis.json) — the primary axis:
+// per-shock-window drawdown head-to-head + the synthetic vol-stress curve where
+// the blind book's drawdown explodes and the regime book stays contained.
+// ----------------------------------------------------------------------------
+const ShockSection = () => {
+  const { data } = useLive("/api/shock-analysis", null, useLive.REFRESH.slow);
+  if (!data) return null;
+  const ws = data.windowSummary || {};
+  const stress = (data.stress || []).map((r) => ({
+    factor: r.factor, aware: Math.abs(r.aware?.maxDrawdown ?? 0), blind: Math.abs(r.blind?.maxDrawdown ?? 0),
+  }));
+  const worst = [...(data.windows || [])].sort((a, b) => Math.abs(b.blind?.drawdown ?? 0) - Math.abs(a.blind?.drawdown ?? 0)).slice(0, 8);
+  return (
+    <div className="space-y-2">
+      <Band icon={Zap} title="Shock Absorption" sub="regime-aware vs blind through vol/regime shocks (5-year daily)" />
+      <Card padding={false}>
+        <div className="px-4 py-3 border-b border-[#1c1d22] flex flex-wrap items-center gap-x-6 gap-y-1">
+          <div>
+            <div className="text-[9px] uppercase tracking-[0.16em] text-zinc-500">Shock windows</div>
+            <div className="text-lg font-semibold text-zinc-100 tabular-nums">{ws.count ?? 0}</div>
+          </div>
+          <div>
+            <div className="text-[9px] uppercase tracking-[0.16em] text-zinc-500">Aware shallower DD</div>
+            <div className="text-lg font-semibold text-emerald-400 tabular-nums">{pctOf(ws.awareShallowerPct, 0)}</div>
+          </div>
+          <div>
+            <div className="text-[9px] uppercase tracking-[0.16em] text-zinc-500">Avg DD · aware</div>
+            <div className="text-lg font-semibold text-sky-300 tabular-nums">{usdK(ws.avgAwareDD)}</div>
+          </div>
+          <div>
+            <div className="text-[9px] uppercase tracking-[0.16em] text-zinc-500">Avg DD · blind</div>
+            <div className="text-lg font-semibold text-red-400 tabular-nums">{usdK(ws.avgBlindDD)}</div>
+          </div>
+        </div>
+        <div className="grid grid-cols-12 gap-0 divide-x divide-[#1c1d22]">
+          {/* synthetic stress curve */}
+          <div className="col-span-12 lg:col-span-5 p-3">
+            <div className="text-[10px] uppercase tracking-[0.14em] text-zinc-500 mb-1">Synthetic stress · max drawdown vs vol shock</div>
+            <div className="h-44">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={stress} margin={{ top: 8, right: 12, bottom: 4, left: 0 }}>
+                  <CartesianGrid {...chartProps.grid} />
+                  <XAxis dataKey="factor" {...chartProps.axis} tickFormatter={(v) => `${v}x`} />
+                  <YAxis {...chartProps.axis} width={48} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
+                  <Tooltip content={<ChartTooltip formatter={(v) => `$${fmt(v, 0)}`} />} />
+                  <Line type="monotone" name="Regime-blind" dataKey="blind" stroke="#f43f5e" strokeWidth={1.6} dot={{ r: 2 }} />
+                  <Line type="monotone" name="Regime-aware" dataKey="aware" stroke="#38bdf8" strokeWidth={1.6} dot={{ r: 2 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="text-[10px] text-zinc-600 mt-1">
+              Blind drawdown grows ~linearly with the shock; the regime book de-levers and stands aside, so its drawdown saturates.
+            </div>
+          </div>
+          {/* worst shock windows */}
+          <div className="col-span-12 lg:col-span-7 overflow-x-auto">
+            <table className="w-full text-[11px]">
+              <thead className="text-zinc-600 text-[9px] uppercase tracking-wider">
+                <tr className="border-b border-[#1c1d22]">
+                  <th className="text-left font-medium px-3 py-2">Shock date</th>
+                  <th className="text-left font-medium px-2 py-2">Trigger</th>
+                  <th className="text-right font-medium px-2 py-2">Aware DD</th>
+                  <th className="text-right font-medium px-2 py-2">Blind DD</th>
+                  <th className="text-right font-medium px-2 py-2">DD avoided</th>
+                  <th className="text-right font-medium px-3 py-2">Recover</th>
+                </tr>
+              </thead>
+              <tbody>
+                {worst.map((w) => (
+                  <tr key={w.start} className="border-b border-[#141519]">
+                    <td className="px-3 py-2 font-mono text-zinc-400 whitespace-nowrap">{w.start}</td>
+                    <td className="px-2 py-2 text-zinc-500 whitespace-nowrap">{w.kind === "regime_to_high" ? "→ High-vol regime" : "Vol jump"}</td>
+                    <td className="px-2 py-2 text-right font-mono tabular-nums text-sky-300">{usdK(w.aware?.drawdown)}</td>
+                    <td className="px-2 py-2 text-right font-mono tabular-nums text-red-400">{usdK(w.blind?.drawdown)}</td>
+                    <td className="px-2 py-2 text-right font-mono tabular-nums text-emerald-400">{usdK(w.awareDeeperDDavoided)}</td>
+                    <td className="px-3 py-2 text-right font-mono tabular-nums text-zinc-500">{w.aware?.recoveredDays == null ? "—" : `${w.aware.recoveredDays}d`}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </Card>
     </div>
   );
@@ -312,14 +527,17 @@ export const PageHistoricalBacktest = () => {
       </div>
 
       <Hero d={d} mode={mode} setMode={setMode} />
-      <Equity curve={d.equityCurve} initial={d.summary?.initialCapital || 250000} />
+      <Verdict s={d.summary || {}} cmp={d.comparison || {}} intraday={intraday} />
+      <Equity curve={d.equityCurve} blindCurve={d.equityCurveBlind} initial={d.summary?.initialCapital || 250000} />
+      <SizingChart series={d.sizingSeries} />
+      <ShockSection />
       <div className="space-y-2">
         <Band icon={History} title="Trade Log" sub={`every ${intraday ? "intraday" : "daily"} trade · full detail · gross PnL`} />
         <TradeLog trades={d.trades || []} total={d.summary?.trades} />
       </div>
       <div className="space-y-2">
-        <Band icon={Gauge} title="Breakdown" sub="per structure & per regime" />
-        <Breakdown byStructure={d.byStructure || {}} byRegime={d.byRegime || {}} />
+        <Band icon={Gauge} title="Breakdown" sub="per structure, regime & vol-state" />
+        <Breakdown byStructure={d.byStructure || {}} byRegime={d.byRegime || {}} byVolState={d.byVolState || {}} />
       </div>
     </div>
   );
