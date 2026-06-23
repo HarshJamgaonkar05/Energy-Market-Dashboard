@@ -16,6 +16,7 @@ __pycache__/
 *.pyc
 *.pyo
 analytics/.venv/
+/.venv/
 
 # Backend secrets
 .env

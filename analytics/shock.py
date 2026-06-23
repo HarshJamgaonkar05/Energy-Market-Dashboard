@@ -34,7 +34,7 @@ standalone live engine in Backtesting/ can import it without the analytics packa
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import numpy as np
 import pandas as pd
@@ -58,7 +58,12 @@ class ShockConfig:
     stand_aside_tau: float         # block NEW entries when severity >= this
     flatten_tau: float             # flatten an OPEN position when severity >= this
     confirm_bars: int              # block new entries for this many bars after a vol step-up
-    size_min: float = 0.25         # floor on the de-levered entry size
+    size_min: float = 0.25         # de-lever floor: a shock can shrink the unit to at most this fraction
+    # REGIME SIZE CONCENTRATION (aware only): per-vol-state weight on the base unit, so risk
+    # concentrates where the fade edge is cleanest and shrinks where it is weak/negative.
+    # Blind always trades a flat 1 unit (the naive control), so the head-to-head captures this.
+    size_mult: dict = field(default_factory=lambda: {"Low": 1.0, "Normal": 1.0, "High": 1.0})
+    book_scale: float = 1.0        # flat $ leverage on the aware book (Sharpe-invariant; dial $ exposure)
     spike_short: int = 0           # intraday: short realized-vol window
     spike_long: int = 0            # intraday: baseline realized-vol window
     spike_scale: float = 0.0       # intraday: (short/long − 1) that maps to severity 1.0
@@ -72,22 +77,31 @@ class ShockConfig:
 # response is mostly DE-LEVER + the occasional FLATTEN, rarely a full stand-aside —
 # the point is to clamp exposure in turbulence, not to stop trading.
 DAILY_SHOCK = ShockConfig(
-    z_stop=3.0, vol_ref_window=63, vol_jump_scale=2.0, z_breach_scale=1.5,
+    z_stop=3.0, vol_ref_window=63, vol_jump_scale=4.0, z_breach_scale=1.5,
     transition_decay=3, stand_aside_tau=0.97, flatten_tau=0.95, confirm_bars=0,
     size_min=0.40, use_intraday_spike=False, flatten_on_regime_break=True,
+    # SPARSE shock: a high vol-jump scale means severity is ~0 in normal conditions and
+    # only bites on a genuine spike — so the book trades like the baseline most of the time
+    # and only de-levers/flattens through real turbulence (protect tails, keep the edge).
+    # Edge concentration (measured here): the fade edge is cleanest in NORMAL vol (PF ~3.2)
+    # and weakest in HIGH (PF ~1.35, ~coin-flip), so the noisy High state is sized down a
+    # little. Sizing a clean state UP just levers it (more return AND drawdown), so we don't.
+    size_mult={"Low": 1.0, "Normal": 1.0, "High": 0.6},
 )
 INTRADAY_SHOCK = ShockConfig(
-    z_stop=3.5, vol_ref_window=1500, vol_jump_scale=2.0, z_breach_scale=1.5,
+    z_stop=3.5, vol_ref_window=1500, vol_jump_scale=4.0, z_breach_scale=1.5,
     transition_decay=4, stand_aside_tau=0.97, flatten_tau=0.95, confirm_bars=0,
-    size_min=0.40, spike_short=8, spike_long=96, spike_scale=2.5,
+    size_min=0.40, spike_short=8, spike_long=96, spike_scale=4.0,
     use_intraday_spike=True, flatten_on_regime_break=False,   # sessions already flatten
+    # intraday Normal/High both carry edge → no per-state concentration (kept flat at 1.0);
+    # re-tune size_mult here only after validating against the restored 5y raw data.
 )
 # Live runs on a short (few-day) feed — shrink the vol-reference windows so the jump/
 # spike detectors actually have enough history to fire; step-up & z-breach still apply.
 LIVE_SHOCK = ShockConfig(
-    z_stop=3.5, vol_ref_window=120, vol_jump_scale=2.0, z_breach_scale=1.5,
+    z_stop=3.5, vol_ref_window=120, vol_jump_scale=4.0, z_breach_scale=1.5,
     transition_decay=4, stand_aside_tau=0.97, flatten_tau=0.95, confirm_bars=0,
-    size_min=0.40, spike_short=8, spike_long=48, spike_scale=2.5,
+    size_min=0.40, spike_short=8, spike_long=48, spike_scale=4.0,
     use_intraday_spike=True, flatten_on_regime_break=False,
 )
 
@@ -222,8 +236,13 @@ def simulate(frame: pd.DataFrame, *, mode: str, z_entry: float, z_exit: float,
         severity = float(combine_severity(sev_vol[i], sev_spike[i], sev_trans, sev_z)) if aware else 0.0
         sev_series[i] = severity
 
-        # ---- size: base 1 unit, de-levered by (1 − severity) when aware ----
-        entry_size = max(1.0 - severity, shock.size_min) if aware else 1.0
+        # ---- size: base = book_scale × per-state concentration, de-levered by (1 − severity);
+        # blind always trades a flat 1 unit (the naive control) ----
+        if aware:
+            base = shock.book_scale * shock.size_mult.get(si, 1.0)
+            entry_size = base * max(1.0 - severity, shock.size_min)
+        else:
+            entry_size = 1.0
         size_series[i] = entry_size if pos is None else pos["size"]
 
         # ---- manage an open position (mark-to-market this bar) ----

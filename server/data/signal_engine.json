@@ -1,5 +1,5 @@
 {
- "generatedAt": "2026-06-23T02:29:18Z",
+ "generatedAt": "2026-06-23T02:41:04Z",
  "mode": "live",
  "live": true,
  "source": "bars_15min_20260612.db",
@@ -1529,6 +1529,24 @@
    "updatedAt": "2026-06-23T02:11:54Z"
   },
   {
+   "id": "WTI_FLY@2026-06-19 06:15",
+   "timestamp": "2026-06-19 06:15",
+   "regime": "Balanced \u00b7 High Vol",
+   "instrument": "WTI_FLY",
+   "label": "WTI Jul/Aug/Sep fly",
+   "direction": "SHORT",
+   "rationale": "Faded a 2.6sigma rich dislocation from the rolling fair value in the Balanced \u00b7 High Vol regime. Phase-2 reversion hit-rate ~60% (open).",
+   "confidence": 84,
+   "status": "OPEN",
+   "performance": 116.0,
+   "outcome": "open",
+   "exitReason": null,
+   "entryZ": 2.63,
+   "histHitRate": null,
+   "loggedAt": "2026-06-23T02:38:59Z",
+   "updatedAt": "2026-06-23T02:38:59Z"
+  },
+  {
    "id": "WTI_M2M3@2026-06-19 05:45",
    "timestamp": "2026-06-19 05:45",
    "regime": "Balanced \u00b7 High Vol",
@@ -1544,7 +1562,7 @@
    "entryZ": 2.65,
    "histHitRate": null,
    "loggedAt": "2026-06-23T02:11:22Z",
-   "updatedAt": "2026-06-23T02:29:18Z"
+   "updatedAt": "2026-06-23T02:41:04Z"
   },
   {
    "id": "WTI_M2M3@2026-06-19 05:30",
@@ -1556,13 +1574,13 @@
    "rationale": "Faded a 2.8sigma rich dislocation from the rolling fair value in the Balanced \u00b7 High Vol regime. Phase-2 reversion hit-rate ~60% (open).",
    "confidence": 83,
    "status": "OPEN",
-   "performance": -30.0,
+   "performance": -15.0,
    "outcome": "open",
    "exitReason": null,
    "entryZ": 2.81,
    "histHitRate": null,
    "loggedAt": "2026-06-23T01:51:31Z",
-   "updatedAt": "2026-06-23T02:23:40Z"
+   "updatedAt": "2026-06-23T02:38:59Z"
   },
   {
    "id": "BRENT_WTI@2026-06-19 05:30",
@@ -1598,7 +1616,7 @@
    "entryZ": 2.3,
    "histHitRate": 0.816,
    "loggedAt": "2026-06-23T01:51:31Z",
-   "updatedAt": "2026-06-23T02:29:18Z"
+   "updatedAt": "2026-06-23T02:41:04Z"
   },
   {
    "id": "WTI_FLY@2026-06-19 02:00",
@@ -1616,7 +1634,7 @@
    "entryZ": -2.25,
    "histHitRate": 0.816,
    "loggedAt": "2026-06-23T02:20:04Z",
-   "updatedAt": "2026-06-23T02:29:18Z"
+   "updatedAt": "2026-06-23T02:41:04Z"
   },
   {
    "id": "WTI_FLY@2026-06-19 01:45",
@@ -1652,7 +1670,7 @@
    "entryZ": 2.34,
    "histHitRate": 0.816,
    "loggedAt": "2026-06-23T02:20:04Z",
-   "updatedAt": "2026-06-23T02:29:18Z"
+   "updatedAt": "2026-06-23T02:41:04Z"
   },
   {
    "id": "WTI_FLY@2026-06-18 19:15",
@@ -1670,7 +1688,7 @@
    "entryZ": 2.22,
    "histHitRate": 0.816,
    "loggedAt": "2026-06-23T02:20:04Z",
-   "updatedAt": "2026-06-23T02:29:18Z"
+   "updatedAt": "2026-06-23T02:41:04Z"
   },
   {
    "id": "WTI_M2M3@2026-06-18 17:15",
@@ -1688,7 +1706,7 @@
    "entryZ": 2.23,
    "histHitRate": 0.752,
    "loggedAt": "2026-06-23T02:11:22Z",
-   "updatedAt": "2026-06-23T02:29:18Z"
+   "updatedAt": "2026-06-23T02:41:04Z"
   },
   {
    "id": "WTI_M2M3@2026-06-18 16:45",
@@ -1700,13 +1718,13 @@
    "rationale": "Faded a 2.3sigma rich dislocation from the rolling fair value in the Balanced \u00b7 High Vol regime. Phase-2 reversion hit-rate ~75% (validated (Phase-2 daily)).",
    "confidence": 76,
    "status": "CLOSED",
-   "performance": 70.0,
+   "performance": 35.0,
    "outcome": "reverted-win",
    "exitReason": "target",
    "entryZ": 2.3,
    "histHitRate": 0.752,
    "loggedAt": "2026-06-18T20:03:42Z",
-   "updatedAt": "2026-06-23T02:23:40Z"
+   "updatedAt": "2026-06-23T02:38:59Z"
   },
   {
    "id": "WTI_FLY@2026-06-18 15:15",
@@ -1724,7 +1742,7 @@
    "entryZ": 2.76,
    "histHitRate": 0.816,
    "loggedAt": "2026-06-23T02:11:22Z",
-   "updatedAt": "2026-06-23T02:29:18Z"
+   "updatedAt": "2026-06-23T02:41:04Z"
   },
   {
    "id": "WTI_FLY@2026-06-18 14:45",
@@ -1742,7 +1760,25 @@
    "entryZ": 2.6,
    "histHitRate": 0.816,
    "loggedAt": "2026-06-18T20:03:42Z",
-   "updatedAt": "2026-06-23T02:29:18Z"
+   "updatedAt": "2026-06-23T02:41:04Z"
+  },
+  {
+   "id": "BRENT_WTI@2026-06-18 10:30",
+   "timestamp": "2026-06-18 10:30",
+   "regime": "Balanced \u00b7 High Vol",
+   "instrument": "BRENT_WTI",
+   "label": "Brent-WTI arb (Aug)",
+   "direction": "SHORT",
+   "rationale": "Faded a 2.0sigma rich dislocation from the rolling fair value in the Balanced \u00b7 High Vol regime. Phase-2 reversion hit-rate ~83% (validated (Phase-2 daily)).",
+   "confidence": 77,
+   "status": "CLOSED",
+   "performance": 100.0,
+   "outcome": "reverted-win",
+   "exitReason": "target",
+   "entryZ": 2.05,
+   "histHitRate": 0.833,
+   "loggedAt": "2026-06-23T02:38:59Z",
+   "updatedAt": "2026-06-23T02:38:59Z"
   },
   {
    "id": "WTI_M2M3@2026-06-18 09:45",
@@ -1754,13 +1790,13 @@
    "rationale": "Faded a 2.9sigma cheap dislocation from the rolling fair value in the Balanced \u00b7 High Vol regime. Phase-2 reversion hit-rate ~75% (validated (Phase-2 daily)).",
    "confidence": 84,
    "status": "CLOSED",
-   "performance": 130.0,
+   "performance": 52.0,
    "outcome": "reverted-win",
    "exitReason": "target",
    "entryZ": -2.94,
    "histHitRate": 0.752,
    "loggedAt": "2026-06-18T20:03:42Z",
-   "updatedAt": "2026-06-23T02:23:40Z"
+   "updatedAt": "2026-06-23T02:38:59Z"
   },
   {
    "id": "BRENT_WTI@2026-06-18 09:45",
@@ -1778,7 +1814,7 @@
    "entryZ": 2.74,
    "histHitRate": 0.833,
    "loggedAt": "2026-06-23T02:11:22Z",
-   "updatedAt": "2026-06-23T02:29:18Z"
+   "updatedAt": "2026-06-23T02:41:04Z"
   },
   {
    "id": "BRENT_WTI@2026-06-18 09:15",
@@ -1814,7 +1850,7 @@
    "entryZ": 2.63,
    "histHitRate": 0.833,
    "loggedAt": "2026-06-18T20:03:42Z",
-   "updatedAt": "2026-06-23T02:29:18Z"
+   "updatedAt": "2026-06-23T02:41:04Z"
   },
   {
    "id": "WTI_FLY@2026-06-18 02:45",
@@ -1826,13 +1862,13 @@
    "rationale": "Faded a 2.7sigma rich dislocation from the rolling fair value in the Balanced \u00b7 High Vol regime. Phase-2 reversion hit-rate ~82% (validated (Phase-2 daily)).",
    "confidence": 85,
    "status": "CLOSED",
-   "performance": 170.0,
+   "performance": 68.0,
    "outcome": "reverted-win",
    "exitReason": "target",
    "entryZ": 2.7,
    "histHitRate": 0.816,
    "loggedAt": "2026-06-18T20:03:42Z",
-   "updatedAt": "2026-06-23T02:23:40Z"
+   "updatedAt": "2026-06-23T02:38:59Z"
   },
   {
    "id": "BRENT_WTI@2026-06-17 20:45",
@@ -1886,7 +1922,7 @@
    "entryZ": -3.07,
    "histHitRate": 0.816,
    "loggedAt": "2026-06-18T20:03:42Z",
-   "updatedAt": "2026-06-23T02:29:18Z"
+   "updatedAt": "2026-06-23T02:41:04Z"
   },
   {
    "id": "WTI_M2M3@2026-06-17 14:45",
@@ -1904,7 +1940,7 @@
    "entryZ": 2.56,
    "histHitRate": 0.752,
    "loggedAt": "2026-06-23T02:11:22Z",
-   "updatedAt": "2026-06-23T02:29:18Z"
+   "updatedAt": "2026-06-23T02:41:04Z"
   },
   {
    "id": "WTI_M2M3@2026-06-17 14:00",
@@ -1940,7 +1976,7 @@
    "entryZ": 2.34,
    "histHitRate": 0.752,
    "loggedAt": "2026-06-18T20:03:42Z",
-   "updatedAt": "2026-06-23T02:29:18Z"
+   "updatedAt": "2026-06-23T02:41:04Z"
   },
   {
    "id": "BRENT_WTI@2026-06-17 12:15",
@@ -1958,7 +1994,7 @@
    "entryZ": 2.27,
    "histHitRate": 0.833,
    "loggedAt": "2026-06-23T02:11:22Z",
-   "updatedAt": "2026-06-23T02:29:18Z"
+   "updatedAt": "2026-06-23T02:41:04Z"
   },
   {
    "id": "BRENT_WTI@2026-06-17 12:00",
@@ -1970,13 +2006,13 @@
    "rationale": "Faded a 2.8sigma rich dislocation from the rolling fair value in the Balanced \u00b7 High Vol regime. Phase-2 reversion hit-rate ~83% (validated (Phase-2 daily)).",
    "confidence": 87,
    "status": "CLOSED",
-   "performance": 300.0,
+   "performance": 120.0,
    "outcome": "reverted-win",
    "exitReason": "target",
    "entryZ": 2.79,
    "histHitRate": 0.833,
    "loggedAt": "2026-06-18T20:03:42Z",
-   "updatedAt": "2026-06-23T02:23:40Z"
+   "updatedAt": "2026-06-23T02:38:59Z"
   },
   {
    "id": "BRENT_WTI@2026-06-17 08:30",
@@ -1994,7 +2030,7 @@
    "entryZ": 2.11,
    "histHitRate": 0.833,
    "loggedAt": "2026-06-18T20:03:42Z",
-   "updatedAt": "2026-06-23T02:29:18Z"
+   "updatedAt": "2026-06-23T02:41:04Z"
   },
   {
    "id": "WTI_M2M3@2026-06-17 06:45",
@@ -2012,7 +2048,7 @@
    "entryZ": -2.16,
    "histHitRate": 0.752,
    "loggedAt": "2026-06-23T02:11:22Z",
-   "updatedAt": "2026-06-23T02:29:18Z"
+   "updatedAt": "2026-06-23T02:41:04Z"
   },
   {
    "id": "WTI_M2M3@2026-06-17 03:15",
@@ -2030,7 +2066,7 @@
    "entryZ": -2.03,
    "histHitRate": 0.752,
    "loggedAt": "2026-06-23T02:11:22Z",
-   "updatedAt": "2026-06-23T02:29:18Z"
+   "updatedAt": "2026-06-23T02:41:04Z"
   },
   {
    "id": "WTI_M2M3@2026-06-17 02:15",
@@ -2048,7 +2084,7 @@
    "entryZ": -2.15,
    "histHitRate": 0.752,
    "loggedAt": "2026-06-18T20:03:42Z",
-   "updatedAt": "2026-06-23T02:29:18Z"
+   "updatedAt": "2026-06-23T02:41:04Z"
   },
   {
    "id": "WTI_M2M3@2026-06-16 22:00",
@@ -2060,13 +2096,13 @@
    "rationale": "Faded a 2.3sigma rich dislocation from the rolling fair value in the Balanced \u00b7 High Vol regime. Phase-2 reversion hit-rate ~75% (validated (Phase-2 daily)).",
    "confidence": 76,
    "status": "CLOSED",
-   "performance": 140.0,
+   "performance": 56.0,
    "outcome": "reverted-win",
-   "exitReason": "target",
+   "exitReason": "shock_flat",
    "entryZ": 2.34,
    "histHitRate": 0.752,
    "loggedAt": "2026-06-18T20:03:42Z",
-   "updatedAt": "2026-06-23T02:23:40Z"
+   "updatedAt": "2026-06-23T02:38:59Z"
   },
   {
    "id": "BRENT_WTI@2026-06-16 19:00",
@@ -2084,7 +2120,7 @@
    "entryZ": -2.31,
    "histHitRate": 0.833,
    "loggedAt": "2026-06-18T20:03:42Z",
-   "updatedAt": "2026-06-23T02:29:18Z"
+   "updatedAt": "2026-06-23T02:41:04Z"
   },
   {
    "id": "WTI_M2M3@2026-06-16 08:15",
@@ -2102,7 +2138,7 @@
    "entryZ": -2.21,
    "histHitRate": 0.752,
    "loggedAt": "2026-06-23T02:11:22Z",
-   "updatedAt": "2026-06-23T02:29:18Z"
+   "updatedAt": "2026-06-23T02:41:04Z"
   },
   {
    "id": "WTI_FLY@2026-06-16 08:00",
@@ -2120,7 +2156,7 @@
    "entryZ": 2.61,
    "histHitRate": 0.816,
    "loggedAt": "2026-06-18T20:03:42Z",
-   "updatedAt": "2026-06-23T02:29:18Z"
+   "updatedAt": "2026-06-23T02:41:04Z"
   },
   {
    "id": "BRENT_WTI@2026-06-16 07:45",
@@ -2138,7 +2174,7 @@
    "entryZ": 2.31,
    "histHitRate": 0.833,
    "loggedAt": "2026-06-18T20:03:42Z",
-   "updatedAt": "2026-06-23T02:29:18Z"
+   "updatedAt": "2026-06-23T02:41:04Z"
   },
   {
    "id": "WTI_M2M3@2026-06-16 07:45",
@@ -2156,7 +2192,7 @@
    "entryZ": -2.53,
    "histHitRate": 0.752,
    "loggedAt": "2026-06-23T02:11:22Z",
-   "updatedAt": "2026-06-23T02:29:18Z"
+   "updatedAt": "2026-06-23T02:41:04Z"
   },
   {
    "id": "WTI_M2M3@2026-06-16 07:30",
@@ -2168,13 +2204,31 @@
    "rationale": "Faded a 3.0sigma cheap dislocation from the rolling fair value in the Balanced \u00b7 High Vol regime. Phase-2 reversion hit-rate ~75% (validated (Phase-2 daily)).",
    "confidence": 85,
    "status": "CLOSED",
-   "performance": -320.0,
+   "performance": -133.33,
    "outcome": "stopped-loss",
    "exitReason": "time_stop",
    "entryZ": -3.01,
    "histHitRate": 0.752,
    "loggedAt": "2026-06-18T20:03:42Z",
-   "updatedAt": "2026-06-23T02:23:40Z"
+   "updatedAt": "2026-06-23T02:38:59Z"
+  },
+  {
+   "id": "BRENT_WTI@2026-06-16 07:30",
+   "timestamp": "2026-06-16 07:30",
+   "regime": "Balanced \u00b7 High Vol",
+   "instrument": "BRENT_WTI",
+   "label": "Brent-WTI arb (Aug)",
+   "direction": "SHORT",
+   "rationale": "Faded a 2.2sigma rich dislocation from the rolling fair value in the Balanced \u00b7 High Vol regime. Phase-2 reversion hit-rate ~83% (validated (Phase-2 daily)).",
+   "confidence": 79,
+   "status": "CLOSED",
+   "performance": 60.0,
+   "outcome": "reverted-win",
+   "exitReason": "shock_flat",
+   "entryZ": 2.21,
+   "histHitRate": 0.833,
+   "loggedAt": "2026-06-23T02:38:59Z",
+   "updatedAt": "2026-06-23T02:38:59Z"
   },
   {
    "id": "BRENT_WTI@2026-06-16 03:00",
@@ -2195,6 +2249,24 @@
    "updatedAt": "2026-06-23T02:23:40Z"
   },
   {
+   "id": "WTI_M2M3@2026-06-16 01:00",
+   "timestamp": "2026-06-16 01:00",
+   "regime": "Balanced \u00b7 High Vol",
+   "instrument": "WTI_M2M3",
+   "label": "WTI Aug/Sep (M2-M3)",
+   "direction": "SHORT",
+   "rationale": "Faded a 2.0sigma rich dislocation from the rolling fair value in the Balanced \u00b7 High Vol regime. Phase-2 reversion hit-rate ~75% (validated (Phase-2 daily)).",
+   "confidence": 72,
+   "status": "CLOSED",
+   "performance": 112.0,
+   "outcome": "reverted-win",
+   "exitReason": "target",
+   "entryZ": 2.05,
+   "histHitRate": 0.752,
+   "loggedAt": "2026-06-23T02:38:59Z",
+   "updatedAt": "2026-06-23T02:38:59Z"
+  },
+  {
    "id": "WTI_FLY@2026-06-15 22:00",
    "timestamp": "2026-06-15 22:00",
    "regime": "Balanced \u00b7 High Vol",
@@ -2202,15 +2274,15 @@
    "label": "WTI Jul/Aug/Sep fly",
    "direction": "LONG",
    "rationale": "Faded a 2.7sigma cheap dislocation from the rolling fair value in the Balanced \u00b7 High Vol regime. Phase-2 reversion hit-rate ~82% (validated (Phase-2 daily)).",
-   "confidence": 86,
+   "confidence": 85,
    "status": "CLOSED",
-   "performance": 280.0,
+   "performance": 112.0,
    "outcome": "reverted-win",
    "exitReason": "target",
    "entryZ": -2.74,
    "histHitRate": 0.816,
    "loggedAt": "2026-06-18T20:03:42Z",
-   "updatedAt": "2026-06-23T02:23:40Z"
+   "updatedAt": "2026-06-23T02:38:59Z"
   },
   {
    "id": "BRENT_WTI@2026-06-15 18:30",
@@ -2228,7 +2300,7 @@
    "entryZ": -2.49,
    "histHitRate": 0.833,
    "loggedAt": "2026-06-23T02:11:22Z",
-   "updatedAt": "2026-06-23T02:29:18Z"
+   "updatedAt": "2026-06-23T02:41:04Z"
   },
   {
    "id": "WTI_M2M3@2026-06-15 15:00",
@@ -2246,7 +2318,7 @@
    "entryZ": 2.31,
    "histHitRate": 0.752,
    "loggedAt": "2026-06-18T20:03:42Z",
-   "updatedAt": "2026-06-23T02:29:18Z"
+   "updatedAt": "2026-06-23T02:41:04Z"
   },
   {
    "id": "BRENT_WTI@2026-06-15 10:30",
@@ -2264,7 +2336,7 @@
    "entryZ": -2.01,
    "histHitRate": 0.833,
    "loggedAt": "2026-06-23T02:11:22Z",
-   "updatedAt": "2026-06-23T02:29:18Z"
+   "updatedAt": "2026-06-23T02:41:04Z"
   },
   {
    "id": "BRENT_WTI@2026-06-15 10:15",
@@ -2276,13 +2348,13 @@
    "rationale": "Faded a 2.1sigma cheap dislocation from the rolling fair value in the Balanced \u00b7 High Vol regime. Phase-2 reversion hit-rate ~83% (validated (Phase-2 daily)).",
    "confidence": 78,
    "status": "CLOSED",
-   "performance": -290.0,
+   "performance": -96.0,
    "outcome": "stopped-loss",
-   "exitReason": "session_end",
+   "exitReason": "shock_flat",
    "entryZ": -2.11,
    "histHitRate": 0.833,
    "loggedAt": "2026-06-18T20:03:42Z",
-   "updatedAt": "2026-06-23T02:23:40Z"
+   "updatedAt": "2026-06-23T02:38:59Z"
   },
   {
    "id": "WTI_FLY@2026-06-15 10:00",
@@ -2294,13 +2366,13 @@
    "rationale": "Faded a 2.5sigma rich dislocation from the rolling fair value in the Balanced \u00b7 High Vol regime. Phase-2 reversion hit-rate ~82% (validated (Phase-2 daily)).",
    "confidence": 82,
    "status": "CLOSED",
-   "performance": 310.0,
+   "performance": 150.2,
    "outcome": "reverted-win",
    "exitReason": "target",
    "entryZ": 2.47,
    "histHitRate": 0.816,
    "loggedAt": "2026-06-18T20:03:42Z",
-   "updatedAt": "2026-06-23T02:23:40Z"
+   "updatedAt": "2026-06-23T02:38:59Z"
   },
   {
    "id": "WTI_M2M3@2026-06-15 10:00",
@@ -2318,7 +2390,7 @@
    "entryZ": -2.25,
    "histHitRate": 0.752,
    "loggedAt": "2026-06-23T02:11:22Z",
-   "updatedAt": "2026-06-23T02:29:18Z"
+   "updatedAt": "2026-06-23T02:41:04Z"
   },
   {
    "id": "WTI_M2M3@2026-06-15 07:15",
@@ -2330,13 +2402,13 @@
    "rationale": "Faded a 3.0sigma cheap dislocation from the rolling fair value in the Balanced \u00b7 High Vol regime. Phase-2 reversion hit-rate ~75% (validated (Phase-2 daily)).",
    "confidence": 85,
    "status": "CLOSED",
-   "performance": 70.0,
+   "performance": 52.29,
    "outcome": "reverted-win",
    "exitReason": "target",
    "entryZ": -2.96,
    "histHitRate": 0.752,
    "loggedAt": "2026-06-18T20:03:42Z",
-   "updatedAt": "2026-06-19T02:04:54Z"
+   "updatedAt": "2026-06-23T02:38:59Z"
   },
   {
    "id": "BRENT_WTI@2026-06-15 00:00",
@@ -2390,7 +2462,7 @@
    "entryZ": -2.28,
    "histHitRate": 0.833,
    "loggedAt": "2026-06-18T20:03:42Z",
-   "updatedAt": "2026-06-23T02:29:18Z"
+   "updatedAt": "2026-06-23T02:41:04Z"
   }
  ],
  "openCount": 1
