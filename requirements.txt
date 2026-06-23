@@ -1,0 +1,15 @@
+# Python dependencies for the Voltaire Terminal analytics + backtest layer
+# (Phase 2 panel/regimes/models + Phase 3 daily/intraday/live engines).
+# The dashboard backend is Node — these are only for the Python pipeline.
+#
+#   python -m venv .venv
+#   .venv\Scripts\python -m pip install -r requirements.txt   # Windows
+#   .venv/bin/python   -m pip install -r requirements.txt     # macOS/Linux
+#
+# Pinned to the versions this project is developed/verified against (Python 3.14).
+
+numpy==2.5.0
+pandas==3.0.3
+scikit-learn==1.9.0   # analytics/models.py — walk-forward fundamentals regression
+pyarrow==24.0.0       # pandas parquet I/O (panel.parquet, intraday 15-min cache)
+requests==2.34.2      # analytics/common.py — EIA v2 + Yahoo chart fetch clients

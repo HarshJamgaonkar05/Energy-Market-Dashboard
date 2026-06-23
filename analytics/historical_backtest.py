@@ -1,20 +1,27 @@
 """
 historical_backtest.py — the Phase-2 fundamental fair value, backtested as a daily
-TRADE SIMULATION over the full 2021-2026 history.
+TRADE SIMULATION over the full 2021-2026 history, NOW with shock absorption, risk-led
+metrics, and a regime-blind control.
 
 This is the *correct* home for the Phase-2 model. Intraday (Phase 3) it could not be
 used — the feed had no fundamentals, its level was stale, and it was flat over a few
 days. On DAILY history with the fundamental features present, it is exactly the right
 tool, and the sample is large enough to mean something (~5 years).
 
-Method (honest, out-of-sample):
+Method (honest, out-of-sample) — the SIGNAL is unchanged from before:
   • Fair value = the Phase-2 regression, produced WALK-FORWARD (expanding window,
-    refit every 21 days) so a day's fair value never sees its own or future data —
-    the same machinery models.py/backtest.py already validated.
+    refit every 21 days) so a day's fair value never sees its own or future data.
   • Signal = residual z = (actual − fair value) / EXPANDING std  (no look-ahead).
-  • Trade  = fade |z| ≥ 1.5 (rich → short the spread, cheap → long it); exit on
-    reversion to fair (|z| ≤ 0.5), a 3σ stop, or a 20-trading-day time stop.
-  • Size   = fixed 1 unit/trade, gross by default (the raw signal). --slip adds cost.
+  • Trade  = fade |z| >= 1.5; exit on reversion to fair (|z| <= 0.5), a 3σ stop, or a
+    20-trading-day time stop. Base size 1 unit/trade.
+
+What is NEW (mirrors analytics/shock.py — applied to BOTH the daily & intraday books):
+  • SHOCK ABSORPTION — the "aware" arm de-levers, stands aside, and flattens through a
+    measured shock (a vol jump, a step UP the vol-state ladder, or a z-breach).
+  • RISK-LED METRICS — Sharpe / Sortino / Calmar / max drawdown ($/%) / CVaR / % time
+    in market, on a mark-to-market daily-return series.
+  • A REGIME-BLIND CONTROL — the SAME strategy with the shock layer off (= main's old
+    behaviour), so the head-to-head isolates what shock absorption contributes.
 
 Reads  analytics/out/panel.parquet  +  server/data/backtest.json (Phase-2 hit-rates)
 Writes server/data/historical_backtest.json  (+ out/historical_trades.csv)
@@ -26,6 +33,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+from dataclasses import replace
 
 import numpy as np
 import pandas as pd
@@ -33,8 +41,9 @@ import pandas as pd
 from common import OUT_DIR, DATA_DIR
 from regimes import classify
 from models import FEATURES, walk_forward, MIN_TRAIN
+import shock
 
-# ---- Strategy parameters (daily horizon) -----------------------------------
+# ---- Strategy parameters (daily horizon) — UNCHANGED -----------------------
 Z_ENTRY = 1.5          # fade when |residual z| >= this (Phase-2 validated threshold)
 Z_EXIT = 0.5           # take profit once reverted to within this of fair value
 Z_STOP = 3.0           # stop if the dislocation widens to |z| >= this
@@ -43,14 +52,11 @@ MULT = 1000            # $1.00/bbl move on a 1,000-bbl unit = $1,000
 INITIAL_CAPITAL = 250_000
 SLIP_PER_LEG = 0.0     # per-leg, per-side slippage in price units; 0 = gross
 
+# The shock policy for the daily horizon (z_stop kept in lock-step with Z_STOP).
+DAILY_SHOCK = replace(shock.DAILY_SHOCK, z_stop=Z_STOP)
+
 # WTI & Brent only — calendars, butterflies, and the Brent-WTI arb.
 # (target panel column, display label, Phase-2 hit-rate key, active?)
-# `active` = traded. The two Brent FRONT calendars have no fundamental edge here — they
-# lose money gross AND net@2c (PF ~0.6) and drag every-year consistency — so we evaluate
-# but do NOT trade them. Dropping them lifts net@2c $77k->$94k, PF 1.84->2.34, t-stat
-# 2.5->3.4, and makes the book profitable in all 6 years (was 5/6). The 5 kept all carry
-# a real after-cost edge. (Overshoot exits and a cost gate were tested and don't help the
-# DAILY horizon — weeks-long holds blow the 20-day stop, and the big moves clear cost anyway.)
 CRUDE = [
     ("wti_m1m2",   "WTI M1-M2",         "wti_m1m2",   True),
     ("wti_m2m3",   "WTI M2-M3",         "wti_m1m2",   True),
@@ -61,12 +67,13 @@ CRUDE = [
     ("brent_wti",  "Brent-WTI arb",     "brent_wti",  True),
 ]
 
-STRATEGY_NAME = "Phase-2 fundamental RV mean-reversion (WTI & Brent, daily, 5y)"
-STRATEGY_DESC = ("Fair value from the Phase-2 fundamentals regression (walk-forward, "
-                 "out-of-sample); fade a >=1.5sigma residual dislocation; exit on reversion "
-                 "to fair (|z|<=0.5), a 3sigma stop, or a 20-day time stop. Traded universe pruned "
-                 "to the 5 structures with a persistent after-cost edge (the two Brent front "
-                 "calendars, which lose, are dropped). 1 unit/trade.")
+STRATEGY_NAME = "Phase-2 fundamental RV mean-reversion + shock absorption (WTI & Brent, daily, 5y)"
+STRATEGY_DESC = ("Fair value from the Phase-2 fundamentals regression (walk-forward, out-of-sample); "
+                 "fade a >=1.5sigma residual dislocation; exit on reversion to fair (|z|<=0.5), a 3sigma "
+                 "stop, or a 20-day time stop. 1 unit/trade. SHOCK ABSORPTION (aware arm): de-lever, "
+                 "stand aside, and flatten through a measured shock (vol jump / vol-state step-up / "
+                 "z-breach). A regime-BLIND control (shock off) runs alongside; results are read "
+                 "risk-first (Sharpe / Calmar / drawdown / CVaR on mark-to-market daily returns).")
 
 
 def legs_count(spread: str) -> int:
@@ -89,7 +96,7 @@ def edge_for(spread: str, edges: dict):
 
 def residual_z(df: pd.DataFrame, target: str):
     """Walk-forward fair value, actual spread, and the expanding-std residual z —
-    all aligned on the dates where the out-of-sample fair value exists."""
+    all aligned on the dates where the out-of-sample fair value exists. UNCHANGED."""
     sub = df[FEATURES + [target]].dropna()
     if len(sub) < MIN_TRAIN + 60:
         return None
@@ -102,181 +109,57 @@ def residual_z(df: pd.DataFrame, target: str):
     return sub[target].reindex(idx), fv.reindex(idx), z.reindex(idx)
 
 
-# ============================================================================
-# Trade simulation for one spread
-# ============================================================================
-def simulate(df: pd.DataFrame, target: str, label: str, hitkey: str, edges: dict):
+def build_frame(df: pd.DataFrame, target: str):
+    """Per-structure frame the shock core walks: spread, regression fair value, the
+    (unchanged) residual z, the day's vol-state & regime label, a causal spread-vol
+    proxy, and a single segment (daily spreads are continuous — no roll/session breaks)."""
     rz = residual_z(df, target)
     if rz is None:
-        return [], None
+        return None
     spread, fv, z = rz
-    regimes = df["regimeLabel"]
-    hit = edge_for(hitkey, edges)
-    legs = legs_count(target)
-    cost = SLIP_PER_LEG * 2 * legs * MULT
-    dates = list(z.index)
+    idx = spread.index
+    bar_vol = spread.diff().rolling(10, min_periods=3).std()
+    return pd.DataFrame({
+        "spread": spread, "fv": fv, "z": z,
+        "vol_state": df["volatility"].reindex(idx),
+        "regime": df["regimeLabel"].reindex(idx),
+        "bar_vol": bar_vol.reindex(idx),
+        "seg": 0,
+    })
 
-    trades, pos = [], None
-    for i, dt in enumerate(dates):
-        zi, sp = float(z.iloc[i]), float(spread.iloc[i])
-        if np.isnan(zi) or np.isnan(sp):
+
+def run_arm(frames: dict, mode: str, edges: dict):
+    """Run every active structure under one arm; return (trades, opens, pnls, in_markets)."""
+    trades, opens, pnls, in_markets = [], [], [], []
+    for target, label, hitkey, active in CRUDE:
+        if not active or target not in frames:
             continue
-        if pos is None:
-            if abs(zi) >= Z_ENTRY:
-                pos = {"dir": "LONG" if zi <= -Z_ENTRY else "SHORT", "i": i, "t": dt,
-                       "sp": sp, "z": zi, "fv": float(fv.iloc[i]),
-                       "regime": regimes.get(dt), "mae": 0.0, "mfe": 0.0}
-            continue
-        sign = 1.0 if pos["dir"] == "LONG" else -1.0
-        entry_sign = -sign
-        upnl = sign * (sp - pos["sp"]) * MULT
-        pos["mae"], pos["mfe"] = min(pos["mae"], upnl), max(pos["mfe"], upnl)
-        held = i - pos["i"]
-
-        hit_target = entry_sign * zi <= Z_EXIT          # reverted to fair
-        hit_stop = abs(zi) >= Z_STOP                     # dislocation widened
-        hit_time = held >= MAX_HOLD_DAYS
-        if hit_target or hit_stop or hit_time:
-            reason = "target" if hit_target else "stop" if hit_stop else "time_stop"
-            gross = sign * (sp - pos["sp"]) * MULT
-            trades.append({
-                "structure": target, "label": label, "regime": pos["regime"],
-                "direction": pos["dir"],
-                "entryDate": pos["t"].strftime("%Y-%m-%d"), "exitDate": dt.strftime("%Y-%m-%d"),
-                "entrySpread": round(pos["sp"], 3), "exitSpread": round(sp, 3),
-                "fairValue": round(pos["fv"], 3),
-                "entryZ": round(pos["z"], 2), "exitZ": round(zi, 2),
-                "holdDays": held, "holdLabel": f"{held}d", "pnl": round(gross, 2),
-                "cost": round(cost, 2), "netPnl": round(gross - cost, 2),
-                "mae": round(pos["mae"], 2), "mfe": round(pos["mfe"], 2),
-                "exitReason": reason, "histHitRate": hit,
-            })
-            pos = None
-
-    open_pos = None
-    if pos is not None:
-        i = len(dates) - 1
-        sp, zi = float(spread.iloc[i]), float(z.iloc[i])
-        sign = 1.0 if pos["dir"] == "LONG" else -1.0
-        open_pos = {
-            "structure": target, "label": label, "direction": pos["dir"],
-            "entryDate": pos["t"].strftime("%Y-%m-%d"), "asOf": dates[i].strftime("%Y-%m-%d"),
-            "entrySpread": round(pos["sp"], 3), "curSpread": round(sp, 3),
-            "entryZ": round(pos["z"], 2), "curZ": round(zi, 2),
-            "holdDays": i - pos["i"], "regime": pos["regime"],
-            "unrealizedPnl": round(sign * (sp - pos["sp"]) * MULT, 2),
-        }
-    return trades, open_pos
+        res = shock.simulate(
+            frames[target], mode=mode, z_entry=Z_ENTRY, z_exit=Z_EXIT, z_stop=Z_STOP,
+            max_hold=MAX_HOLD_DAYS, shock=DAILY_SHOCK, legs_count=legs_count(target),
+            structure=target, label=label, hit_rate=edge_for(hitkey, edges),
+            horizon="daily", mult=MULT, slip_per_leg=SLIP_PER_LEG, gate_cost=0.0, warmup=0,
+        )
+        trades += res["trades"]
+        if res["open"]:
+            opens.append(res["open"])
+        pnls.append(res["pnl"])
+        in_markets.append(res["in_market"])
+    return trades, opens, pnls, in_markets
 
 
-# ============================================================================
-# Aggregation
-# ============================================================================
-def equity_curve(all_trades):
-    rows = sorted(all_trades, key=lambda t: t["exitDate"])
-    eq = INITIAL_CAPITAL
-    curve = [{"t": rows[0]["entryDate"], "equity": eq}] if rows else []
-    for t in rows:
-        eq += t["pnl"]
-        curve.append({"t": t["exitDate"], "equity": round(eq, 2)})
-    return curve
+def arm_block(trades, pnls, in_markets, years):
+    daily = shock.portfolio_daily_pnl(pnls)
+    summary = shock.summarize(trades, daily, in_markets, INITIAL_CAPITAL, years, MULT,
+                              ref_slip=0.02, horizon="daily")
+    return summary, daily
 
 
-def max_drawdown(curve):
-    peak, mdd = -1e18, 0.0
-    for p in curve:
-        peak = max(peak, p["equity"])
-        mdd = min(mdd, p["equity"] - peak)
-    return round(mdd, 2)
-
-
-def _counts(rows, key):
-    out = {}
-    for r in rows:
-        out[r[key]] = out.get(r[key], 0) + 1
-    return out
-
-
-def pf(rows):
-    gw = sum(t["pnl"] for t in rows if t["pnl"] > 0)
-    gl = -sum(t["pnl"] for t in rows if t["pnl"] <= 0)
-    return round(gw / gl, 3) if gl > 0 else None
-
-
-def summarize(all_trades, curve, years):
-    n = len(all_trades)
-    gross = sum(t["pnl"] for t in all_trades)
-    net = sum(t["netPnl"] for t in all_trades)
-    costs = sum(t["cost"] for t in all_trades)
-    wins = [t for t in all_trades if t["pnl"] > 0]
-    losses = [t for t in all_trades if t["pnl"] <= 0]
-    gw, gl = sum(t["pnl"] for t in wins), -sum(t["pnl"] for t in losses)
-    nwins = [t for t in all_trades if t["netPnl"] > 0]
-    nlosses = [t for t in all_trades if t["netPnl"] <= 0]
-    pnls = np.array([t["pnl"] for t in all_trades], float) if n else np.array([])
-    sharpe = float(pnls.mean() / pnls.std()) if n > 1 and pnls.std() > 0 else 0.0
-    # Reference net at a realistic 2c/leg — ALWAYS computed (even when reporting gross),
-    # so the dashboard can always show the honest after-cost number / % of gross kept.
-    REF = 0.02
-    ref_costs = sum(2 * legs_count(t["structure"]) * REF * MULT for t in all_trades)
-    ref_net = gross - ref_costs
-    return {
-        "trades": n, "grossPnl": round(gross, 2), "netPnl": round(net, 2), "costs": round(costs, 2),
-        "refNet": round(ref_net, 2), "refSlip": REF,
-        "refKeepPct": round(ref_net / gross, 3) if gross > 0 else 0.0,
-        "winRate": round(len(wins) / n, 4) if n else 0.0,
-        "avgWin": round(gw / len(wins), 2) if wins else 0.0,
-        "avgLoss": round(-gl / len(losses), 2) if losses else 0.0,
-        "avgNetWin": round(sum(t["netPnl"] for t in nwins) / len(nwins), 2) if nwins else 0.0,
-        "avgNetLoss": round(sum(t["netPnl"] for t in nlosses) / len(nlosses), 2) if nlosses else 0.0,
-        "profitFactor": pf(all_trades), "expectancy": round(gross / n, 2) if n else 0.0,
-        "netExpectancy": round(net / n, 2) if n else 0.0,
-        "perTradeSharpe": round(sharpe, 3),
-        "avgHoldDays": round(float(np.mean([t["holdDays"] for t in all_trades])), 1) if n else 0.0,
-        "tradesPerYear": round(n / years, 1) if years else 0.0,
-        "maxDrawdown": max_drawdown(curve),
-        "endingEquity": round(INITIAL_CAPITAL + gross, 2), "initialCapital": INITIAL_CAPITAL,
-        "byExitReason": _counts(all_trades, "exitReason"), "byDirection": _counts(all_trades, "direction"),
-    }
-
-
-def per_structure(all_trades):
-    out = {}
-    for sp, label, _, _ in CRUDE:
-        ts = [t for t in all_trades if t["structure"] == sp]
-        if not ts:
-            continue
-        wins = [t for t in ts if t["pnl"] > 0]
-        out[sp] = {
-            "label": label, "trades": len(ts), "wins": len(wins),
-            "winRate": round(len(wins) / len(ts), 3), "pnl": round(sum(t["pnl"] for t in ts), 2),
-            "profitFactor": pf(ts), "avgHoldDays": round(float(np.mean([t["holdDays"] for t in ts])), 1),
-            "histHitRate": ts[0]["histHitRate"],
-        }
-    return out
-
-
-def per_regime(all_trades):
-    out = {}
-    labels = sorted({t["regime"] for t in all_trades if t["regime"]})
-    for lab in labels:
-        ts = [t for t in all_trades if t["regime"] == lab]
-        wins = [t for t in ts if t["pnl"] > 0]
-        out[lab] = {
-            "trades": len(ts), "wins": len(wins),
-            "winRate": round(len(wins) / len(ts), 3), "pnl": round(sum(t["pnl"] for t in ts), 2),
-            "profitFactor": pf(ts),
-        }
-    return out
-
-
-# ============================================================================
-# Main
-# ============================================================================
 def write_csv(all_trades):
-    cols = ["structure", "label", "regime", "direction", "entryDate", "exitDate", "holdDays",
-            "entrySpread", "exitSpread", "fairValue", "entryZ", "exitZ", "pnl", "cost", "netPnl",
-            "mae", "mfe", "exitReason", "histHitRate", "equityAfter"]
+    cols = ["structure", "label", "regime", "volState", "direction", "entryDate", "exitDate",
+            "holdDays", "entrySpread", "exitSpread", "fairValue", "entryZ", "exitZ", "size",
+            "entrySeverity", "pnl", "cost", "netPnl", "mae", "mfe", "exitReason", "histHitRate",
+            "equityAfter"]
     path = OUT_DIR / "historical_trades.csv"
     with open(path, "w", newline="", encoding="utf8") as f:
         w = csv.DictWriter(f, fieldnames=cols, extrasaction="ignore")
@@ -303,20 +186,29 @@ def main():
     first, last = df.index.min(), df.index.max()
     years = max((last - first).days / 365.25, 1e-9)
 
-    all_trades, open_positions = [], []
-    for sp, label, hitkey, active in CRUDE:
-        if not active:                       # evaluated but not traded (no after-cost edge)
+    frames = {}
+    for target, label, hitkey, active in CRUDE:
+        if not active:
             continue
-        trades, op = simulate(df, sp, label, hitkey, edges)
-        all_trades += trades
-        if op:
-            open_positions.append(op)
-        if trades:
-            print(f"  {sp:14} trades={len(trades):3} pnl=${sum(t['pnl'] for t in trades):>8,.0f} "
-                  f"win={sum(1 for t in trades if t['pnl']>0)/len(trades):.0%} PF={pf(trades)}")
+        fr = build_frame(df, target)
+        if fr is not None:
+            frames[target] = fr
 
-    curve = equity_curve(all_trades)
-    summary = summarize(all_trades, curve, years)
+    aware_trades, opens, a_pnls, a_inmkt = run_arm(frames, "aware", edges)
+    blind_trades, _, b_pnls, b_inmkt = run_arm(frames, "blind", edges)
+
+    aware_summary, aware_daily = arm_block(aware_trades, a_pnls, a_inmkt, years)
+    blind_summary, _ = arm_block(blind_trades, b_pnls, b_inmkt, years)
+
+    for target, label, hitkey, active in CRUDE:
+        if not active or target not in frames:
+            continue
+        ts = [t for t in aware_trades if t["structure"] == target]
+        if ts:
+            print(f"  {target:14} trades={len(ts):3} pnl=${sum(t['pnl'] for t in ts):>8,.0f} "
+                  f"win={sum(1 for t in ts if t['pnl']>0)/len(ts):.0%} PF={shock.pf(ts)}")
+
+    structures = [(t, l) for t, l, _, a in CRUDE if a]
     feed = {
         "generatedAt": pd.Timestamp.now("UTC").strftime("%Y-%m-%dT%H:%M:%SZ"),
         "mode": "daily", "horizon": "daily",
@@ -324,22 +216,31 @@ def main():
         "years": round(years, 1), "days": int(len(df)),
         "strategy": {"name": STRATEGY_NAME, "desc": STRATEGY_DESC,
                      "params": {"zEntry": Z_ENTRY, "zExit": Z_EXIT, "zStop": Z_STOP,
-                                "maxHoldDays": MAX_HOLD_DAYS, "mult": MULT, "slipPerLeg": SLIP_PER_LEG}},
-        "summary": summary,
-        "byStructure": per_structure(all_trades),
-        "byRegime": per_regime(all_trades),
-        "equityCurve": curve,
-        "trades": sorted(all_trades, key=lambda t: t["entryDate"], reverse=True),
-        "openPositions": open_positions, "openCount": len(open_positions),
+                                "maxHoldDays": MAX_HOLD_DAYS, "mult": MULT, "slipPerLeg": SLIP_PER_LEG,
+                                "shockAbsorption": True}},
+        "summary": aware_summary,
+        "blind": {"summary": blind_summary},
+        "comparison": shock.head_to_head(aware_summary, blind_summary),
+        "shock": shock.shock_summary(aware_trades),
+        "byStructure": shock.per_structure(aware_trades, structures),
+        "byRegime": shock.per_regime(aware_trades),
+        "byVolState": shock.per_volstate(aware_trades),
+        "equityCurve": shock.equity_from_daily(aware_daily, INITIAL_CAPITAL),
+        "trades": sorted(aware_trades, key=lambda t: t["entryDate"], reverse=True),
+        "openPositions": opens, "openCount": len(opens),
     }
     (DATA_DIR / "historical_backtest.json").write_text(json.dumps(feed, indent=1), encoding="utf8")
-    write_csv(all_trades)
-    net = f" | net ${summary['netPnl']:,.0f}" if summary["costs"] > 0 else ""
-    print(f"\n{first.date()} -> {last.date()} ({years:.1f}y, {len(df)} days) | "
-          f"trades {summary['trades']} | gross ${summary['grossPnl']:,.0f}{net} | "
-          f"win {summary['winRate']*100:.0f}% | PF {summary['profitFactor']} | "
-          f"exp ${summary['netExpectancy' if summary['costs'] > 0 else 'expectancy']:,.0f} | "
-          f"DD ${summary['maxDrawdown']:,.0f}")
+    write_csv(aware_trades)
+    s = aware_summary
+    net = f" | net ${s['netPnl']:,.0f}" if s["costs"] > 0 else ""
+    print(f"\n{first.date()} -> {last.date()} ({years:.1f}y, {len(df)} days) | AWARE: "
+          f"trades {s['trades']} | gross ${s['grossPnl']:,.0f}{net} | win {s['winRate']*100:.0f}% | "
+          f"PF {s['profitFactor']} | Sharpe {s['sharpe']} | Calmar {s['calmar']} | "
+          f"maxDD {s['maxDrawdownPct']*100:.0f}% (${s['maxDrawdown']:,.0f}) | CVaR ${s['cvar5']:,.0f}")
+    b = blind_summary
+    print(f"{'':>40}  BLIND: trades {b['trades']} | gross ${b['grossPnl']:,.0f} | "
+          f"Sharpe {b['sharpe']} | Calmar {b['calmar']} | maxDD {b['maxDrawdownPct']*100:.0f}% "
+          f"(${b['maxDrawdown']:,.0f}) | CVaR ${b['cvar5']:,.0f}")
     print(f"  -> {DATA_DIR / 'historical_backtest.json'}")
 
 
