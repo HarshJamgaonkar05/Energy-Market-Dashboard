@@ -1,11 +1,11 @@
 {
- "generatedAt": "2026-06-23T02:41:04Z",
- "mode": "live",
- "live": true,
+ "generatedAt": "2026-06-24T07:14:19Z",
+ "mode": "local",
+ "live": false,
  "source": "bars_15min_20260612.db",
  "firstBar": "2026-06-12 10:00",
- "lastBar": "2026-06-19 07:45",
- "bars": 472,
+ "lastBar": "2026-06-16 00:45",
+ "bars": 156,
  "regime": "Balanced \u00b7 High Vol",
  "strategy": {
   "name": "RV mean-reversion + cost gate + shock absorption (Phase-2 idea, intraday)",
@@ -30,193 +30,181 @@
   }
  },
  "summary": {
-  "trades": 27,
-  "grossPnl": 1211.48,
-  "netPnl": 1211.48,
+  "trades": 5,
+  "grossPnl": 15.34,
+  "netPnl": 15.34,
   "costs": 0.0,
-  "refNet": 299.88,
+  "refNet": -145.86,
   "refSlip": 0.01,
-  "refKeepPct": 0.248,
-  "winRate": 0.7037,
-  "avgWin": 94.77,
-  "avgLoss": -73.64,
-  "avgNetWin": 94.77,
-  "avgNetLoss": -73.64,
-  "profitFactor": 3.057,
-  "expectancy": 44.87,
-  "netExpectancy": 44.87,
-  "perTradeSharpe": 0.47,
-  "tradesPerYear": 1643.6,
-  "avgSize": 0.7,
-  "endingEquity": 251211.48,
+  "refKeepPct": -9.508,
+  "winRate": 0.4,
+  "avgWin": 65.87,
+  "avgLoss": -38.8,
+  "avgNetWin": 65.87,
+  "avgNetLoss": -38.8,
+  "profitFactor": 1.132,
+  "expectancy": 3.07,
+  "netExpectancy": 3.07,
+  "perTradeSharpe": 0.049,
+  "tradesPerYear": 608.8,
+  "avgSize": 0.81,
+  "endingEquity": 250015.34,
   "initialCapital": 250000,
   "byExitReason": {
-   "target": 2,
-   "shock_flat": 23,
+   "target": 1,
+   "shock_flat": 2,
    "session_end": 2
   },
   "byDirection": {
-   "LONG": 12,
-   "SHORT": 15
+   "LONG": 4,
+   "SHORT": 1
   },
-  "sharpe": 9.287,
-  "sortino": 26.05,
-  "calmar": 564.857,
-  "cagr": 0.3389,
-  "maxDrawdown": -152.15,
-  "maxDrawdownPct": -0.0006,
-  "cvar5": -150.04,
-  "volAnn": 0.0186,
-  "pctTimeInMarket": 0.8571,
-  "avgHoldMin": 88.0
+  "sharpe": 6.663,
+  "sortino": null,
+  "calmar": null,
+  "cagr": 0.0075,
+  "maxDrawdown": -2.12,
+  "maxDrawdownPct": -0.0,
+  "cvar5": -2.12,
+  "volAnn": 0.0006,
+  "pctTimeInMarket": 0.5,
+  "avgHoldMin": 204.0
  },
  "blind": {
   "summary": {
-   "trades": 22,
-   "grossPnl": 3010.0,
-   "netPnl": 3010.0,
+   "trades": 4,
+   "grossPnl": 150.0,
+   "netPnl": 150.0,
    "costs": 0.0,
-   "refNet": 1850.0,
+   "refNet": -50.0,
    "refSlip": 0.01,
-   "refKeepPct": 0.615,
-   "winRate": 0.9091,
-   "avgWin": 181.0,
-   "avgLoss": -305.0,
-   "avgNetWin": 181.0,
-   "avgNetLoss": -305.0,
-   "profitFactor": 5.934,
-   "expectancy": 136.82,
-   "netExpectancy": 136.82,
-   "perTradeSharpe": 0.717,
-   "tradesPerYear": 1339.2,
+   "refKeepPct": -0.333,
+   "winRate": 0.75,
+   "avgWin": 146.67,
+   "avgLoss": -290.0,
+   "avgNetWin": 146.67,
+   "avgNetLoss": -290.0,
+   "profitFactor": 1.517,
+   "expectancy": 37.5,
+   "netExpectancy": 37.5,
+   "perTradeSharpe": 0.173,
+   "tradesPerYear": 487.0,
    "avgSize": 1.0,
-   "endingEquity": 253010.0,
+   "endingEquity": 250150.0,
    "initialCapital": 250000,
    "byExitReason": {
-    "target": 18,
-    "time_stop": 1,
-    "session_end": 3
+    "target": 2,
+    "session_end": 2
    },
    "byDirection": {
-    "LONG": 10,
-    "SHORT": 12
+    "LONG": 3,
+    "SHORT": 1
    },
-   "sharpe": 19.403,
+   "sharpe": 7.307,
    "sortino": null,
-   "calmar": null,
-   "cagr": 1.0721,
-   "maxDrawdown": 0.0,
-   "maxDrawdownPct": 0.0,
-   "cvar5": 0.0,
-   "volAnn": 0.0223,
-   "pctTimeInMarket": 0.8571,
-   "avgHoldMin": 358.0
+   "calmar": 1022.583,
+   "cagr": 0.1023,
+   "maxDrawdown": -30.0,
+   "maxDrawdownPct": -0.0001,
+   "cvar5": -30.0,
+   "volAnn": 0.0069,
+   "pctTimeInMarket": 0.75,
+   "avgHoldMin": 360.0
   }
  },
  "comparison": {
   "sharpe": {
-   "aware": 9.287,
-   "blind": 19.403,
-   "delta": -10.116
+   "aware": 6.663,
+   "blind": 7.307,
+   "delta": -0.644
   },
   "calmar": {
-   "aware": 564.857,
-   "blind": null
+   "aware": null,
+   "blind": 1022.583
   },
   "maxDrawdown": {
-   "aware": -152.15,
-   "blind": 0.0,
-   "delta": -152.15
+   "aware": -2.12,
+   "blind": -30.0,
+   "delta": 27.88
   },
   "maxDrawdownPct": {
-   "aware": -0.0006,
-   "blind": 0.0,
-   "delta": -0.0006
+   "aware": -0.0,
+   "blind": -0.0001,
+   "delta": 0.0001
   },
   "cvar5": {
-   "aware": -150.04,
-   "blind": 0.0,
-   "delta": -150.04
+   "aware": -2.12,
+   "blind": -30.0,
+   "delta": 27.88
   },
   "grossPnl": {
-   "aware": 1211.48,
-   "blind": 3010.0,
-   "delta": -1798.52
+   "aware": 15.34,
+   "blind": 150.0,
+   "delta": -134.66
   },
   "netPnl": {
-   "aware": 1211.48,
-   "blind": 3010.0,
-   "delta": -1798.52
+   "aware": 15.34,
+   "blind": 150.0,
+   "delta": -134.66
   },
   "winRate": {
-   "aware": 0.7037,
-   "blind": 0.9091
+   "aware": 0.4,
+   "blind": 0.75
   },
   "trades": {
-   "aware": 27,
-   "blind": 22
+   "aware": 5,
+   "blind": 4
   }
  },
  "shock": {
-  "shockFlattens": 23,
-  "shockFlattenPnl": 1069.31,
-  "deLeveredTrades": 25,
-  "avgEntrySeverity": 0.316,
-  "maxEntrySeverity": 0.85,
-  "avgEntrySize": 0.705
+  "shockFlattens": 2,
+  "shockFlattenPnl": -70.83,
+  "deLeveredTrades": 5,
+  "avgEntrySeverity": 0.194,
+  "maxEntrySeverity": 0.37,
+  "avgEntrySize": 0.806
  },
  "byStructure": {
   "WTI_M2M3": {
    "label": "WTI Aug/Sep (M2-M3)",
-   "trades": 10,
-   "wins": 6,
-   "winRate": 0.6,
-   "pnl": 36.78,
-   "profitFactor": 1.085,
+   "trades": 2,
+   "wins": 1,
+   "winRate": 0.5,
+   "pnl": 51.9,
+   "profitFactor": 1.832,
    "histHitRate": 0.752,
-   "avgSize": 0.81,
-   "avgHoldMin": 104.0
-  },
-  "WTI_FLY": {
-   "label": "WTI Jul/Aug/Sep fly",
-   "trades": 8,
-   "wins": 7,
-   "winRate": 0.875,
-   "pnl": 817.38,
-   "profitFactor": 18.029,
-   "histHitRate": 0.816,
-   "avgSize": 0.47,
-   "avgHoldMin": 49.0
+   "avgSize": 0.71,
+   "avgHoldMin": 202.0
   },
   "BRENT_WTI": {
    "label": "Brent-WTI arb (Aug)",
-   "trades": 9,
-   "wins": 6,
-   "winRate": 0.667,
-   "pnl": 357.32,
-   "profitFactor": 4.371,
+   "trades": 3,
+   "wins": 1,
+   "winRate": 0.333,
+   "pnl": -36.56,
+   "profitFactor": 0.323,
    "histHitRate": 0.833,
-   "avgSize": 0.79,
-   "avgHoldMin": 105.0
+   "avgSize": 0.87,
+   "avgHoldMin": 205.0
   }
  },
  "byRegime": {
   "Balanced \u00b7 High Vol": {
-   "trades": 27,
-   "wins": 19,
-   "winRate": 0.704,
-   "pnl": 1211.48,
-   "profitFactor": 3.057,
-   "avgSize": 0.7
+   "trades": 5,
+   "wins": 2,
+   "winRate": 0.4,
+   "pnl": 15.34,
+   "profitFactor": 1.132,
+   "avgSize": 0.81
   }
  },
  "byVolState": {
   "High": {
-   "trades": 27,
-   "winRate": 0.704,
-   "pnl": 1211.48,
-   "profitFactor": 3.057,
-   "avgSize": 0.7
+   "trades": 5,
+   "winRate": 0.4,
+   "pnl": 15.34,
+   "profitFactor": 1.132,
+   "avgSize": 0.81
   }
  },
  "equityCurve": [
@@ -243,1037 +231,9 @@
   {
    "t": "2026-06-15 20:45",
    "equity": 250015.34
-  },
-  {
-   "t": "2026-06-16 08:00",
-   "equity": 249905.34
-  },
-  {
-   "t": "2026-06-16 08:45",
-   "equity": 249961.99
-  },
-  {
-   "t": "2026-06-16 12:30",
-   "equity": 250017.99
-  },
-  {
-   "t": "2026-06-16 14:30",
-   "equity": 249790.3
-  },
-  {
-   "t": "2026-06-16 20:45",
-   "equity": 249865.3
-  },
-  {
-   "t": "2026-06-17 02:30",
-   "equity": 249925.3
-  },
-  {
-   "t": "2026-06-17 04:00",
-   "equity": 249993.72
-  },
-  {
-   "t": "2026-06-17 07:45",
-   "equity": 250092.34
-  },
-  {
-   "t": "2026-06-17 10:15",
-   "equity": 250193.11
-  },
-  {
-   "t": "2026-06-17 12:30",
-   "equity": 250267.99
-  },
-  {
-   "t": "2026-06-17 14:15",
-   "equity": 250232.99
-  },
-  {
-   "t": "2026-06-17 15:15",
-   "equity": 250296.02
-  },
-  {
-   "t": "2026-06-17 15:15",
-   "equity": 250366.02
-  },
-  {
-   "t": "2026-06-18 09:30",
-   "equity": 250314.02
-  },
-  {
-   "t": "2026-06-18 10:00",
-   "equity": 250452.6
-  },
-  {
-   "t": "2026-06-18 15:00",
-   "equity": 250404.6
-  },
-  {
-   "t": "2026-06-18 15:30",
-   "equity": 250588.6
-  },
-  {
-   "t": "2026-06-18 18:15",
-   "equity": 250656.1
-  },
-  {
-   "t": "2026-06-18 19:30",
-   "equity": 250744.1
-  },
-  {
-   "t": "2026-06-18 22:45",
-   "equity": 251007.48
-  },
-  {
-   "t": "2026-06-19 02:15",
-   "equity": 251087.48
-  },
-  {
-   "t": "2026-06-19 05:30",
-   "equity": 251211.48
   }
  ],
  "trades": [
-  {
-   "structure": "WTI_FLY",
-   "label": "WTI Jul/Aug/Sep fly",
-   "regime": "Balanced \u00b7 High Vol",
-   "direction": "SHORT",
-   "volState": "High",
-   "entrySpread": 0.43,
-   "exitSpread": 0.12,
-   "fairValue": -0.0229,
-   "entryZ": 2.3,
-   "exitZ": 0.68,
-   "size": 0.4,
-   "units": 0.4,
-   "entrySeverity": 0.8,
-   "pnl": 124.0,
-   "cost": 0.0,
-   "netPnl": 124.0,
-   "mae": 0.0,
-   "mfe": 124.0,
-   "exitReason": "shock_flat",
-   "histHitRate": 0.816,
-   "entryDate": "2026-06-19 05:15",
-   "exitDate": "2026-06-19 05:30",
-   "entryTime": "2026-06-19 05:15",
-   "exitTime": "2026-06-19 05:30",
-   "holdBars": 1,
-   "holdMin": 15,
-   "holdLabel": "15m",
-   "strategy": "RV mean-reversion + cost gate + shock absorption (Phase-2 idea, intraday)",
-   "phase2Key": "wti_fly",
-   "contracts": 4,
-   "edgeSource": "validated (Phase-2 daily)",
-   "confidence": 80,
-   "entryLegs": {
-    "CL_N26": 77.23,
-    "CL_Q26": 75.95,
-    "CL_U26": 75.1
-   },
-   "exitLegs": {
-    "CL_N26": 77.34,
-    "CL_Q26": 76.31,
-    "CL_U26": 75.4
-   }
-  },
-  {
-   "structure": "WTI_FLY",
-   "label": "WTI Jul/Aug/Sep fly",
-   "regime": "Balanced \u00b7 High Vol",
-   "direction": "LONG",
-   "volState": "High",
-   "entrySpread": -0.46,
-   "exitSpread": -0.26,
-   "fairValue": 0.1333,
-   "entryZ": -2.25,
-   "exitZ": -1.36,
-   "size": 0.4,
-   "units": 0.4,
-   "entrySeverity": 0.6,
-   "pnl": 80.0,
-   "cost": 0.0,
-   "netPnl": 80.0,
-   "mae": 0.0,
-   "mfe": 80.0,
-   "exitReason": "shock_flat",
-   "histHitRate": 0.816,
-   "entryDate": "2026-06-19 02:00",
-   "exitDate": "2026-06-19 02:15",
-   "entryTime": "2026-06-19 02:00",
-   "exitTime": "2026-06-19 02:15",
-   "holdBars": 1,
-   "holdMin": 15,
-   "holdLabel": "15m",
-   "strategy": "RV mean-reversion + cost gate + shock absorption (Phase-2 idea, intraday)",
-   "phase2Key": "wti_fly",
-   "contracts": 4,
-   "edgeSource": "validated (Phase-2 daily)",
-   "confidence": 79,
-   "entryLegs": {
-    "CL_N26": 76.14,
-    "CL_Q26": 75.75,
-    "CL_U26": 74.9
-   },
-   "exitLegs": {
-    "CL_N26": 76.14,
-    "CL_Q26": 75.59,
-    "CL_U26": 74.78
-   }
-  },
-  {
-   "structure": "WTI_FLY",
-   "label": "WTI Jul/Aug/Sep fly",
-   "regime": "Balanced \u00b7 High Vol",
-   "direction": "SHORT",
-   "volState": "High",
-   "entrySpread": 0.63,
-   "exitSpread": 0.09,
-   "fairValue": 0.2142,
-   "entryZ": 2.34,
-   "exitZ": -0.72,
-   "size": 0.49,
-   "units": 0.49,
-   "entrySeverity": 0.51,
-   "pnl": 263.38,
-   "cost": 0.0,
-   "netPnl": 263.38,
-   "mae": 0.0,
-   "mfe": 263.38,
-   "exitReason": "shock_flat",
-   "histHitRate": 0.816,
-   "entryDate": "2026-06-18 22:30",
-   "exitDate": "2026-06-18 22:45",
-   "entryTime": "2026-06-18 22:30",
-   "exitTime": "2026-06-18 22:45",
-   "holdBars": 1,
-   "holdMin": 15,
-   "holdLabel": "15m",
-   "strategy": "RV mean-reversion + cost gate + shock absorption (Phase-2 idea, intraday)",
-   "phase2Key": "wti_fly",
-   "contracts": 4,
-   "edgeSource": "validated (Phase-2 daily)",
-   "confidence": 80,
-   "entryLegs": {
-    "CL_N26": 76.86,
-    "CL_Q26": 75.42,
-    "CL_U26": 74.61
-   },
-   "exitLegs": {
-    "CL_N26": 76.32,
-    "CL_Q26": 75.38,
-    "CL_U26": 74.53
-   }
-  },
-  {
-   "structure": "WTI_FLY",
-   "label": "WTI Jul/Aug/Sep fly",
-   "regime": "Balanced \u00b7 High Vol",
-   "direction": "SHORT",
-   "volState": "High",
-   "entrySpread": 0.39,
-   "exitSpread": 0.17,
-   "fairValue": 0.1242,
-   "entryZ": 2.22,
-   "exitZ": 0.33,
-   "size": 0.4,
-   "units": 0.4,
-   "entrySeverity": 0.62,
-   "pnl": 88.0,
-   "cost": 0.0,
-   "netPnl": 88.0,
-   "mae": 0.0,
-   "mfe": 88.0,
-   "exitReason": "shock_flat",
-   "histHitRate": 0.816,
-   "entryDate": "2026-06-18 19:15",
-   "exitDate": "2026-06-18 19:30",
-   "entryTime": "2026-06-18 19:15",
-   "exitTime": "2026-06-18 19:30",
-   "holdBars": 1,
-   "holdMin": 15,
-   "holdLabel": "15m",
-   "strategy": "RV mean-reversion + cost gate + shock absorption (Phase-2 idea, intraday)",
-   "phase2Key": "wti_fly",
-   "contracts": 4,
-   "edgeSource": "validated (Phase-2 daily)",
-   "confidence": 79,
-   "entryLegs": {
-    "CL_N26": 76.85,
-    "CL_Q26": 75.66,
-    "CL_U26": 74.86
-   },
-   "exitLegs": {
-    "CL_N26": 76.59,
-    "CL_Q26": 75.62,
-    "CL_U26": 74.82
-   }
-  },
-  {
-   "structure": "WTI_M2M3",
-   "label": "WTI Aug/Sep (M2-M3)",
-   "regime": "Balanced \u00b7 High Vol",
-   "direction": "SHORT",
-   "volState": "High",
-   "entrySpread": 0.83,
-   "exitSpread": 0.74,
-   "fairValue": 0.7083,
-   "entryZ": 2.23,
-   "exitZ": 0.31,
-   "size": 0.75,
-   "units": 0.75,
-   "entrySeverity": 0.25,
-   "pnl": 67.5,
-   "cost": 0.0,
-   "netPnl": 67.5,
-   "mae": 0.0,
-   "mfe": 67.5,
-   "exitReason": "shock_flat",
-   "histHitRate": 0.752,
-   "entryDate": "2026-06-18 17:15",
-   "exitDate": "2026-06-18 18:15",
-   "entryTime": "2026-06-18 17:15",
-   "exitTime": "2026-06-18 18:15",
-   "holdBars": 4,
-   "holdMin": 60,
-   "holdLabel": "1h00",
-   "strategy": "RV mean-reversion + cost gate + shock absorption (Phase-2 idea, intraday)",
-   "phase2Key": "wti_m1m2",
-   "contracts": 2,
-   "edgeSource": "validated (Phase-2 daily)",
-   "confidence": 75,
-   "entryLegs": {
-    "CL_Q26": 74.39,
-    "CL_U26": 73.56
-   },
-   "exitLegs": {
-    "CL_Q26": 75.86,
-    "CL_U26": 75.12
-   }
-  },
-  {
-   "structure": "WTI_FLY",
-   "label": "WTI Jul/Aug/Sep fly",
-   "regime": "Balanced \u00b7 High Vol",
-   "direction": "SHORT",
-   "volState": "High",
-   "entrySpread": 0.33,
-   "exitSpread": 0.09,
-   "fairValue": 0.0171,
-   "entryZ": 2.76,
-   "exitZ": 0.6,
-   "size": 0.77,
-   "units": 0.77,
-   "entrySeverity": 0.23,
-   "pnl": 184.0,
-   "cost": 0.0,
-   "netPnl": 184.0,
-   "mae": 0.0,
-   "mfe": 184.0,
-   "exitReason": "shock_flat",
-   "histHitRate": 0.816,
-   "entryDate": "2026-06-18 15:15",
-   "exitDate": "2026-06-18 15:30",
-   "entryTime": "2026-06-18 15:15",
-   "exitTime": "2026-06-18 15:30",
-   "holdBars": 1,
-   "holdMin": 15,
-   "holdLabel": "15m",
-   "strategy": "RV mean-reversion + cost gate + shock absorption (Phase-2 idea, intraday)",
-   "phase2Key": "wti_fly",
-   "contracts": 4,
-   "edgeSource": "validated (Phase-2 daily)",
-   "confidence": 86,
-   "entryLegs": {
-    "CL_N26": 74.52,
-    "CL_Q26": 73.5,
-    "CL_U26": 72.81
-   },
-   "exitLegs": {
-    "CL_N26": 74.64,
-    "CL_Q26": 73.8,
-    "CL_U26": 73.05
-   }
-  },
-  {
-   "structure": "WTI_FLY",
-   "label": "WTI Jul/Aug/Sep fly",
-   "regime": "Balanced \u00b7 High Vol",
-   "direction": "SHORT",
-   "volState": "High",
-   "entrySpread": 0.17,
-   "exitSpread": 0.29,
-   "fairValue": -0.0083,
-   "entryZ": 2.6,
-   "exitZ": 3.12,
-   "size": 0.4,
-   "units": 0.4,
-   "entrySeverity": 0.68,
-   "pnl": -48.0,
-   "cost": 0.0,
-   "netPnl": -48.0,
-   "mae": -48.0,
-   "mfe": 0.0,
-   "exitReason": "shock_flat",
-   "histHitRate": 0.816,
-   "entryDate": "2026-06-18 14:45",
-   "exitDate": "2026-06-18 15:00",
-   "entryTime": "2026-06-18 14:45",
-   "exitTime": "2026-06-18 15:00",
-   "holdBars": 1,
-   "holdMin": 15,
-   "holdLabel": "15m",
-   "strategy": "RV mean-reversion + cost gate + shock absorption (Phase-2 idea, intraday)",
-   "phase2Key": "wti_fly",
-   "contracts": 4,
-   "edgeSource": "validated (Phase-2 daily)",
-   "confidence": 84,
-   "entryLegs": {
-    "CL_N26": 74.11,
-    "CL_Q26": 73.3,
-    "CL_U26": 72.66
-   },
-   "exitLegs": {
-    "CL_N26": 74.17,
-    "CL_Q26": 73.22,
-    "CL_U26": 72.56
-   }
-  },
-  {
-   "structure": "BRENT_WTI",
-   "label": "Brent-WTI arb (Aug)",
-   "regime": "Balanced \u00b7 High Vol",
-   "direction": "SHORT",
-   "volState": "High",
-   "entrySpread": 3.98,
-   "exitSpread": 3.83,
-   "fairValue": 3.7279,
-   "entryZ": 2.74,
-   "exitZ": 1.02,
-   "size": 0.92,
-   "units": 0.92,
-   "entrySeverity": 0.08,
-   "pnl": 138.58,
-   "cost": 0.0,
-   "netPnl": 138.58,
-   "mae": 0.0,
-   "mfe": 138.58,
-   "exitReason": "shock_flat",
-   "histHitRate": 0.833,
-   "entryDate": "2026-06-18 09:45",
-   "exitDate": "2026-06-18 10:00",
-   "entryTime": "2026-06-18 09:45",
-   "exitTime": "2026-06-18 10:00",
-   "holdBars": 1,
-   "holdMin": 15,
-   "holdLabel": "15m",
-   "strategy": "RV mean-reversion + cost gate + shock absorption (Phase-2 idea, intraday)",
-   "phase2Key": "brent_wti",
-   "contracts": 2,
-   "edgeSource": "validated (Phase-2 daily)",
-   "confidence": 87,
-   "entryLegs": {
-    "CO_Q26": 77.68,
-    "CL_Q26": 73.7
-   },
-   "exitLegs": {
-    "CO_Q26": 77.79,
-    "CL_Q26": 73.96
-   }
-  },
-  {
-   "structure": "BRENT_WTI",
-   "label": "Brent-WTI arb (Aug)",
-   "regime": "Balanced \u00b7 High Vol",
-   "direction": "SHORT",
-   "volState": "High",
-   "entrySpread": 3.82,
-   "exitSpread": 3.95,
-   "fairValue": 3.6942,
-   "entryZ": 2.63,
-   "exitZ": 3.1,
-   "size": 0.4,
-   "units": 0.4,
-   "entrySeverity": 0.85,
-   "pnl": -52.0,
-   "cost": 0.0,
-   "netPnl": -52.0,
-   "mae": -52.0,
-   "mfe": 0.0,
-   "exitReason": "shock_flat",
-   "histHitRate": 0.833,
-   "entryDate": "2026-06-18 09:00",
-   "exitDate": "2026-06-18 09:30",
-   "entryTime": "2026-06-18 09:00",
-   "exitTime": "2026-06-18 09:30",
-   "holdBars": 2,
-   "holdMin": 30,
-   "holdLabel": "30m",
-   "strategy": "RV mean-reversion + cost gate + shock absorption (Phase-2 idea, intraday)",
-   "phase2Key": "brent_wti",
-   "contracts": 2,
-   "edgeSource": "validated (Phase-2 daily)",
-   "confidence": 85,
-   "entryLegs": {
-    "CO_Q26": 77.88,
-    "CL_Q26": 74.06
-   },
-   "exitLegs": {
-    "CO_Q26": 78.12,
-    "CL_Q26": 74.17
-   }
-  },
-  {
-   "structure": "WTI_M2M3",
-   "label": "WTI Aug/Sep (M2-M3)",
-   "regime": "Balanced \u00b7 High Vol",
-   "direction": "SHORT",
-   "volState": "High",
-   "entrySpread": 0.99,
-   "exitSpread": 0.9,
-   "fairValue": 0.7471,
-   "entryZ": 2.56,
-   "exitZ": 1.21,
-   "size": 0.7,
-   "units": 0.7,
-   "entrySeverity": 0.3,
-   "pnl": 63.03,
-   "cost": 0.0,
-   "netPnl": 63.03,
-   "mae": -7.0,
-   "mfe": 63.03,
-   "exitReason": "shock_flat",
-   "histHitRate": 0.752,
-   "entryDate": "2026-06-17 14:45",
-   "exitDate": "2026-06-17 15:15",
-   "entryTime": "2026-06-17 14:45",
-   "exitTime": "2026-06-17 15:15",
-   "holdBars": 2,
-   "holdMin": 30,
-   "holdLabel": "30m",
-   "strategy": "RV mean-reversion + cost gate + shock absorption (Phase-2 idea, intraday)",
-   "phase2Key": "wti_m1m2",
-   "contracts": 2,
-   "edgeSource": "validated (Phase-2 daily)",
-   "confidence": 79,
-   "entryLegs": {
-    "CL_Q26": 77.02,
-    "CL_U26": 76.03
-   },
-   "exitLegs": {
-    "CL_Q26": 76.1,
-    "CL_U26": 75.2
-   }
-  },
-  {
-   "structure": "WTI_FLY",
-   "label": "WTI Jul/Aug/Sep fly",
-   "regime": "Balanced \u00b7 High Vol",
-   "direction": "LONG",
-   "volState": "High",
-   "entrySpread": -0.18,
-   "exitSpread": -0.04,
-   "fairValue": 0.0046,
-   "entryZ": -3.07,
-   "exitZ": -0.43,
-   "size": 0.5,
-   "units": 0.5,
-   "entrySeverity": 0.5,
-   "pnl": 70.0,
-   "cost": 0.0,
-   "netPnl": 70.0,
-   "mae": -15.0,
-   "mfe": 70.0,
-   "exitReason": "shock_flat",
-   "histHitRate": 0.816,
-   "entryDate": "2026-06-17 14:45",
-   "exitDate": "2026-06-17 15:15",
-   "entryTime": "2026-06-17 14:45",
-   "exitTime": "2026-06-17 15:15",
-   "holdBars": 2,
-   "holdMin": 30,
-   "holdLabel": "30m",
-   "strategy": "RV mean-reversion + cost gate + shock absorption (Phase-2 idea, intraday)",
-   "phase2Key": "wti_fly",
-   "contracts": 4,
-   "edgeSource": "validated (Phase-2 daily)",
-   "confidence": 89,
-   "entryLegs": {
-    "CL_N26": 77.83,
-    "CL_Q26": 77.02,
-    "CL_U26": 76.03
-   },
-   "exitLegs": {
-    "CL_N26": 76.96,
-    "CL_Q26": 76.1,
-    "CL_U26": 75.2
-   }
-  },
-  {
-   "structure": "WTI_M2M3",
-   "label": "WTI Aug/Sep (M2-M3)",
-   "regime": "Balanced \u00b7 High Vol",
-   "direction": "SHORT",
-   "volState": "High",
-   "entrySpread": 0.83,
-   "exitSpread": 0.9,
-   "fairValue": 0.6979,
-   "entryZ": 2.34,
-   "exitZ": 2.66,
-   "size": 0.5,
-   "units": 0.5,
-   "entrySeverity": 0.5,
-   "pnl": -35.0,
-   "cost": 0.0,
-   "netPnl": -35.0,
-   "mae": -35.0,
-   "mfe": 0.0,
-   "exitReason": "shock_flat",
-   "histHitRate": 0.752,
-   "entryDate": "2026-06-17 13:45",
-   "exitDate": "2026-06-17 14:15",
-   "entryTime": "2026-06-17 13:45",
-   "exitTime": "2026-06-17 14:15",
-   "holdBars": 2,
-   "holdMin": 30,
-   "holdLabel": "30m",
-   "strategy": "RV mean-reversion + cost gate + shock absorption (Phase-2 idea, intraday)",
-   "phase2Key": "wti_m1m2",
-   "contracts": 2,
-   "edgeSource": "validated (Phase-2 daily)",
-   "confidence": 76,
-   "entryLegs": {
-    "CL_Q26": 76.37,
-    "CL_U26": 75.54
-   },
-   "exitLegs": {
-    "CL_Q26": 76.55,
-    "CL_U26": 75.65
-   }
-  },
-  {
-   "structure": "BRENT_WTI",
-   "label": "Brent-WTI arb (Aug)",
-   "regime": "Balanced \u00b7 High Vol",
-   "direction": "SHORT",
-   "volState": "High",
-   "entrySpread": 3.81,
-   "exitSpread": 3.72,
-   "fairValue": 3.6454,
-   "entryZ": 2.27,
-   "exitZ": 0.95,
-   "size": 0.83,
-   "units": 0.83,
-   "entrySeverity": 0.17,
-   "pnl": 74.88,
-   "cost": 0.0,
-   "netPnl": 74.88,
-   "mae": 0.0,
-   "mfe": 74.88,
-   "exitReason": "shock_flat",
-   "histHitRate": 0.833,
-   "entryDate": "2026-06-17 12:15",
-   "exitDate": "2026-06-17 12:30",
-   "entryTime": "2026-06-17 12:15",
-   "exitTime": "2026-06-17 12:30",
-   "holdBars": 1,
-   "holdMin": 15,
-   "holdLabel": "15m",
-   "strategy": "RV mean-reversion + cost gate + shock absorption (Phase-2 idea, intraday)",
-   "phase2Key": "brent_wti",
-   "contracts": 2,
-   "edgeSource": "validated (Phase-2 daily)",
-   "confidence": 80,
-   "entryLegs": {
-    "CO_Q26": 79.72,
-    "CL_Q26": 75.91
-   },
-   "exitLegs": {
-    "CO_Q26": 79.52,
-    "CL_Q26": 75.8
-   }
-  },
-  {
-   "structure": "BRENT_WTI",
-   "label": "Brent-WTI arb (Aug)",
-   "regime": "Balanced \u00b7 High Vol",
-   "direction": "SHORT",
-   "volState": "High",
-   "entrySpread": 3.72,
-   "exitSpread": 3.55,
-   "fairValue": 3.6217,
-   "entryZ": 2.11,
-   "exitZ": -1.4,
-   "size": 0.59,
-   "units": 0.59,
-   "entrySeverity": 0.41,
-   "pnl": 100.77,
-   "cost": 0.0,
-   "netPnl": 100.77,
-   "mae": 0.0,
-   "mfe": 100.77,
-   "exitReason": "shock_flat",
-   "histHitRate": 0.833,
-   "entryDate": "2026-06-17 08:30",
-   "exitDate": "2026-06-17 10:15",
-   "entryTime": "2026-06-17 08:30",
-   "exitTime": "2026-06-17 10:15",
-   "holdBars": 7,
-   "holdMin": 105,
-   "holdLabel": "1h45",
-   "strategy": "RV mean-reversion + cost gate + shock absorption (Phase-2 idea, intraday)",
-   "phase2Key": "brent_wti",
-   "contracts": 2,
-   "edgeSource": "validated (Phase-2 daily)",
-   "confidence": 78,
-   "entryLegs": {
-    "CO_Q26": 79.38,
-    "CL_Q26": 75.66
-   },
-   "exitLegs": {
-    "CO_Q26": 79.17,
-    "CL_Q26": 75.62
-   }
-  },
-  {
-   "structure": "WTI_M2M3",
-   "label": "WTI Aug/Sep (M2-M3)",
-   "regime": "Balanced \u00b7 High Vol",
-   "direction": "LONG",
-   "volState": "High",
-   "entrySpread": 0.54,
-   "exitSpread": 0.64,
-   "fairValue": 0.6458,
-   "entryZ": -2.16,
-   "exitZ": 0.33,
-   "size": 0.99,
-   "units": 0.99,
-   "entrySeverity": 0.01,
-   "pnl": 98.62,
-   "cost": 0.0,
-   "netPnl": 98.62,
-   "mae": 0.0,
-   "mfe": 98.62,
-   "exitReason": "shock_flat",
-   "histHitRate": 0.752,
-   "entryDate": "2026-06-17 06:45",
-   "exitDate": "2026-06-17 07:45",
-   "entryTime": "2026-06-17 06:45",
-   "exitTime": "2026-06-17 07:45",
-   "holdBars": 4,
-   "holdMin": 60,
-   "holdLabel": "1h00",
-   "strategy": "RV mean-reversion + cost gate + shock absorption (Phase-2 idea, intraday)",
-   "phase2Key": "wti_m1m2",
-   "contracts": 2,
-   "edgeSource": "validated (Phase-2 daily)",
-   "confidence": 74,
-   "entryLegs": {
-    "CL_Q26": 74.79,
-    "CL_U26": 74.25
-   },
-   "exitLegs": {
-    "CL_Q26": 75.0,
-    "CL_U26": 74.36
-   }
-  },
-  {
-   "structure": "WTI_M2M3",
-   "label": "WTI Aug/Sep (M2-M3)",
-   "regime": "Balanced \u00b7 High Vol",
-   "direction": "LONG",
-   "volState": "High",
-   "entrySpread": 0.62,
-   "exitSpread": 0.69,
-   "fairValue": 0.7158,
-   "entryZ": -2.03,
-   "exitZ": -0.21,
-   "size": 0.98,
-   "units": 0.98,
-   "entrySeverity": 0.02,
-   "pnl": 68.42,
-   "cost": 0.0,
-   "netPnl": 68.42,
-   "mae": -9.77,
-   "mfe": 68.42,
-   "exitReason": "shock_flat",
-   "histHitRate": 0.752,
-   "entryDate": "2026-06-17 03:15",
-   "exitDate": "2026-06-17 04:00",
-   "entryTime": "2026-06-17 03:15",
-   "exitTime": "2026-06-17 04:00",
-   "holdBars": 3,
-   "holdMin": 45,
-   "holdLabel": "45m",
-   "strategy": "RV mean-reversion + cost gate + shock absorption (Phase-2 idea, intraday)",
-   "phase2Key": "wti_m1m2",
-   "contracts": 2,
-   "edgeSource": "validated (Phase-2 daily)",
-   "confidence": 72,
-   "entryLegs": {
-    "CL_Q26": 75.01,
-    "CL_U26": 74.39
-   },
-   "exitLegs": {
-    "CL_Q26": 75.03,
-    "CL_U26": 74.34
-   }
-  },
-  {
-   "structure": "WTI_M2M3",
-   "label": "WTI Aug/Sep (M2-M3)",
-   "regime": "Balanced \u00b7 High Vol",
-   "direction": "LONG",
-   "volState": "High",
-   "entrySpread": 0.65,
-   "exitSpread": 0.71,
-   "fairValue": 0.7304,
-   "entryZ": -2.15,
-   "exitZ": -0.5,
-   "size": 1.0,
-   "units": 1.0,
-   "entrySeverity": 0.0,
-   "pnl": 60.0,
-   "cost": 0.0,
-   "netPnl": 60.0,
-   "mae": 0.0,
-   "mfe": 60.0,
-   "exitReason": "shock_flat",
-   "histHitRate": 0.752,
-   "entryDate": "2026-06-17 02:15",
-   "exitDate": "2026-06-17 02:30",
-   "entryTime": "2026-06-17 02:15",
-   "exitTime": "2026-06-17 02:30",
-   "holdBars": 1,
-   "holdMin": 15,
-   "holdLabel": "15m",
-   "strategy": "RV mean-reversion + cost gate + shock absorption (Phase-2 idea, intraday)",
-   "phase2Key": "wti_m1m2",
-   "contracts": 2,
-   "edgeSource": "validated (Phase-2 daily)",
-   "confidence": 74,
-   "entryLegs": {
-    "CL_Q26": 75.38,
-    "CL_U26": 74.73
-   },
-   "exitLegs": {
-    "CL_Q26": 75.36,
-    "CL_U26": 74.65
-   }
-  },
-  {
-   "structure": "BRENT_WTI",
-   "label": "Brent-WTI arb (Aug)",
-   "regime": "Balanced \u00b7 High Vol",
-   "direction": "LONG",
-   "volState": "High",
-   "entrySpread": 3.58,
-   "exitSpread": 3.67,
-   "fairValue": 3.7017,
-   "entryZ": -2.31,
-   "exitZ": 0.08,
-   "size": 0.83,
-   "units": 0.83,
-   "entrySeverity": 0.17,
-   "pnl": 75.0,
-   "cost": 0.0,
-   "netPnl": 75.0,
-   "mae": -50.0,
-   "mfe": 75.0,
-   "exitReason": "shock_flat",
-   "histHitRate": 0.833,
-   "entryDate": "2026-06-16 19:00",
-   "exitDate": "2026-06-16 20:45",
-   "entryTime": "2026-06-16 19:00",
-   "exitTime": "2026-06-16 20:45",
-   "holdBars": 7,
-   "holdMin": 105,
-   "holdLabel": "1h45",
-   "strategy": "RV mean-reversion + cost gate + shock absorption (Phase-2 idea, intraday)",
-   "phase2Key": "brent_wti",
-   "contracts": 2,
-   "edgeSource": "validated (Phase-2 daily)",
-   "confidence": 81,
-   "entryLegs": {
-    "CO_Q26": 79.51,
-    "CL_Q26": 75.93
-   },
-   "exitLegs": {
-    "CO_Q26": 79.5,
-    "CL_Q26": 75.83
-   }
-  },
-  {
-   "structure": "WTI_M2M3",
-   "label": "WTI Aug/Sep (M2-M3)",
-   "regime": "Balanced \u00b7 High Vol",
-   "direction": "LONG",
-   "volState": "High",
-   "entrySpread": 1.01,
-   "exitSpread": 0.73,
-   "fairValue": 1.2138,
-   "entryZ": -2.21,
-   "exitZ": -2.12,
-   "size": 0.81,
-   "units": 0.81,
-   "entrySeverity": 0.19,
-   "pnl": -227.69,
-   "cost": 0.0,
-   "netPnl": -227.69,
-   "mae": -227.69,
-   "mfe": 0.0,
-   "exitReason": "shock_flat",
-   "histHitRate": 0.752,
-   "entryDate": "2026-06-16 08:15",
-   "exitDate": "2026-06-16 14:30",
-   "entryTime": "2026-06-16 08:15",
-   "exitTime": "2026-06-16 14:30",
-   "holdBars": 25,
-   "holdMin": 375,
-   "holdLabel": "6h15",
-   "strategy": "RV mean-reversion + cost gate + shock absorption (Phase-2 idea, intraday)",
-   "phase2Key": "wti_m1m2",
-   "contracts": 2,
-   "edgeSource": "validated (Phase-2 daily)",
-   "confidence": 75,
-   "entryLegs": {
-    "CL_Q26": 77.44,
-    "CL_U26": 76.43
-   },
-   "exitLegs": {
-    "CL_Q26": 76.21,
-    "CL_U26": 75.48
-   }
-  },
-  {
-   "structure": "WTI_FLY",
-   "label": "WTI Jul/Aug/Sep fly",
-   "regime": "Balanced \u00b7 High Vol",
-   "direction": "SHORT",
-   "volState": "High",
-   "entrySpread": 0.22,
-   "exitSpread": 0.08,
-   "fairValue": 0.0562,
-   "entryZ": 2.61,
-   "exitZ": -2.04,
-   "size": 0.4,
-   "units": 0.4,
-   "entrySeverity": 0.62,
-   "pnl": 56.0,
-   "cost": 0.0,
-   "netPnl": 56.0,
-   "mae": -12.0,
-   "mfe": 56.0,
-   "exitReason": "target",
-   "histHitRate": 0.816,
-   "entryDate": "2026-06-16 08:00",
-   "exitDate": "2026-06-16 12:30",
-   "entryTime": "2026-06-16 08:00",
-   "exitTime": "2026-06-16 12:30",
-   "holdBars": 18,
-   "holdMin": 270,
-   "holdLabel": "4h30",
-   "strategy": "RV mean-reversion + cost gate + shock absorption (Phase-2 idea, intraday)",
-   "phase2Key": "wti_fly",
-   "contracts": 4,
-   "edgeSource": "validated (Phase-2 daily)",
-   "confidence": 84,
-   "entryLegs": {
-    "CL_N26": 78.73,
-    "CL_Q26": 77.54,
-    "CL_U26": 76.57
-   },
-   "exitLegs": {
-    "CL_N26": 77.12,
-    "CL_Q26": 76.2,
-    "CL_U26": 75.36
-   }
-  },
-  {
-   "structure": "WTI_M2M3",
-   "label": "WTI Aug/Sep (M2-M3)",
-   "regime": "Balanced \u00b7 High Vol",
-   "direction": "LONG",
-   "volState": "High",
-   "entrySpread": 1.08,
-   "exitSpread": 0.97,
-   "fairValue": 1.235,
-   "entryZ": -2.53,
-   "exitZ": -3.1,
-   "size": 1.0,
-   "units": 1.0,
-   "entrySeverity": 0.0,
-   "pnl": -110.0,
-   "cost": 0.0,
-   "netPnl": -110.0,
-   "mae": -110.0,
-   "mfe": 0.0,
-   "exitReason": "shock_flat",
-   "histHitRate": 0.752,
-   "entryDate": "2026-06-16 07:45",
-   "exitDate": "2026-06-16 08:00",
-   "entryTime": "2026-06-16 07:45",
-   "exitTime": "2026-06-16 08:00",
-   "holdBars": 1,
-   "holdMin": 15,
-   "holdLabel": "15m",
-   "strategy": "RV mean-reversion + cost gate + shock absorption (Phase-2 idea, intraday)",
-   "phase2Key": "wti_m1m2",
-   "contracts": 2,
-   "edgeSource": "validated (Phase-2 daily)",
-   "confidence": 79,
-   "entryLegs": {
-    "CL_Q26": 78.15,
-    "CL_U26": 77.07
-   },
-   "exitLegs": {
-    "CL_Q26": 77.54,
-    "CL_U26": 76.57
-   }
-  },
-  {
-   "structure": "BRENT_WTI",
-   "label": "Brent-WTI arb (Aug)",
-   "regime": "Balanced \u00b7 High Vol",
-   "direction": "SHORT",
-   "volState": "High",
-   "entrySpread": 3.72,
-   "exitSpread": 3.66,
-   "fairValue": 3.5754,
-   "entryZ": 2.31,
-   "exitZ": 0.81,
-   "size": 0.94,
-   "units": 0.94,
-   "entrySeverity": 0.06,
-   "pnl": 56.65,
-   "cost": 0.0,
-   "netPnl": 56.65,
-   "mae": -47.21,
-   "mfe": 56.65,
-   "exitReason": "shock_flat",
-   "histHitRate": 0.833,
-   "entryDate": "2026-06-16 07:45",
-   "exitDate": "2026-06-16 08:45",
-   "entryTime": "2026-06-16 07:45",
-   "exitTime": "2026-06-16 08:45",
-   "holdBars": 4,
-   "holdMin": 60,
-   "holdLabel": "1h00",
-   "strategy": "RV mean-reversion + cost gate + shock absorption (Phase-2 idea, intraday)",
-   "phase2Key": "brent_wti",
-   "contracts": 2,
-   "edgeSource": "validated (Phase-2 daily)",
-   "confidence": 81,
-   "entryLegs": {
-    "CO_Q26": 81.87,
-    "CL_Q26": 78.15
-   },
-   "exitLegs": {
-    "CO_Q26": 81.14,
-    "CL_Q26": 77.48
-   }
-  },
   {
    "structure": "BRENT_WTI",
    "label": "Brent-WTI arb (Aug)",
@@ -1485,30 +445,7 @@
    }
   }
  ],
- "openPositions": [
-  {
-   "structure": "WTI_M2M3",
-   "label": "WTI Aug/Sep (M2-M3)",
-   "direction": "SHORT",
-   "entryDate": "2026-06-19 05:45",
-   "entryTime": "2026-06-19 05:45",
-   "asOf": "2026-06-19 07:45",
-   "entrySpread": 0.93,
-   "curSpread": 0.94,
-   "entryZ": 2.65,
-   "curZ": 0.92,
-   "holdBars": 8,
-   "holdDays": 8,
-   "size": 1.0,
-   "units": 1.0,
-   "regime": "Balanced \u00b7 High Vol",
-   "volState": "High",
-   "unrealizedPnl": -10.0,
-   "strategy": "RV mean-reversion + cost gate + shock absorption (Phase-2 idea, intraday)",
-   "contracts": 2,
-   "confidence": 80
-  }
- ],
+ "openPositions": [],
  "signalLog": [
   {
    "id": "WTI_M2M3@2026-06-19 06:15",
@@ -2300,7 +1237,7 @@
    "entryZ": -2.49,
    "histHitRate": 0.833,
    "loggedAt": "2026-06-23T02:11:22Z",
-   "updatedAt": "2026-06-23T02:41:04Z"
+   "updatedAt": "2026-06-24T07:14:19Z"
   },
   {
    "id": "WTI_M2M3@2026-06-15 15:00",
@@ -2318,7 +1255,7 @@
    "entryZ": 2.31,
    "histHitRate": 0.752,
    "loggedAt": "2026-06-18T20:03:42Z",
-   "updatedAt": "2026-06-23T02:41:04Z"
+   "updatedAt": "2026-06-24T07:14:19Z"
   },
   {
    "id": "BRENT_WTI@2026-06-15 10:30",
@@ -2336,7 +1273,7 @@
    "entryZ": -2.01,
    "histHitRate": 0.833,
    "loggedAt": "2026-06-23T02:11:22Z",
-   "updatedAt": "2026-06-23T02:41:04Z"
+   "updatedAt": "2026-06-24T07:14:19Z"
   },
   {
    "id": "BRENT_WTI@2026-06-15 10:15",
@@ -2390,7 +1327,7 @@
    "entryZ": -2.25,
    "histHitRate": 0.752,
    "loggedAt": "2026-06-23T02:11:22Z",
-   "updatedAt": "2026-06-23T02:41:04Z"
+   "updatedAt": "2026-06-24T07:14:19Z"
   },
   {
    "id": "WTI_M2M3@2026-06-15 07:15",
@@ -2462,8 +1399,8 @@
    "entryZ": -2.28,
    "histHitRate": 0.833,
    "loggedAt": "2026-06-18T20:03:42Z",
-   "updatedAt": "2026-06-23T02:41:04Z"
+   "updatedAt": "2026-06-24T07:14:19Z"
   }
  ],
- "openCount": 1
+ "openCount": 0
 }

@@ -1,0 +1,670 @@
+[
+  {
+    "dimension": "release-mechanics",
+    "research": {
+      "dimension": "release-mechanics",
+      "summary": "The EIA Weekly Petroleum Status Report (WPSR) is the U.S. government's official snapshot of the oil market, and its release mechanics are highly predictable, which is exactly why traders watch them so closely.\n\nTiming: In a normal week, the headline files (the summary PDF, an overview, and Tables 1-14 in CSV/XLS) are posted after 10:30 a.m. Eastern Time on Wednesday; the remaining PDF and HTML files follow after 1:00 p.m. ET. When a federal holiday falls in or near the reporting week (e.g., Memorial Day, July 4th, Labor Day, Thanksgiving, Christmas, New Year), the release slips one business day, typically to Thursday (and occasionally later, e.g., a Monday for Christmas week).\n\nReference week and lag: The data describe the week ending the prior Friday. EIA labels every week by its Friday date and reports stock levels as of the end of that period. So a Wednesday print is roughly 5 days behind the most recent data point it contains, making it timely but still backward-looking.\n\nHow fast it hits the wire: For these market-sensitive releases, EIA's dedicated information-release server (ir.eia.gov) carries the numbers to-the-second at 10:30 a.m. The EIA Open Data v2 API now reads directly from EIA's public databases and updates continuously, but for the WPSR (and the weekly natural gas report) the data appear in the API within about two hours of the 10:30 release, not instantly. EIA explicitly recommends ir.eia.gov for fastest access.\n\nRevisions and reliability: Weekly figures are preliminary estimates. EIA and the API survey roughly 90% of the industry and estimate the rest. Several weekly items (and especially crude production) get re-benchmarked against the more accurate, survey-based Petroleum Supply Monthly; production estimates can be re-anchored during the monthly Short-Term Energy Outlook week. The monthly data are the authoritative benchmark.\n\nThe API preview: The American Petroleum Institute publishes its private Weekly Statistical Bulletin on Tuesday around 4:30 p.m. ET (after the oil pit close, and shifted to Wednesday if Monday is a holiday) - about 18 hours before EIA. It is a voluntary survey, available only to paid subscribers via LSEG and ICE, and it covers crude, gasoline, distillate and other product stocks plus imports and refinery runs. Traders use it to front-run the EIA print; the two are directionally aligned roughly 80% of the time, and a large API surprise often moves prices ahead of Wednesday.\n\nSeries published: crude oil ex-SPR (commercial) stocks, Cushing OK stocks, total motor gasoline, distillate fuel oil, refinery utilization (% operable capacity) and crude inputs/runs, domestic crude production, crude imports, crude exports, and SPR stocks - all by PAD District.",
+      "keyFacts": [
+        {
+          "claim": "The WPSR's headline files are released after 10:30 a.m. Eastern Time on Wednesday, with remaining files after 1:00 p.m. ET.",
+          "detail": "EIA: 'wpsrsummary.pdf, overview.pdf, and Tables 1-14 in CSV and XLS formats, are released to the web site after 10:30 a.m. eastern time on Wednesday'; 'All other PDF and HTML files...after 1:00 p.m. eastern time on Wednesday.'",
+          "source": "https://www.eia.gov/petroleum/supply/weekly/schedule.php",
+          "confidence": "high"
+        },
+        {
+          "claim": "Weeks containing a federal holiday delay the release by one business day, typically to Thursday.",
+          "detail": "EIA schedule: 'For some weeks that include holidays, releases are delayed by one day.' Holiday releases can run as late as 12:00 p.m.-5:00 p.m. ET (or even a Monday, e.g., Christmas week 2025).",
+          "source": "https://www.eia.gov/petroleum/supply/weekly/schedule.php",
+          "confidence": "high"
+        },
+        {
+          "claim": "The data describe the week ending the prior Friday; EIA labels each week by its Friday date.",
+          "detail": "Independent explainer: report covers 'the prior week's data (week ending the previous Friday).' EIA's weekly supply table shows weeks labeled by Friday dates (e.g., 06/12/26), data 'as of the end of the period.'",
+          "source": "https://www.eia.gov/dnav/pet/pet_sum_sndw_dcus_nus_w.htm",
+          "confidence": "high"
+        },
+        {
+          "claim": "The most recent print as of mid-June 2026 covered the week ending June 12, 2026, released June 17, 2026, with the next release June 24, 2026.",
+          "detail": "Confirms the ~5-day lag between the Friday data point and the Wednesday release.",
+          "source": "https://www.eia.gov/petroleum/supply/weekly/",
+          "confidence": "high"
+        },
+        {
+          "claim": "For the WPSR, EIA Open Data v2 API data appear within about two hours of the 10:30 a.m. release, not instantly.",
+          "detail": "EIA FAQ: APIv2 'is updated constantly'; for the WPSR/WNGSR 'within two hours' the data appear in the API; 'Your best resource for to-the-second access...is our dedicated information release server at: ir.eia.gov.'",
+          "source": "https://www.eia.gov/opendata/faqs.php",
+          "confidence": "high"
+        },
+        {
+          "claim": "Weekly figures are preliminary estimates that are revised/re-benchmarked against the monthly Petroleum Supply Monthly.",
+          "detail": "EIA reviews weekly crude production vs. the survey-based Petroleum Supply Monthly each month and may re-benchmark during the STEO release week; several weekly items rely partly on the latest monthly data.",
+          "source": "https://www.eia.gov/petroleum/supply/monthly/",
+          "confidence": "high"
+        },
+        {
+          "claim": "The API (American Petroleum Institute) Weekly Statistical Bulletin is published Tuesday ~4:30 p.m. ET, about 18 hours before EIA.",
+          "detail": "API: 'Published every Tuesday afternoon' at 'approximately 4:30 pm Eastern'; shifts to Wednesday if Monday is a federal holiday; subscribers get it '18 hours before the rest of the world gets the data from EIA.'",
+          "source": "https://www.api.org/energy-insights/statistics/wsb",
+          "confidence": "high"
+        },
+        {
+          "claim": "The API report is a voluntary survey (paid subscription only) and is directionally aligned with EIA about 80% of the time.",
+          "detail": "API surveys oil companies 'voluntarily...on an at-will basis' (~90% coverage); distributed via LSEG and ICE. StoneX: the two reports are 'directionally aligned...around 80% of the time.'",
+          "source": "https://futures.stonex.com/blog/eia-vs-api-weekly-crude-oil-inventory",
+          "confidence": "high"
+        },
+        {
+          "claim": "EIA's survey is mandatory and legally enforced, whereas API's is voluntary, so most traders weight EIA more heavily.",
+          "detail": "StoneX: the EIA survey is 'mandatory and enforced by law' with 'civil and criminal penalties' for inaccurate reporting; API is voluntary.",
+          "source": "https://futures.stonex.com/blog/eia-vs-api-weekly-crude-oil-inventory",
+          "confidence": "high"
+        },
+        {
+          "claim": "The WPSR publishes crude ex-SPR, Cushing OK, gasoline, distillate, refinery utilization and crude inputs, production, imports, exports, and SPR.",
+          "detail": "EIA weekly supply table shows 'Commercial (Excl. Lease Stock)' crude, SPR, Total Motor Gasoline, distillate, 'Crude Oil Inputs'/'Gross Inputs', 'Percent Operable Utilization', 'Domestic Production', crude imports and exports; Cushing appears in the full WPSR tables.",
+          "source": "https://www.eia.gov/dnav/pet/pet_sum_sndw_dcus_nus_w.htm",
+          "confidence": "high"
+        },
+        {
+          "claim": "The API WSB covers products comprising more than 90% of refinery output, including crude, gasoline, jet, distillate and residual fuel.",
+          "detail": "API: WSB reports 'total U.S. and regional crude inventories' plus 'production, imports, and inventories' of motor gasoline, kerosene jet fuel, distillate and residual fuel oil.",
+          "source": "https://www.api.org/energy-insights/statistics/wsb",
+          "confidence": "high"
+        },
+        {
+          "claim": "In Q1 2025, API and EIA crude/gasoline/distillate stock estimates were within 1% of each other essentially 100% of the time.",
+          "detail": "API cites recent close alignment; both cover roughly 90% of the industry and publish estimates for the remainder.",
+          "source": "https://www.api.org/energy-insights/statistics/wsb",
+          "confidence": "medium"
+        }
+      ],
+      "citations": [
+        "https://www.eia.gov/petroleum/supply/weekly/schedule.php",
+        "https://www.eia.gov/petroleum/supply/weekly/",
+        "https://www.eia.gov/opendata/faqs.php",
+        "https://www.eia.gov/dnav/pet/pet_sum_sndw_dcus_nus_w.htm",
+        "https://www.api.org/energy-insights/statistics/wsb",
+        "https://futures.stonex.com/blog/eia-vs-api-weekly-crude-oil-inventory",
+        "https://www.eia.gov/petroleum/supply/monthly/",
+        "https://brentchart.com/eia-petroleum-status-report",
+        "https://www.cmegroup.com/openmarkets/energy/2025/What-API-and-EIA-Data-Reveal-About-Crude-Oil-Markets.html"
+      ]
+    },
+    "verify": {
+      "dimension": "release-mechanics",
+      "verdict": "solid",
+      "notes": "Independently re-verified all 13 key facts via fresh fetches of the primary sources (EIA schedule page, EIA Open Data FAQ, API WSB page, StoneX, CME) plus current-week confirmation. Every claim is confirmed; two get minor refinements rather than corrections.\n\nKEY REFINEMENTS (not errors, but worth sharpening):\n1) Holiday-delay times: The findings' phrasing \"12:00 p.m.-5:00 p.m. ET\" reads like a range for a typical holiday week. Per EIA's schedule page, most affected weeks release Thursday at a fixed time (New Year ~11:00 a.m.; Presidents'/MLK/Memorial/Labor/Columbus/Veterans Day ~12:00 p.m. Thursday). The 5:00 p.m. figure is specific to Christmas week, which uniquely slips to MONDAY (not Thursday). So \"one business day to Thursday\" is the norm; Christmas is the documented multi-day exception. The summary already notes the Christmas-Monday case, so this is internally consistent — just don't read \"12-5 p.m.\" as a single week's window.\n\n2) Reference week: Confirmed the data describe the week ending the prior Friday and are labeled by Friday date. Added precision from EIA: the cutoff is specifically \"as of 7:00 a.m. the preceding Friday,\" and re-benchmarking adjustments to weekly crude production occur on STEO-release weeks (a real example showed an +88,000 bbl/d adjustment, ~0.64%).\n\nCONFIRMED VERBATIM from primary sources:\n- WPSR headline files after 10:30 a.m. ET Wed; other PDF/HTML after 1:00 p.m. ET (eia.gov/petroleum/supply/weekly/schedule.php).\n- API v2 data appear \"within two hours\" of release; EIA recommends ir.eia.gov for \"to-the-second access\" (eia.gov/opendata/faqs.php).\n- Current cycle: week ending June 12, 2026, released June 17, 2026, next release June 24, 2026 (confirmed via IndexBox + EIA). Note: June 24 is a normal Wednesday because Juneteenth (June 19) fell on a Friday in 2026 and did not push the schedule.\n- API WSB: Tuesday ~4:30 p.m. ET, shifts to Wednesday if Monday is a federal holiday, \"18 hours before\" EIA, distributed via LSEG and ICE, covers gasoline/jet/distillate/residual = \">90% of total refinery production,\" and API's own Q1 2025 stat: Crude/Gasoline/Distillate within 1% of EIA \"about 100% of the time\" (api.org/energy-insights/statistics/wsb).\n- StoneX: directionally aligned \"around 80% of the time\"; EIA survey \"mandatory and enforced by law\" with \"civil and criminal penalties,\" API \"voluntary...at-will\" (futures.stonex.com).\n- ~90% survey coverage with estimation of the remainder applies to BOTH API and EIA — accurately represented.\n\nOverall: a robust, well-sourced dimension with no factual errors found.",
+      "checkedClaims": [
+        {
+          "claim": "WPSR headline files (wpsrsummary.pdf, overview.pdf, Tables 1-14 CSV/XLS) are released after 10:30 a.m. ET Wednesday; other PDF/HTML files after 1:00 p.m. ET.",
+          "status": "confirmed",
+          "source": "https://www.eia.gov/petroleum/supply/weekly/schedule.php"
+        },
+        {
+          "claim": "Holiday weeks delay the release by one business day, typically to Thursday.",
+          "status": "confirmed",
+          "correction": "Confirmed as the norm (Thursday, mostly ~12:00 p.m. ET; New Year ~11:00 a.m.). But the '12:00 p.m.-5:00 p.m.' phrasing conflates holidays: 5:00 p.m. is specific to CHRISTMAS week, which uniquely slips to MONDAY rather than Thursday. Treat Christmas as the multi-day exception, not a Thursday-time range.",
+          "source": "https://www.eia.gov/petroleum/supply/weekly/schedule.php"
+        },
+        {
+          "claim": "The data describe the week ending the prior Friday; EIA labels each week by its Friday date.",
+          "status": "confirmed",
+          "correction": "Confirmed; add precision that the cutoff is 'as of 7:00 a.m. the preceding Friday' per EIA documentation.",
+          "source": "https://www.eia.gov/petroleum/supply/weekly/"
+        },
+        {
+          "claim": "Most recent print as of mid-June 2026 covered week ending June 12, 2026, released June 17, 2026; next release June 24, 2026.",
+          "status": "confirmed",
+          "source": "https://www.indexbox.io/blog/us-weekly-petroleum-status-report-june-17-2026/"
+        },
+        {
+          "claim": "For the WPSR, EIA Open Data v2 API data appear within about two hours of the 10:30 a.m. release, not instantly; ir.eia.gov gives to-the-second access.",
+          "status": "confirmed",
+          "source": "https://www.eia.gov/opendata/faqs.php"
+        },
+        {
+          "claim": "Weekly figures are preliminary estimates revised/re-benchmarked against the monthly Petroleum Supply Monthly, with crude production re-anchored during STEO-release weeks.",
+          "status": "confirmed",
+          "source": "https://www.eia.gov/petroleum/supply/monthly/"
+        },
+        {
+          "claim": "API Weekly Statistical Bulletin is published Tuesday ~4:30 p.m. ET, ~18 hours before EIA; shifts to Wednesday if Monday is a holiday.",
+          "status": "confirmed",
+          "source": "https://www.api.org/energy-insights/statistics/wsb"
+        },
+        {
+          "claim": "API report is a voluntary survey (paid subscription via LSEG/ICE) and directionally aligned with EIA about 80% of the time.",
+          "status": "confirmed",
+          "source": "https://futures.stonex.com/blog/eia-vs-api-weekly-crude-oil-inventory"
+        },
+        {
+          "claim": "EIA's survey is mandatory and legally enforced (civil and criminal penalties); API's is voluntary.",
+          "status": "confirmed",
+          "source": "https://futures.stonex.com/blog/eia-vs-api-weekly-crude-oil-inventory"
+        },
+        {
+          "claim": "The WPSR publishes crude ex-SPR, Cushing OK, gasoline, distillate, refinery utilization and crude inputs, production, imports, exports, and SPR by PAD District.",
+          "status": "confirmed",
+          "source": "https://www.eia.gov/dnav/pet/pet_sum_sndw_dcus_nus_w.htm"
+        },
+        {
+          "claim": "The API WSB covers products comprising more than 90% of refinery output (crude, gasoline, jet, distillate, residual).",
+          "status": "confirmed",
+          "source": "https://www.api.org/energy-insights/statistics/wsb"
+        },
+        {
+          "claim": "In Q1 2025, API and EIA crude/gasoline/distillate stock estimates were within 1% of each other essentially 100% of the time.",
+          "status": "confirmed",
+          "correction": "Confirmed verbatim from API's own page: 'during first quarter of 2025...Crude, Gasoline, and Distillate stocks, API and EIA have been within 1% of each other about 100% of the time.' This is API's self-reported figure (single quarter), so treat as a recent-period observation, not a long-run guarantee.",
+          "source": "https://www.api.org/energy-insights/statistics/wsb"
+        },
+        {
+          "claim": "Both API and EIA sample/survey about 90% of the industry and estimate the remaining ~10%.",
+          "status": "confirmed",
+          "source": "https://www.api.org/energy-insights/statistics/wsb"
+        }
+      ]
+    }
+  },
+  {
+    "dimension": "historical-episodes",
+    "research": {
+      "dimension": "historical-episodes",
+      "summary": "U.S. crude inventory data (the EIA Weekly Petroleum Status Report and the API's preview) is the single most-watched scheduled catalyst for oil, but its market power is conditional: it moves WTI/Brent sharply when nothing bigger is happening, and gets ignored when OPEC supply policy, geopolitics, or a macro shock dominates. The historical record from 2017-2026 shows three patterns. First, BIG REACTIONS: when the market is range-bound and the only news is the report, a surprise of more than ~3 million barrels versus consensus typically flips intraday direction. Traders watch the \"surprise\" (actual minus consensus), not the headline number. Second, NON-REACTIONS: inventories get overridden when a larger force is in play. On 2-3 April 2023, a surprise OPEC+ cut of ~1.16 million b/d sent WTI up ~5.5% and Brent up ~5.4% overnight, swamping any weekly stock signal. Through 2023 generally, OPEC+ cuts and demand fears dominated. Third, EXTREME EVENTS, where inventories became the whole story or were drowned out entirely. The Saudi-Russia price war crash of 9 March 2020 saw oil fall up to ~30% intraday (worst day since 1991) on a supply-policy rupture, not stocks. Weeks later, the COVID demand collapse turned inventories into the dominant driver: with Cushing filling fast (the EIA cited Cushing at 76% of capacity on 17 April), the expiring May WTI contract went negative for the first time ever on 20 April 2020, trading as low as roughly -$37 to -$40/barrel because holders had nowhere to store physical crude. In 2022, the opposite extreme: Russia's invasion drove Brent to $139.13 (highest since July 2008) on 7 March 2022 amid record-low global inventories, prompting the largest-ever SPR release (180 million barrels over six months, announced 31 March 2022), which Treasury estimated cut gasoline by 17-42 cents/gallon. The forecasting lesson: weight inventory surprises by regime. They are high-signal in quiet, supply-driven, well-supplied markets and low-signal when a supply-policy, geopolitical, or macro shock is active. Storage capacity (especially Cushing) is a non-linear tail risk that overrides everything when utilization approaches limits.",
+      "keyFacts": [
+        {
+          "claim": "WTI crude futures settled negative for the first time in history on 20 April 2020, driven by a U.S. storage crisis.",
+          "detail": "The expiring May 2020 NYMEX WTI contract traded as low as about -$40.32/barrel (settling near -$37.63); EIA attributed it to Cushing filling (76% of working capacity as of 17 April, ~60 of 76 million barrels) plus a 24% YoY collapse in refinery runs to 12.8 million b/d.",
+          "source": "https://www.eia.gov/todayinenergy/detail.php?id=43495",
+          "confidence": "high"
+        },
+        {
+          "claim": "The Saudi-Russia price war triggered oil's worst single day since 1991 on 9 March 2020.",
+          "detail": "After OPEC+ talks collapsed and Saudi Arabia cut official selling prices by $6-8/barrel and signaled higher output, WTI and Brent fell as much as ~30% intraday; this supply-policy shock, not inventories, drove the move. WTI settled -24.6% at $31.13, Brent -24.1% at $34.36.",
+          "source": "https://en.wikipedia.org/wiki/2020_Russia%E2%80%93Saudi_Arabia_oil_price_war",
+          "confidence": "high"
+        },
+        {
+          "claim": "Russia's invasion of Ukraine pushed crude to its highest level since July 2008 on 7 March 2022.",
+          "detail": "Brent reached $139.13 (and WTI roughly $130.50, per CNBC; some sources cite up to $133.46) on 7 March 2022; the spike came after eight straight quarters of falling global inventories, so low stocks amplified the geopolitical shock.",
+          "source": "https://www.cnbc.com/2022/03/06/us-crude-oil-jumps-to-125-a-barrel-a-13-year-high-on-possible-western-ban-of-russian-oil.html",
+          "confidence": "high"
+        },
+        {
+          "claim": "The U.S. announced its largest-ever SPR release on 31 March 2022 to counter the post-invasion price spike.",
+          "detail": "180 million barrels over six months (~1 million b/d), with ~60 million more from IEA partners; the U.S. Treasury later estimated coordinated releases lowered gasoline prices by roughly 17-42 cents per gallon (point estimate ~38 cents).",
+          "source": "https://home.treasury.gov/news/press-releases/jy0887",
+          "confidence": "high"
+        },
+        {
+          "claim": "A surprise OPEC+ cut on 2-3 April 2023 overrode inventory signals and moved oil ~5.5% overnight.",
+          "detail": "OPEC+ announced ~1.16 million b/d of voluntary cuts; WTI jumped to ~$79.83 (+5.48%) and Brent to ~$84.13 (+5.31%) per CNN, a clean case of supply policy dominating weekly stock data.",
+          "source": "https://edition.cnn.com/2023/04/02/business/opec-production-cuts/index.html",
+          "confidence": "high"
+        },
+        {
+          "claim": "On 30 October 2019 a large BEARISH crude build pushed WTI lower — an example of a high-signal inventory reaction in a quiet market (direction corrected by fact-check).",
+          "detail": "EIA reported a crude BUILD of 5.7 million barrels for the week to Oct 25, versus analyst expectations of only ~494,000 barrels — a large bearish surprise; WTI fell 88 cents (-1.6%) to settle at $54.18, Brent to ~$60.21. (Original finding had this reversed as a bullish draw; corrected here.)",
+          "source": "https://www.cnbc.com/2019/10/31/oil-markets-us-crude-inventories-in-focus.html",
+          "confidence": "high"
+        },
+        {
+          "claim": "Oil collapsed ~40% in Q4 2018 as macro fears and surging shale supply overwhelmed inventory dynamics.",
+          "detail": "WTI fell from $76.40 on 3 October 2018 to annual lows by late December (~$43 on Dec 24; Brent ~$50); the driver was global growth fears and record U.S. output plus the OPEC+ supply-pact breakdown, not weekly stocks.",
+          "source": "https://www.eia.gov/todayinenergy/detail.php?id=37852",
+          "confidence": "high"
+        },
+        {
+          "claim": "Traders read the inventory 'surprise' (actual minus consensus), not the raw build/draw.",
+          "detail": "A surprise of more than ~3 million barrels versus expectations is often cited as a level that flips short-term WTI bias; this is an illustrative market heuristic from explainer sources, not a quantitatively validated hard rule.",
+          "source": "https://www.cnbc.com/2019/10/31/oil-markets-us-crude-inventories-in-focus.html",
+          "confidence": "medium"
+        },
+        {
+          "claim": "2022 oil prices peaked in March then fell through year-end as SPR releases and recession fears took over.",
+          "detail": "Brent averaged ~$100 for 2022, peaked early March, and fell from 8 June onward to a low of $75 on 8 December as SPR releases added supply and China lockdowns plus recession fears cut demand.",
+          "source": "https://www.eia.gov/todayinenergy/detail.php?id=55079",
+          "confidence": "high"
+        }
+      ],
+      "episodes": [
+        {
+          "date": "2018-10-03 to 2018-11-30",
+          "what": "Q4 2018 oil crash: WTI fell ~40% from $76.40 (3 Oct) toward annual lows as global growth fears, record U.S. shale output, and the OPEC+ supply-pact breakdown took hold.",
+          "inventoryEvent": "U.S. crude stocks were building through autumn 2018 amid record production, reinforcing the bearish tone, but the move was driven by macro and supply-policy fundamentals rather than any single weekly report.",
+          "priceReaction": "WTI -40% peak-to-trough over the quarter, with annual lows on Dec 24 (~$43 WTI, ~$50 Brent).",
+          "lesson": "In a broad macro/supply regime shift, weekly inventories are confirming noise, not the catalyst. A framework should down-weight stock surprises when a multi-week trend is being driven by growth fears or production surges."
+        },
+        {
+          "date": "2019-10-30",
+          "what": "A high-signal single-report reaction in a quiet market: a large bearish crude build pushed WTI lower (direction corrected from the original finding).",
+          "inventoryEvent": "EIA reported a crude BUILD of 5.7 million barrels (week to Oct 25) versus an expected build of only ~494,000 barrels — a large bearish surprise of roughly 5.2 million barrels versus consensus.",
+          "priceReaction": "WTI fell 88 cents (-1.6%) to settle at $54.18; Brent fell to ~$60.21.",
+          "lesson": "In quiet, range-bound markets the inventory surprise is high-signal: a large deviation against consensus produces a clean, fast move. The direction follows the surprise (a big build is bearish)."
+        },
+        {
+          "date": "2020-03-09",
+          "what": "Saudi-Russia price war: OPEC+ talks collapsed; Saudi Arabia slashed official selling prices and signaled a production surge, triggering oil's worst day since 1991.",
+          "inventoryEvent": "Inventories were irrelevant that day; the shock was a deliberate supply-policy rupture just as COVID demand was cracking.",
+          "priceReaction": "WTI and Brent fell as much as ~30% intraday; WTI settled -24.6% at $31.13, Brent -24.1% at $34.36 — among the largest one-day drops on record.",
+          "lesson": "Supply-policy shocks (OPEC decisions) dominate and can move price an order of magnitude more than any inventory print. A forecasting model must treat OPEC meetings/announcements as override events."
+        },
+        {
+          "date": "2020-04-20",
+          "what": "Negative WTI: the expiring May contract went below zero for the first time ever as physical crude had nowhere to go during the COVID demand collapse.",
+          "inventoryEvent": "Cushing storage was filling rapidly (EIA: 76% of working capacity, ~60 of 76 million barrels, as of 17 April) while refinery runs fell 24% YoY to 12.8 million b/d.",
+          "priceReaction": "Front-month WTI traded as low as roughly -$37 to -$40.32/barrel; holders paid to offload barrels they could not store.",
+          "lesson": "Storage capacity, especially at the Cushing delivery point, is a non-linear tail risk. As utilization nears physical limits, the inventory signal stops being marginal and becomes the entire price — models need a capacity-proximity trigger."
+        },
+        {
+          "date": "2022-03-07",
+          "what": "Russia-Ukraine spike: crude hit its highest level since July 2008 as the invasion threatened to remove a top-3 exporter from the market.",
+          "inventoryEvent": "Inventories were a backdrop, not the trigger — eight straight quarters of falling global stocks meant the market had no cushion, amplifying the geopolitical shock.",
+          "priceReaction": "Brent reached $139.13 and WTI roughly $130.50 on 7 March 2022; oil posted its biggest weekly gain on record with ~$20 intraweek swings.",
+          "lesson": "Geopolitical supply-threat shocks override weekly data, but pre-existing low inventories set the gain. Combine the geopolitical override with an inventory-buffer gauge: thin buffers magnify the move."
+        },
+        {
+          "date": "2022-03-31",
+          "what": "Largest-ever SPR release announced to counter the post-invasion price spike — a deliberate government inventory intervention.",
+          "inventoryEvent": "180 million barrels released over six months (~1 million b/d), plus ~60 million from IEA partners; this added supply showed up as rising commercial and falling strategic stocks through 2H 2022.",
+          "priceReaction": "Contributed to a steady decline from the June peak; Brent fell to a low of $75 by 8 December 2022. Treasury estimated the coordinated release cut gasoline by ~17-42 cents/gallon.",
+          "lesson": "Policy-driven inventory releases are a sustained, weeks-to-months bearish force, distinct from a one-week surprise. A framework should separate flow interventions (SPR) from organic weekly stock changes."
+        },
+        {
+          "date": "2023-04-02",
+          "what": "Surprise OPEC+ cut: a weekend announcement of voluntary output cuts gapped oil higher and swamped the demand/inventory narrative.",
+          "inventoryEvent": "Weekly U.S. stock data was secondary; the market had recently been near 15-month lows on banking-crisis demand fears, and the supply cut reversed sentiment overnight.",
+          "priceReaction": "WTI +5.48% to ~$79.83 and Brent +5.31% to ~$84.13 at the open on 3 April (CNN).",
+          "lesson": "A scheduled inventory print can be fully overridden by an unscheduled OPEC+ surprise. Forecasting frameworks should flag OPEC-meeting windows and surprise-cut risk as conditions under which inventory weights drop sharply."
+        }
+      ],
+      "citations": [
+        "https://www.eia.gov/todayinenergy/detail.php?id=43495",
+        "https://www.eia.gov/todayinenergy/detail.php?id=55079",
+        "https://www.eia.gov/todayinenergy/detail.php?id=37852",
+        "https://home.treasury.gov/news/press-releases/jy0887",
+        "https://edition.cnn.com/2023/04/02/business/opec-production-cuts/index.html",
+        "https://en.wikipedia.org/wiki/2020_Russia%E2%80%93Saudi_Arabia_oil_price_war",
+        "https://www.cnbc.com/2022/03/06/us-crude-oil-jumps-to-125-a-barrel-a-13-year-high-on-possible-western-ban-of-russian-oil.html",
+        "https://www.cnbc.com/2019/10/31/oil-markets-us-crude-inventories-in-focus.html",
+        "https://www.cnbc.com/2020/03/08/oil-plummets-30percent-as-opec-deal-failure-sparks-price-war-fears.html"
+      ]
+    },
+    "verify": {
+      "dimension": "historical-episodes",
+      "verdict": "mostly-solid",
+      "notes": "Most keyFacts hold up to independent re-verification against EIA, Treasury, CNBC, CNN, Reuters-sourced reporting, and Wikipedia. The crash/spike/SPR/OPEC episodes are accurate. However, one episode was materially wrong and one source was mis-attributed.\n\nCRITICAL ERROR (the October 2019 episode): The original findings claimed a bullish surprise crude DRAW (~1.7M vs an expected ~2.2M build) that sparked a ~+2.4% WTI rally around 2019-10-30. The actual record is the OPPOSITE. On 2019-10-30 the EIA reported a crude BUILD of 5.7 million barrels versus expectations of ~494,000 barrels — a large BEARISH surprise — and WTI FELL 88 cents (-1.6%) to settle at $54.18. The mis-cited oilprice.com article was actually a 2020-10-15 article about a different event. Corrected in this dataset.\n\nSOURCE MIS-ATTRIBUTION (2022 peak): EIA page id=55079 does NOT contain the $139.13/$133 figures and frames the spike as 'highest inflation-adjusted price since 2014,' not 'since 2008.' The nominal 'highest since July 2008' claim is correct but should be sourced to CNBC, with WTI intraday peak widely reported as $130.50 (some sources cite $133.46).",
+      "checkedClaims": [
+        {
+          "claim": "WTI crude futures settled negative for the first time in history on 20 April 2020; Cushing 76% full as of April 17; refinery runs -24% YoY to 12.8M b/d.",
+          "status": "confirmed",
+          "source": "https://www.eia.gov/todayinenergy/detail.php?id=43495"
+        },
+        {
+          "claim": "The Saudi-Russia price war triggered oil's worst single day since 1991 on 9 March 2020.",
+          "status": "confirmed",
+          "correction": "WTI settled -24.6% (-$10.15) at $31.13 and Brent -24.1% (-$10.91) at $34.36; the '~30%' figure is the intraday low, not the close.",
+          "source": "https://www.cnbc.com/2020/03/08/oil-plummets-30percent-as-opec-deal-failure-sparks-price-war-fears.html"
+        },
+        {
+          "claim": "Russia's invasion pushed crude to its highest level since 2008 on 7 March 2022; Brent $139.13.",
+          "status": "corrected",
+          "correction": "Brent $139.13 and 'highest since July 2008' confirmed. WTI intraday peak widely reported as $130.50 (CNBC); $133.46 cited by some sources. The original EIA source (id=55079) does NOT contain these figures.",
+          "source": "https://www.cnbc.com/2022/03/06/us-crude-oil-jumps-to-125-a-barrel-a-13-year-high-on-possible-western-ban-of-russian-oil.html"
+        },
+        {
+          "claim": "The U.S. announced its largest-ever SPR release on 31 March 2022: 180M barrels over six months (~1M b/d); Treasury estimated ~17-42 cents/gal gasoline reduction.",
+          "status": "confirmed",
+          "source": "https://home.treasury.gov/news/press-releases/jy0887"
+        },
+        {
+          "claim": "A surprise OPEC+ cut on 2-3 April 2023 (~1.16M b/d voluntary) moved oil ~5.5% overnight.",
+          "status": "corrected",
+          "correction": "Cut size 1.16M b/d and ~5.5% magnitude confirmed. CNN reports WTI +5.48% to $79.83 and Brent +5.31% to $84.13 (vs original $79.84/$84.19). Difference is trivial.",
+          "source": "https://edition.cnn.com/2023/04/02/business/opec-production-cuts/index.html"
+        },
+        {
+          "claim": "October 2019 inventory reaction (originally a bullish draw / +2.4% rally).",
+          "status": "corrected",
+          "correction": "FACTUALLY REVERSED. On 2019-10-30 the EIA reported a crude BUILD of 5.7 million barrels versus expectations of ~494,000 — a large BEARISH surprise — and WTI FELL 88 cents (-1.6%) to settle at $54.18. Corrected in this dataset to a bearish-build example.",
+          "source": "https://www.cnbc.com/2019/10/31/oil-markets-us-crude-inventories-in-focus.html"
+        },
+        {
+          "claim": "Oil collapsed ~40% in Q4 2018; WTI fell from $76.40 on 3 Oct 2018 to annual lows by late December.",
+          "status": "confirmed",
+          "correction": "EIA confirms Brent ~$86/b and WTI ~$76/b peaked Oct 3, 2018, with the slide continuing to annual lows on Dec 24 (WTI ~$43/b, Brent ~$50/b).",
+          "source": "https://www.eia.gov/todayinenergy/detail.php?id=37852"
+        },
+        {
+          "claim": "A positive surprise >~3M bbl vs expectations typically flips short-term WTI bias.",
+          "status": "unverified",
+          "correction": "A reasonable, widely-held market heuristic, qualitatively supported by the 2019-10-30 episode, but the specific ~3M-barrel threshold is a rule of thumb from a single explainer source, not authoritative. Treat as illustrative, not a hard rule.",
+          "source": "https://www.cnbc.com/2019/10/31/oil-markets-us-crude-inventories-in-focus.html"
+        },
+        {
+          "claim": "2022 oil peaked in March then fell through year-end; Brent averaged ~$100 for 2022, fell to a low of $75 on 8 December.",
+          "status": "confirmed",
+          "source": "https://www.eia.gov/todayinenergy/detail.php?id=55079"
+        }
+      ]
+    }
+  },
+  {
+    "dimension": "seasonality",
+    "research": {
+      "dimension": "seasonality",
+      "summary": "U.S. commercial crude oil inventories follow a refinery-driven seasonal rhythm: builds Feb-May, draws Jun-Aug, builds Sep-Nov, and a sharp December draw, peaking April-May and bottoming in late summer.",
+      "keyFacts": [
+        {
+          "claim": "U.S. crude builds Feb-May and Sep-Nov, draws Jun-Aug and December, peaking April-May.",
+          "detail": "Spring/fall refinery maintenance builds; summer driving-season draws; consumption shifts gasoline (summer) to heating fuels (winter).",
+          "source": "https://en.macromicro.me/charts/178/us-oil-inventory",
+          "confidence": "high"
+        },
+        {
+          "claim": "Refinery turnarounds cluster in Q1 and fall (peaking Feb-March), when petroleum demand is lowest, building crude.",
+          "detail": "EIA: outages most frequent at seasonal demand lows; outage-year Gulf Coast refineries cut gasoline output 8.2-33 percent (a cross-refinery best-vs-worst-year range, not an annual seasonal cut).",
+          "source": "https://www.eia.gov/petroleum/articles/refoutagesindex.php",
+          "confidence": "high"
+        },
+        {
+          "claim": "Refinery utilization peaks late spring through summer (most often Jun-Aug), drawing crude for summer driving season.",
+          "detail": "~95.3 percent in early June 2026 (week ending June 5). Driving season runs Memorial Day to Labor Day. Note: at least one recent year (2025) reportedly peaked in May, so 'every year Jun-Aug since 2003' is an overstatement — the summer-peak pattern is solid but the absolute window should be softened.",
+          "source": "https://www.eia.gov/petroleum/supply/weekly/",
+          "confidence": "high"
+        },
+        {
+          "claim": "Gulf Coast crude draws sharply each December from Texas/Louisiana ad-valorem inventory taxes.",
+          "detail": "Firms cut imports, raise runs, and move crude out before the ~Dec 31 assessment; LIFO and rising prices add incentive.",
+          "source": "https://www.eia.gov/todayinenergy/detail.php?id=10031",
+          "confidence": "high"
+        },
+        {
+          "claim": "Gulf Coast stocks fell in 30 of 31 Decembers 1981-2011, averaging nearly 8 million barrels; Dec 2012 over 12.5 million.",
+          "detail": "Many of the largest single-month inventory declines on record occur in December.",
+          "source": "https://www.eia.gov/todayinenergy/detail.php?id=10031",
+          "confidence": "high"
+        },
+        {
+          "claim": "Cushing is the WTI delivery point, ~76 million barrels working storage, ~13 percent of U.S. capacity.",
+          "detail": "Cushing stocks drive the WTI curve; contango incentivizes storage there, backwardation discourages it.",
+          "source": "https://www.cmegroup.com/education/courses/introduction-to-crude-oil/product-overview/the-importance-of-cushing-oklahoma.html",
+          "confidence": "high"
+        },
+        {
+          "claim": "Stock levels mean little without seasonal context; analysts compare to the five-year average for that week.",
+          "detail": "426.5 million barrels read ~5 percent below the five-year average (week ending June 5, 2026); same level is bullish in August, bearish in April.",
+          "source": "https://www.eia.gov/petroleum/supply/weekly/",
+          "confidence": "medium"
+        },
+        {
+          "claim": "A build can be bullish and a draw bearish once seasonality is accounted for.",
+          "detail": "Build below five-year norm is bullish; below-normal draw bearish; beating consensus drives bigger price moves.",
+          "source": "https://www.investing.com/analysis/crude-oil-faces-surprising-inventory-build-amid-shifting-supplydemand-dynamics-200666717",
+          "confidence": "medium"
+        }
+      ],
+      "citations": [
+        "https://www.eia.gov/todayinenergy/detail.php?id=10031",
+        "https://www.eia.gov/petroleum/articles/refoutagesindex.php",
+        "https://www.eia.gov/finance/markets/products/balance.php",
+        "https://en.macromicro.me/charts/178/us-oil-inventory",
+        "https://www.cmegroup.com/education/courses/introduction-to-crude-oil/product-overview/the-importance-of-cushing-oklahoma.html",
+        "https://www.eia.gov/petroleum/supply/weekly/",
+        "https://discoveryalert.com.au/crude-inventory-drawdown-refinery-throughput-eia-report-2026/",
+        "https://www.investing.com/analysis/crude-oil-faces-surprising-inventory-build-amid-shifting-supplydemand-dynamics-200666717"
+      ]
+    },
+    "verify": {
+      "dimension": "seasonality",
+      "verdict": "solid",
+      "checkedClaims": [
+        {
+          "claim": "U.S. crude builds Feb-May and Sep-Nov, draws Jun-Aug and December, peaking April-May.",
+          "status": "confirmed",
+          "source": "https://www.eia.gov/petroleum/articles/refoutagesindex.php"
+        },
+        {
+          "claim": "Refinery turnarounds cluster in Q1 and fall (peaking Feb-March), when petroleum demand is lowest. Outage-year Gulf Coast refineries cut gasoline output 8.2-33 percent.",
+          "status": "confirmed",
+          "source": "https://www.eia.gov/petroleum/articles/refoutagesindex.php"
+        },
+        {
+          "claim": "Refinery utilization peaks Jun-Aug (most often July), ~95 percent in early June 2026; driving season Memorial Day to Labor Day. Has peaked Jun-Aug every year since 2003.",
+          "status": "corrected",
+          "correction": "The broad claim is confirmed (summer-peaking, 95.3% week ending June 5, 2026). However, 'peaked Jun-Aug every year since 2003' is an overstatement — 2025 reportedly peaked at 95.4% in May. Soften to 'typically peaks late spring through summer, most often Jun-Aug.'",
+          "source": "https://www.eia.gov/petroleum/supply/weekly/"
+        },
+        {
+          "claim": "Gulf Coast crude draws sharply each December from Texas/Louisiana ad-valorem inventory taxes.",
+          "status": "confirmed",
+          "source": "https://www.eia.gov/todayinenergy/detail.php?id=10031"
+        },
+        {
+          "claim": "Gulf Coast stocks fell in 30 of 31 Decembers 1981-2011, averaging nearly 8 million barrels; Dec 2012 over 12.5 million barrels.",
+          "status": "confirmed",
+          "source": "https://www.eia.gov/todayinenergy/detail.php?id=10031"
+        },
+        {
+          "claim": "Cushing is the WTI delivery point, ~76 million barrels working storage, ~13 percent of U.S. capacity. Contango incentivizes storage, backwardation discourages it.",
+          "status": "confirmed",
+          "source": "https://en.wikipedia.org/wiki/Oil_industry_in_Cushing,_Oklahoma"
+        },
+        {
+          "claim": "Stock levels mean little without seasonal context; analysts compare to the five-year average for that week. 426.5 million barrels ~5 percent below the five-year average.",
+          "status": "confirmed",
+          "source": "https://www.eia.gov/petroleum/supply/weekly/"
+        },
+        {
+          "claim": "A build can be bullish and a draw bearish once seasonality is accounted for; beating consensus drives bigger price moves.",
+          "status": "confirmed",
+          "source": "https://www.eia.gov/petroleum/supply/weekly/"
+        }
+      ],
+      "notes": "Verdict: solid. Seven of eight key facts confirmed exactly against primary EIA sources, including precise figures (30 of 31 Decembers, ~8M-barrel average December draw, Dec 2012 >12.5M barrels, Gulf Coast gasoline cut range 8.2-33.0%, Cushing 76M barrels / 13%, 426.5M barrels / 5% below five-year average for week ending June 5 2026). One claim corrected/softened: 'refinery utilization peaked Jun-Aug every year since 2003' is an overstatement — 2025 reportedly peaked in May. The '8.2-33%' Gulf Coast figure is a cross-refinery best-vs-worst-year range, not an annual seasonal draw."
+    }
+  },
+  {
+    "dimension": "amplifiers-offsets",
+    "research": {
+      "dimension": "amplifiers-offsets",
+      "summary": "A weekly crude inventory number (EIA on Wednesdays, API on Tuesdays) almost never moves price by itself. Six outside forces decide whether a build or draw gets amplified, ignored, or flipped to the \"wrong\" sign on the day, and they dominate completely when geopolitics is in charge — as in June 2026.\n\n(1) OPEC+ supply policy. The cartel controls roughly 35-40% of supply and meets monthly. When it is adding barrels (it raised quotas by 188,000 b/d for June 2026), a bearish build is amplified; when it surprises with cuts, the same build is shrugged off. Critically, OPEC's SPARE CAPACITY is the market's shock absorber: lots of spare = builds bite harder and disruptions are ignored; thin spare = every draw and every supply scare is magnified into a risk premium. In March 2026 effective (Middle East) spare capacity collapsed to a record-low ~320,000 b/d, which is why prices exploded.\n\n(2) Geopolitics. The 2026 Strait of Hormuz crisis (US/Israel strikes on Iran from Feb 28; ~20 mb/d, ~20% of seaborne oil, blocked) sent Brent over $100 on March 8 and to a $126 peak. With ~10 mb/d of supply shut in, weekly US inventory data became almost irrelevant — sentiment over diplomacy (Hormuz reopening hopes drove a $17/bbl four-day slide into June 17) overwhelmed it.\n\n(3) Macro. A stronger US dollar (DXY) makes oil costlier abroad and offsets bullish draws; a weaker dollar amplifies them. Fed rate cuts and risk-on equities support price; China demand swings the global balance. (Note: specific 50bp/0.5mb/d figures are generic rules of thumb, mis-attributed to a Kpler page that does not contain them.) On risk-off days a draw can be ignored entirely.\n\n(4) Product cracks. Traders check whether crude, gasoline and distillate agree. A crude build alongside falling product stocks and surging cracks signals strong refinery demand and is read bullishly, neutralizing the headline build. (Distillate cracks in March 2026 were the highest since 2022, not an all-time record.) Divergence is the tell.\n\n(5) Refinery runs, exports, SPR. High utilization (96.7% in mid-June 2026) explains crude draws via heavy refining, not tight supply. Heavy US exports drain crude stocks; SPR releases add supply (bearish) while refills (Trump's plan to refill toward ~714 mb capacity) add demand (bullish).\n\n(6) Positioning. CFTC managed-money data shows how stretched specs are. When net length is extreme, a bearish build triggers long-liquidation cascades; when shorts are crowded, a draw sparks short-covering rallies. In June 2026 net length sat around a 33-week high near 172k contracts (single-source StoneX figure, uncorroborated) — elevated but not euphoric.",
+      "keyFacts": [
+        {
+          "claim": "OPEC+ raised output quotas by 188,000 b/d for June 2026, an amplifier of bearish inventory reads when supply is being added.",
+          "detail": "Agreed May 3, 2026 by seven OPEC+ members (Saudi, Russia, Iraq, Kuwait, Kazakhstan, Algeria, Oman); it was the group's first meeting after the UAE exited OPEC+ (late April 2026). The group meets monthly; next meeting was June 7, 2026.",
+          "source": "https://www.aljazeera.com/news/2026/5/3/opec-announces-symbolic-oil-output-rise-during-strait-of-hormuz-closure",
+          "confidence": "high"
+        },
+        {
+          "claim": "OPEC+ / Middle East spare capacity, the market's shock absorber, collapsed to a record-low ~320,000 b/d in March 2026, magnifying every supply scare.",
+          "detail": "Low spare capacity means oil prices embed a rising risk premium; high spare capacity dampens volatility and lets builds bite. IEA figure refers to Middle East spare capacity.",
+          "source": "https://www.iea.org/reports/oil-market-report-april-2026",
+          "confidence": "medium"
+        },
+        {
+          "claim": "EIA explicitly states low OPEC spare capacity adds a risk premium while high spare capacity dampens volatility.",
+          "detail": "OPEC defines spare capacity as output that can come online within 30 days and be sustained 90 days; it controls ~35% of global crude production and ~50% of internationally traded oil.",
+          "source": "https://www.eia.gov/finance/markets/crudeoil/supply-opec.php",
+          "confidence": "high"
+        },
+        {
+          "claim": "The 2026 Strait of Hormuz crisis blocked a chokepoint carrying ~20 mb/d (~20% of seaborne oil), overwhelming weekly inventory signals.",
+          "detail": "US/Israel strikes on Iran began Feb 28, 2026; ship traffic fell ~70% by early March; ~10 mb/d of supply was shut in.",
+          "source": "https://en.wikipedia.org/wiki/2026_Strait_of_Hormuz_crisis",
+          "confidence": "high"
+        },
+        {
+          "claim": "Brent surpassed $100 on March 8, 2026 and peaked near $126, in the largest-ever monthly oil price increase, driven by the supply shock not inventories.",
+          "detail": "March 2026 saw global supply plunge ~10.1 mb/d to 97 mb/d, the largest disruption in history per the IEA.",
+          "source": "https://en.wikipedia.org/wiki/2026_Strait_of_Hormuz_crisis",
+          "confidence": "high"
+        },
+        {
+          "claim": "Diplomacy can flip the read instantly: hopes of a Hormuz reopening drove a ~$17/bbl four-session Brent slide into June 17, 2026, leaving Brent ~$78.",
+          "detail": "Analyst Vandana Hari called the slide 'entirely sentiment-driven,' warning markets were front-running the reopening; Brent was only ~7% above pre-war levels.",
+          "source": "https://www.aljazeera.com/economy/2026/6/17/oil-prices-continue-slide-amid-hopes-for-peace-opening-of-strait-of-hormuz",
+          "confidence": "high"
+        },
+        {
+          "claim": "A stronger US dollar (DXY) offsets bullish inventory draws; Fed cuts and China demand amplify or mute the read.",
+          "detail": "Oil is priced in dollars, so a stronger dollar raises the cost for foreign buyers and pressures price. The specific 50bp-Fed-cut and 0.5 mb/d-per-1%-China figures are generic rules of thumb and were mis-attributed to the cited Kpler page, which does not contain them.",
+          "source": "https://www.kpler.com/blog/crude-oil-top-5-market-drivers-in-2026",
+          "confidence": "low"
+        },
+        {
+          "claim": "High US refinery utilization (96.7% mid-June 2026) explains crude draws through heavy refining rather than scarcity.",
+          "detail": "Week ending June 12, 2026: crude inputs averaged 17.2 mb/d. Strong runs mean a crude draw is bullish for crude but bearish for products.",
+          "source": "https://www.indexbox.io/blog/us-weekly-petroleum-status-report-june-17-2026/",
+          "confidence": "high"
+        },
+        {
+          "claim": "Heavy US crude exports drain domestic crude stocks, so a draw can reflect exports rather than tight fundamentals.",
+          "detail": "The US acted as 'supplier of last resort' during the Middle East disruption. (The ~5.2 mb/d 'record' figure could not be corroborated; EIA full-year net-export forecast is ~4.2 mb/d.)",
+          "source": "https://oilprice.com/Energy/Crude-Oil/US-Oil-Cant-Fill-the-Middle-East-Supply-Hole.html",
+          "confidence": "low"
+        },
+        {
+          "claim": "SPR policy is a two-way swing factor: releases add bearish supply, refills add bullish demand.",
+          "detail": "Trump administration set refilling the SPR as a priority (toward ~714 mb capacity); the 2022 Biden release of 180 mb shows how SPR action can offset a bullish balance.",
+          "source": "https://www.congress.gov/crs-product/IN12542",
+          "confidence": "high"
+        },
+        {
+          "claim": "Stretched CFTC managed-money positioning amplifies inventory-day moves via long-liquidation cascades or short-covering rallies.",
+          "detail": "In June 2026 large-spec net length reached a 33-week high near 172,000 contracts (single-source StoneX figure, not independently corroborated) — elevated but not euphoric.",
+          "source": "https://www.stonex.com/en/market-intelligence/commodity-futures-positioning-gold-silver-copper-wti-crude-cot-report/",
+          "confidence": "low"
+        },
+        {
+          "claim": "EIA's June 2026 STEO shows fundamentals overwhelmed by the shock: OECD stocks falling, Brent near $105 mid-2026.",
+          "detail": "Average drawdown ~6.3 mb/d in Q2 2026 with heavy shut-ins in May; the agency attributes volatility to the de facto Hormuz closure since Feb 28, with normalization not expected until early 2027.",
+          "source": "https://www.eia.gov/outlooks/steo/report/global_oil.php",
+          "confidence": "medium"
+        }
+      ],
+      "episodes": [
+        {
+          "date": "2026-02-28",
+          "what": "US/Israel strikes on Iran triggered the Strait of Hormuz crisis; IRGC barred vessel passage.",
+          "inventoryEvent": "Weekly EIA/API data became largely irrelevant as ~10 mb/d of supply was shut in and a ~20 mb/d chokepoint closed.",
+          "priceReaction": "Ship traffic fell ~70% within days; Brent topped $100 on March 8 and peaked ~$126 — the largest-ever monthly price jump.",
+          "lesson": "When a geopolitical supply shock hits and spare capacity is near zero (~320k b/d), the geopolitical risk premium dominates; inventory prints are noise until the threat clears."
+        },
+        {
+          "date": "2026-06-17",
+          "what": "Peace framework and Hormuz-reopening hopes drove a sentiment-led collapse in crude.",
+          "inventoryEvent": "Bullish supply backdrop (deep draws, ~6.3 mb/d Q2 drawdown) was ignored as the risk premium unwound.",
+          "priceReaction": "Brent slid ~$17/bbl over four sessions to ~$78, the lowest since March 3.",
+          "lesson": "Diplomacy can flip the read overnight: an 'entirely sentiment-driven' move overrode bullish fundamentals, showing the risk premium, not stocks, was setting price."
+        },
+        {
+          "date": "2026-06-22",
+          "what": "Iran's Hormuz-closure threat and Trump's renewed-strike threats whipsawed the market after the reopening rally.",
+          "inventoryEvent": "Inventory fundamentals took a back seat to headline-driven repricing of the risk premium.",
+          "priceReaction": "Brent fell 3.3% to $77.90 and WTI fell 2.3% to $74.82, reversing the prior day's geopolitical bounce.",
+          "lesson": "In a headline-dominated tape, two-way geopolitical risk overwhelms any inventory signal; positioning then amplifies each swing."
+        },
+        {
+          "date": "2026-05-03",
+          "what": "OPEC+ agreed a +188,000 b/d June quota hike, its first meeting after the UAE's exit.",
+          "inventoryEvent": "Adding barrels into the market biases inventory builds to be read more bearishly and draws less bullishly.",
+          "priceReaction": "Modest, because the Hormuz disruption swamped the quota math — illustrating that the same OPEC decision matters far more in a balanced market.",
+          "lesson": "OPEC+ direction (adding vs cutting) sets the bias for how inventory data is interpreted, but its impact is conditional on whether geopolitics is in control."
+        }
+      ],
+      "citations": [
+        "https://www.aljazeera.com/news/2026/5/3/opec-announces-symbolic-oil-output-rise-during-strait-of-hormuz-closure",
+        "https://www.eia.gov/finance/markets/crudeoil/supply-opec.php",
+        "https://www.iea.org/reports/oil-market-report-april-2026",
+        "https://en.wikipedia.org/wiki/2026_Strait_of_Hormuz_crisis",
+        "https://www.aljazeera.com/economy/2026/6/17/oil-prices-continue-slide-amid-hopes-for-peace-opening-of-strait-of-hormuz",
+        "https://www.cnbc.com/2026/06/22/oil-prices-wti-brent-crude-trump-iran-threat-strait-hormuz-closure.html",
+        "https://www.eia.gov/outlooks/steo/report/global_oil.php",
+        "https://www.indexbox.io/blog/us-weekly-petroleum-status-report-june-17-2026/",
+        "https://www.kpler.com/blog/crude-oil-top-5-market-drivers-in-2026",
+        "https://oilprice.com/Energy/Crude-Oil/US-Oil-Cant-Fill-the-Middle-East-Supply-Hole.html",
+        "https://www.congress.gov/crs-product/IN12542",
+        "https://www.stonex.com/en/market-intelligence/commodity-futures-positioning-gold-silver-copper-wti-crude-cot-report/"
+      ]
+    },
+    "verify": {
+      "dimension": "amplifiers-offsets",
+      "verdict": "mostly-solid",
+      "notes": "Independently re-verified against authoritative sources (EIA STEO/OPEC pages, IEA OMR, Wikipedia 2026 Hormuz crisis page, Al Jazeera, CNBC, CRS). The core narrative — that outside forces decide whether an inventory print is amplified or ignored, and that geopolitics dominated in 2026 — is sound and the major dated facts check out. NOTE: This is a coherent 2026 scenario with extensive consistent web coverage; claims were verified against the available record.\n\nConfirmed strongly: OPEC+ 188,000 b/d hike for June 2026 (decided May 3, 2026; 7 members); ~320,000 b/d record-low spare capacity (IEA, Middle East spare capacity); EIA wording on risk premium / ~35% production / ~50% traded oil; Hormuz ~20 mb/d (~20% seaborne), strikes Feb 28, ~70% traffic drop, ~10 mb/d shut-in; Brent >$100 on March 8 and ~$126 peak; June 17 slide of ~$17/bbl over four sessions to Brent $78.24, 'entirely sentiment-driven'; refinery utilization 96.7% and crude inputs 17.2 mb/d (week ending June 12, 2026); EIA June STEO Brent ~$105, Q2 drawdown 6.3 mb/d, normalization early 2027; SPR ~714 mb capacity and Trump refill priority.\n\nWeak spots: (a) macro keyFact cites a Kpler article that does NOT contain the dollar/China/Fed figures — economics are textbook-true but figures are generic rules of thumb, source mis-attributed; (b) 'distillate cracks hit record highs in 2026' overstated — highest since 2022, not all-time record; (c) the ~5.2 mb/d 'record US crude exports' figure could not be corroborated; (d) the CFTC 172k / 33-week-high figures rest on a single StoneX report; (e) the May 3 OPEC+ decision was its first meeting after the UAE quit OPEC+ (late April 2026), context the original finding omitted.",
+      "checkedClaims": [
+        {
+          "claim": "OPEC+ raised output quotas by 188,000 b/d for June 2026; agreed May 3, 2026 by 7 members.",
+          "status": "confirmed",
+          "source": "https://www.aljazeera.com/news/2026/5/3/opec-announces-symbolic-oil-output-rise-during-strait-of-hormuz-closure"
+        },
+        {
+          "claim": "Saudi and Russia each took +62,000 b/d of the June hike.",
+          "status": "unverified",
+          "correction": "The 188,000 b/d total and 7-member list are confirmed, but the specific per-country split of +62,000 b/d each was not corroborated. Treat the per-country increment as unverified.",
+          "source": "https://www.aljazeera.com/news/2026/5/3/opec-announces-symbolic-oil-output-rise-during-strait-of-hormuz-closure"
+        },
+        {
+          "claim": "Middle East / OPEC+ spare capacity collapsed to ~320,000 b/d in March 2026.",
+          "status": "confirmed",
+          "correction": "Confirmed via IEA, but it is Middle East spare capacity, not strictly OPEC+.",
+          "source": "https://www.iea.org/reports/oil-market-report-april-2026"
+        },
+        {
+          "claim": "Hormuz ~20 mb/d (~20% seaborne); strikes Feb 28; ~70% traffic drop; ~10 mb/d shut-in.",
+          "status": "confirmed",
+          "source": "https://en.wikipedia.org/wiki/2026_Strait_of_Hormuz_crisis"
+        },
+        {
+          "claim": "Brent >$100 on March 8 and ~$126 peak; largest-ever monthly increase.",
+          "status": "confirmed",
+          "source": "https://en.wikipedia.org/wiki/2026_Strait_of_Hormuz_crisis"
+        },
+        {
+          "claim": "June 17, 2026 ~$17/bbl four-session Brent slide to ~$78, 'entirely sentiment-driven'.",
+          "status": "confirmed",
+          "source": "https://www.aljazeera.com/economy/2026/6/17/oil-prices-continue-slide-amid-hopes-for-peace-opening-of-strait-of-hormuz"
+        },
+        {
+          "claim": "Macro: stronger dollar offsets draws; Fed cuts ~50bp; China demand 0.5 mb/d per 1%.",
+          "status": "corrected",
+          "correction": "The dollar/Fed/China economics are textbook-true, but the specific figures are generic rules of thumb mis-attributed to the cited Kpler page, which does not contain them.",
+          "source": "https://www.kpler.com/blog/crude-oil-top-5-market-drivers-in-2026"
+        },
+        {
+          "claim": "Distillate cracks hit record highs in 2026.",
+          "status": "corrected",
+          "correction": "Overstated — EIA shows March 2026 distillate cracks were the highest since 2022, not an all-time record.",
+          "source": "https://www.eia.gov/outlooks/steo/report/global_oil.php"
+        },
+        {
+          "claim": "High US refinery utilization 96.7% mid-June 2026; crude inputs 17.2 mb/d (week ending June 12, 2026).",
+          "status": "confirmed",
+          "source": "https://www.indexbox.io/blog/us-weekly-petroleum-status-report-june-17-2026/"
+        },
+        {
+          "claim": "Record US crude exports ~5.2 mb/d.",
+          "status": "unverified",
+          "correction": "The ~5.2 mb/d figure could not be corroborated; EIA full-year net-export forecast ~4.2 mb/d.",
+          "source": "https://oilprice.com/Energy/Crude-Oil/US-Oil-Cant-Fill-the-Middle-East-Supply-Hole.html"
+        },
+        {
+          "claim": "SPR ~714 mb capacity and Trump refill priority.",
+          "status": "confirmed",
+          "source": "https://www.congress.gov/crs-product/IN12542"
+        },
+        {
+          "claim": "CFTC managed-money net length ~172k contracts, 33-week high, June 2026.",
+          "status": "unverified",
+          "correction": "Rests on a single StoneX report and could not be independently corroborated.",
+          "source": "https://www.stonex.com/en/market-intelligence/commodity-futures-positioning-gold-silver-copper-wti-crude-cot-report/"
+        },
+        {
+          "claim": "EIA June 2026 STEO: OECD stocks falling, Brent ~$105 mid-2026, Q2 drawdown 6.3 mb/d, normalization early 2027.",
+          "status": "confirmed",
+          "source": "https://www.eia.gov/outlooks/steo/report/global_oil.php"
+        }
+      ]
+    }
+  }
+]

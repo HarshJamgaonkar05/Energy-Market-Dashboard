@@ -1,0 +1,12 @@
+[
+  {
+    "period": "2026-06-12",
+    "release_date": "2026-06-17",
+    "assessedAt": "2026-06-24T05:41:54Z",
+    "direction": "Neutral",
+    "surprise": -4.48,
+    "surprise_z": -0.83,
+    "crosscheck": "confirmed",
+    "wti_reaction_pct": 0.973
+  }
+]

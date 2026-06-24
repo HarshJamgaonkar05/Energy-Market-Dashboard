@@ -1,5 +1,5 @@
 {
- "generatedAt": "2026-06-23T02:41:04Z",
+ "generatedAt": "2026-06-24T07:14:19Z",
  "count": 53,
  "signals": [
   {
@@ -792,7 +792,7 @@
    "entryZ": -2.49,
    "histHitRate": 0.833,
    "loggedAt": "2026-06-23T02:11:22Z",
-   "updatedAt": "2026-06-23T02:41:04Z"
+   "updatedAt": "2026-06-24T07:14:19Z"
   },
   {
    "id": "WTI_M2M3@2026-06-15 15:00",
@@ -810,7 +810,7 @@
    "entryZ": 2.31,
    "histHitRate": 0.752,
    "loggedAt": "2026-06-18T20:03:42Z",
-   "updatedAt": "2026-06-23T02:41:04Z"
+   "updatedAt": "2026-06-24T07:14:19Z"
   },
   {
    "id": "BRENT_WTI@2026-06-15 10:30",
@@ -828,7 +828,7 @@
    "entryZ": -2.01,
    "histHitRate": 0.833,
    "loggedAt": "2026-06-23T02:11:22Z",
-   "updatedAt": "2026-06-23T02:41:04Z"
+   "updatedAt": "2026-06-24T07:14:19Z"
   },
   {
    "id": "BRENT_WTI@2026-06-15 10:15",
@@ -882,7 +882,7 @@
    "entryZ": -2.25,
    "histHitRate": 0.752,
    "loggedAt": "2026-06-23T02:11:22Z",
-   "updatedAt": "2026-06-23T02:41:04Z"
+   "updatedAt": "2026-06-24T07:14:19Z"
   },
   {
    "id": "WTI_M2M3@2026-06-15 07:15",
@@ -954,7 +954,7 @@
    "entryZ": -2.28,
    "histHitRate": 0.833,
    "loggedAt": "2026-06-18T20:03:42Z",
-   "updatedAt": "2026-06-23T02:41:04Z"
+   "updatedAt": "2026-06-24T07:14:19Z"
   }
  ]
 }

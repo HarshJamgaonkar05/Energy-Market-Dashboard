@@ -8,6 +8,7 @@ import { SourceTag } from "../components/primitives/SourceTag";
 import { AsOf } from "../components/primitives/AsOf";
 import { Sourced } from "../components/primitives/Sourced";
 import { InventorySnap } from "../components/panels/InventorySnap";
+import { InventorySignal } from "../components/panels/InventorySignal";
 import { chartProps, ChartTooltip } from "../lib/chart-theme";
 import { fmt, fmtSigned } from "../lib/format";
 import { INV_HIST, genSpark } from "../data/mock";
@@ -96,6 +97,9 @@ export const PageInventories = () => {
 
   return (
     <div className="space-y-3">
+      {/* Live crude-inventory cross-check engine — pre-release verdict + market check. */}
+      <InventorySignal />
+
       <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-[#1c1d22]">
         {heroes.map((d, i) => (
           <HeroCard key={d.sym} d={{ ...d, unit: "MMbbl", source: "eia", sourceNote: "EIA Weekly Petroleum Status Report (official, weekly).", spark: genSpark(81 + i, 30, d.chg >= 0 ? 1 : -1) }} />

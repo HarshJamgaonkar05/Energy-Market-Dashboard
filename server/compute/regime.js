@@ -100,6 +100,15 @@ export function signalEngine() {
   return loadJson("signal_engine.json");
 }
 
+// ---- Live Crude-Inventory Cross-Check Engine -------------------------------
+/** The inventory framework's live signal: the pre-release base case for the next
+ *  EIA crude release, the most recent published print assessed as a surprise +
+ *  verdict, and the market cross-check. Written by analytics/inventory_engine.py and
+ *  hot-reloaded on mtime change. Returns null until the engine has run once. */
+export function inventorySignal() {
+  return loadJson("inventory_signal.json");
+}
+
 // ---- Historical Backtest (Phase 2 fair value, daily, 5y) -------------------
 /** The historical backtest feed: the Phase-2 fundamental fair value traded as a
  *  daily mean-reversion simulation over 2021-2026. Written by
