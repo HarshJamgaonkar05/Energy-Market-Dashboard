@@ -15,6 +15,7 @@ import { Card } from "../components/primitives/Card";
 import { SectionTitle } from "../components/primitives/SectionTitle";
 import { SourceTag } from "../components/primitives/SourceTag";
 import { AsOf } from "../components/primitives/AsOf";
+import { InfoDot } from "../components/primitives/InfoDot";
 import { fmt, fmtSigned } from "../lib/format";
 import { useLive } from "../lib/useLive";
 import { chartProps } from "../lib/chart-theme";
@@ -47,14 +48,39 @@ const LIGHT = (ok) =>
 const SPREAD = { wti: "WTI", brent: "Brent", brent_wti: "Brent–WTI", wti_m1m2: "WTI M1–M2",
   crack_321_wti: "3-2-1 crack", ho_wti: "HO crack", gasoil_brent: "Gasoil crack" };
 
+// Plain-English explanations, surfaced as subtle hover info dots. Inventory terms
+// are spelled out most fully — that's the concept this page exists to teach.
+const EXPL = {
+  page: "The lesson here: what the EIA's weekly U.S. crude-inventory number does to the oil price. " +
+    "Inventory = how much crude sits in storage tanks. A draw (stocks fall) is usually bullish, a build (stocks rise) bearish — " +
+    "but the price only reacts to the SURPRISE vs what was expected, and only when inventories are a strong driver that week.",
+  expected: "Our leak-free estimate of this week's crude build/draw — the stand-in for the market consensus the price is already positioned for. Built only from data known before the release.",
+  expSurprise: "Zero by design: the model expects the print to land on its own forecast. Only the miss — the real surprise — moves price.",
+  catalyst: "How strongly the crude surprise has driven WTI in conditions like today's (R² of release-day move on the surprise). Near 0 = inventories barely move price right now; other forces rule.",
+  actual: "The crude build/draw the EIA actually reported vs last week, in million barrels (MMbbl). Negative = draw, positive = build.",
+  realSurprise: "Actual − Expected. A bigger draw than expected is bullish; a bigger build is bearish. Sized in σ — standard deviations, i.e. how unusual the miss is vs a typical week.",
+  wtiMove: "How WTI actually moved on the release vs the tiny move the surprise implied. A gap means non-inventory forces drove the day.",
+  attrInv: "The part of the day's WTI move explained by the crude inventory surprise.",
+  attrMacro: "The part explained by the broad market that day (S&P 500 risk-on/off + the US dollar).",
+  attrOther: "Everything left over — OPEC, geopolitics, positioning, oil-specific news. Usually the biggest piece.",
+  scorecard: "Did the call work? Three checks: did we forecast the number, did the surprise break our way, and did price actually follow the surprise.",
+  curve: "Predicted release-day WTI move = β × surprise. A near-flat line means inventories barely move WTI in this regime — so the gap to the actual dot is the real story.",
+  intraday: "How the reaction builds minute-by-minute after the 10:30 ET release: the (near-flat) predicted path vs the live actual path. R² per horizon shows inventories explain almost none of the intraday move.",
+  trSurprise: "Among sizeable surprises in history, how often WTI moved the way the surprise implied. 50% = coin-flip; higher = a real edge.",
+  trLean: "How often our pre-release bias (lean) called the direction of the surprise.",
+  trMae: "Average miss of our expected build/draw vs a naive 'just use the seasonal average' guess (million barrels; lower is better). Shows the forecast has genuine skill.",
+};
+
 const drawWord = (v) => (v == null ? "—" : v < 0 ? "draw" : "build");
 const pct = (v, d = 2) => (v == null ? "—" : `${fmtSigned(v, d)}%`);
 const toneFor = (v, bullishWhenNeg = true) =>
   v == null ? "text-zinc-300" : (bullishWhenNeg ? v <= 0 : v >= 0) ? "text-emerald-400" : "text-red-400";
 
-const Tile = ({ label, value, sub, tone = "text-zinc-100" }) => (
+const Tile = ({ label, value, sub, tone = "text-zinc-100", info }) => (
   <div className="bg-[#0e0f12] p-3">
-    <div className="text-[9px] uppercase tracking-wider text-zinc-500">{label}</div>
+    <div className="text-[9px] uppercase tracking-wider text-zinc-500 flex items-center gap-1">
+      {label}{info && <InfoDot text={info} />}
+    </div>
     <div className={`font-mono text-2xl ${tone}`}>{value}</div>
     {sub != null && <div className="text-[9px] text-zinc-600 leading-tight mt-0.5">{sub}</div>}
   </div>
@@ -63,7 +89,7 @@ const Tile = ({ label, value, sub, tone = "text-zinc-100" }) => (
 // ---- Scorecard: 3 lights + one-line verdict -------------------------------
 const Scorecard = ({ scorecard }) => (
   <Card>
-    <SectionTitle sub="prediction vs reality">Scorecard</SectionTitle>
+    <SectionTitle sub="prediction vs reality">Scorecard <InfoDot text={EXPL.scorecard} /></SectionTitle>
     {!scorecard ? (
       <div className="text-[11px] text-zinc-500 py-2">Run the release to grade the call.</div>
     ) : (
@@ -91,9 +117,9 @@ const Scorecard = ({ scorecard }) => (
 
 // ---- Track record ----------------------------------------------------------
 const hitTone = (v) => (v == null ? "text-zinc-300" : v >= 0.55 ? "text-emerald-400" : v >= 0.45 ? "text-amber-400" : "text-red-400");
-const Row = ({ label, value, sub, tone = "text-zinc-100" }) => (
+const Row = ({ label, value, sub, tone = "text-zinc-100", info }) => (
   <div className="flex items-center justify-between gap-2">
-    <span className="text-[11px] text-zinc-400">{label}</span>
+    <span className="text-[11px] text-zinc-400 flex items-center gap-1">{label}{info && <InfoDot text={info} />}</span>
     <div className="text-right">
       <span className={`font-mono text-[13px] ${tone}`}>{value}</span>
       {sub && <span className="text-[9px] text-zinc-600 ml-1.5">{sub}</span>}
@@ -106,11 +132,11 @@ const TrackRecord = ({ track }) => {
     <div className="flex-1">
       <div className="text-[9px] uppercase tracking-wider text-zinc-600 mb-2 text-center">{title}</div>
       <div className="space-y-2">
-        <Row label="Surprise → price" value={w.surprise_hit_rate == null ? "—" : `${(w.surprise_hit_rate * 100).toFixed(0)}%`}
+        <Row label="Surprise → price" info={EXPL.trSurprise} value={w.surprise_hit_rate == null ? "—" : `${(w.surprise_hit_rate * 100).toFixed(0)}%`}
           tone={hitTone(w.surprise_hit_rate)} sub={w.surprise_hit_n ? `n=${w.surprise_hit_n}` : ""} />
-        <Row label="Lean called it" value={w.lean?.hit_rate == null ? "—" : `${(w.lean.hit_rate * 100).toFixed(0)}%`}
+        <Row label="Lean called it" info={EXPL.trLean} value={w.lean?.hit_rate == null ? "—" : `${(w.lean.hit_rate * 100).toFixed(0)}%`}
           tone={hitTone(w.lean?.hit_rate)} sub={w.lean?.n ? `n=${w.lean.n}` : ""} />
-        <Row label="Model / seasonal MAE" value={w.mae ? `${fmt(w.mae.model, 1)} / ${fmt(w.mae.seasonal, 1)}` : "—"}
+        <Row label="Model / seasonal MAE" info={EXPL.trMae} value={w.mae ? `${fmt(w.mae.model, 1)} / ${fmt(w.mae.seasonal, 1)}` : "—"}
           tone={w.mae && w.mae.model < w.mae.seasonal ? "text-emerald-400" : "text-amber-400"} />
         <Row label="Avg favorable move" value={w.avg_fav_move_pct == null ? "—" : pct(w.avg_fav_move_pct)}
           tone={toneFor(w.avg_fav_move_pct, false)} />
@@ -192,7 +218,7 @@ const IntradayReaction = ({ intraday }) => {
         <SectionTitle sub={`reaction by horizon · ${intraday.vol_regime_used} vol`}
           action={<SourceTag source="derived"
             note={`Per-horizon OLS of WTI cumulative return on the surprise, ${intraday.model_n} historical releases on the 1-min tape. Predicted = β×surprise ±RMSE; actual = live Yahoo 5-min path.`} />}>
-          Intraday reaction
+          Intraday reaction <InfoDot text={EXPL.intraday} />
         </SectionTitle>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 px-4 pt-2">
@@ -290,7 +316,7 @@ export const PageReleaseLab = () => {
       {/* Header + run button */}
       <Card>
         <SectionTitle sub={`expected vs real surprise · ${t.label}`} action={RunBtn}>
-          EIA Release Lab
+          EIA Release Lab <InfoDot text={EXPL.page} title="What this teaches" />
         </SectionTitle>
         {error && (
           <div className="rounded-md border border-red-500/30 bg-red-500/10 p-2 text-[11px] text-red-300">
@@ -319,9 +345,9 @@ export const PageReleaseLab = () => {
             <span className="text-[10px] uppercase tracking-wider text-zinc-500">lean · conf {p.confidence}</span>
           </div>
           <div className="grid grid-cols-3 gap-px bg-[#1c1d22] border-y border-[#1c1d22]">
-            <Tile label="Expected" value={fmtSigned(p.expected_wow, 1)} tone={toneFor(p.expected_wow)} sub={`MMbbl ${drawWord(p.expected_wow)}`} />
-            <Tile label="Exp. surprise" value={fmtSigned(p.expected_surprise, 1)} tone="text-zinc-300" sub="≈0 (consensus)" />
-            <Tile label="Catalyst" value={p.catalyst_r2 == null ? "—" : `R² ${fmt(p.catalyst_r2, 2)}`}
+            <Tile label="Expected" info={EXPL.expected} value={fmtSigned(p.expected_wow, 1)} tone={toneFor(p.expected_wow)} sub={`MMbbl ${drawWord(p.expected_wow)}`} />
+            <Tile label="Exp. surprise" info={EXPL.expSurprise} value={fmtSigned(p.expected_surprise, 1)} tone="text-zinc-300" sub="≈0 (consensus)" />
+            <Tile label="Catalyst" info={EXPL.catalyst} value={p.catalyst_r2 == null ? "—" : `R² ${fmt(p.catalyst_r2, 2)}`}
               tone={(p.catalyst_r2 ?? 0) >= 0.05 ? "text-emerald-400" : "text-amber-400"}
               sub={`${(p.catalyst_r2 ?? 0) >= 0.05 ? "drives" : "weak"} · n=${p.catalyst_n ?? "—"}`} />
           </div>
@@ -368,24 +394,26 @@ export const PageReleaseLab = () => {
                 <span className="text-[10px] uppercase tracking-wider text-zinc-500">verdict · conf {r.verdict?.confidence}</span>
               </div>
               <div className="grid grid-cols-3 gap-px bg-[#1c1d22] border-y border-[#1c1d22]">
-                <Tile label="Actual" value={fmtSigned(r.actual_wow, 1)} tone={toneFor(r.actual_wow)} sub={`MMbbl ${drawWord(r.actual_wow)}`} />
-                <Tile label="Real surprise" value={fmtSigned(r.real_surprise, 1)} tone={toneFor(r.real_surprise)} sub={`${fmtSigned(r.real_surprise_z, 1)}σ · ${r.real_surprise_dir}`} />
-                <Tile label="WTI on print" value={pct(r.actual_move_pct, 1)} tone={toneFor(r.actual_move_pct, false)} sub={`pred ${pct(r.pred_move_pct)}`} />
+                <Tile label="Actual" info={EXPL.actual} value={fmtSigned(r.actual_wow, 1)} tone={toneFor(r.actual_wow)} sub={`MMbbl ${drawWord(r.actual_wow)}`} />
+                <Tile label="Real surprise" info={EXPL.realSurprise} value={fmtSigned(r.real_surprise, 1)} tone={toneFor(r.real_surprise)} sub={`${fmtSigned(r.real_surprise_z, 1)}σ · ${r.real_surprise_dir}`} />
+                <Tile label="WTI on print" info={EXPL.wtiMove} value={pct(r.actual_move_pct, 1)} tone={toneFor(r.actual_move_pct, false)} sub={`pred ${pct(r.pred_move_pct)}`} />
               </div>
               {r.attribution && (
                 <div className="px-4 pt-3 pb-1">
-                  <div className="text-[9px] uppercase tracking-wider text-zinc-600 mb-1.5">Move attribution · what drove it</div>
+                  <div className="text-[9px] uppercase tracking-wider text-zinc-600 mb-1.5 flex items-center gap-1">
+                    Move attribution · what drove it <InfoDot text="The day's WTI move split into the part from the inventory surprise, the part from the broad market, and everything else." />
+                  </div>
                   <div className="grid grid-cols-3 gap-2 text-center">
                     <div className="rounded-md border border-[#1c1d22] bg-[#0e0f12] p-2">
-                      <div className="text-[9px] text-zinc-500">Inventory</div>
+                      <div className="text-[9px] text-zinc-500 flex items-center justify-center gap-1">Inventory <InfoDot text={EXPL.attrInv} /></div>
                       <div className="font-mono text-sm text-sky-400">{pct(r.attribution.inventory_pct)}</div>
                     </div>
                     <div className="rounded-md border border-[#1c1d22] bg-[#0e0f12] p-2">
-                      <div className="text-[9px] text-zinc-500">Macro</div>
+                      <div className="text-[9px] text-zinc-500 flex items-center justify-center gap-1">Macro <InfoDot text={EXPL.attrMacro} /></div>
                       <div className="font-mono text-sm text-zinc-300">{r.attribution.macro_pct == null ? "—" : pct(r.attribution.macro_pct)}</div>
                     </div>
                     <div className="rounded-md border border-[#1c1d22] bg-[#0e0f12] p-2">
-                      <div className="text-[9px] text-zinc-500">Other (residual)</div>
+                      <div className="text-[9px] text-zinc-500 flex items-center justify-center gap-1">Other <InfoDot text={EXPL.attrOther} /></div>
                       <div className={`font-mono text-sm ${toneFor(r.attribution.residual_pct, false)}`}>{pct(r.attribution.residual_pct)}</div>
                     </div>
                   </div>
@@ -399,7 +427,7 @@ export const PageReleaseLab = () => {
       {/* Impact curve */}
       <Card padding={false}>
         <div className="p-4 pb-1">
-          <SectionTitle sub="WTI move = β × surprise" action={<AsOf date={t.release_date} />}>Impact curve</SectionTitle>
+          <SectionTitle sub="WTI move = β × surprise" action={<AsOf date={t.release_date} />}>Impact curve <InfoDot text={EXPL.curve} /></SectionTitle>
         </div>
         <div className="px-3 pb-4"><ImpactCurve curve={view.impact_curve || FALLBACK.impact_curve} result={r} /></div>
       </Card>

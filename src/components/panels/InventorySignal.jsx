@@ -8,8 +8,20 @@ import { Card } from "../primitives/Card";
 import { SectionTitle } from "../primitives/SectionTitle";
 import { SourceTag } from "../primitives/SourceTag";
 import { AsOf } from "../primitives/AsOf";
+import { InfoDot } from "../primitives/InfoDot";
 import { fmt, fmtSigned } from "../../lib/format";
 import { useLive } from "../../lib/useLive";
+
+// Plain-English explanations of the core inventory concepts (subtle hover help).
+const INV_EXPL = {
+  crude: "Total U.S. commercial crude oil sitting in storage tanks (excludes the government's Strategic Petroleum Reserve), in million barrels.",
+  wow: "Week-over-week change. Negative = a DRAW (oil left storage — usually bullish); positive = a BUILD (oil piled up — usually bearish).",
+  norm: "How unusual today's stock level is for the time of year, vs the 5-year seasonal norm (in σ). Below normal = tight market = bullish.",
+  cushing: "Crude held at Cushing, Oklahoma — the physical delivery point for WTI futures. Draining toward tank lows is very bullish for WTI specifically.",
+  refinery: "Share of refining capacity in use. Higher utilization burns more crude, which tends to draw down stocks.",
+  regime: "The market backdrop (volatility / season / whether crude & products agree) that decides how much a given inventory surprise actually moves price.",
+  verdict: "The framework's lean into the next release: structural bias (bullish/bearish) plus how strong a catalyst the number is likely to be.",
+};
 
 const FALLBACK = {
   stage: "pre-release",
@@ -34,9 +46,11 @@ const XCHECK = {
   "no-price": { fg: "text-zinc-500", label: "NO PRICE" },
 };
 
-const Tile = ({ label, value, sub, tone = "text-zinc-100" }) => (
+const Tile = ({ label, value, sub, tone = "text-zinc-100", info }) => (
   <div className="bg-[#0e0f12] p-2.5">
-    <div className="text-[9px] uppercase tracking-wider text-zinc-500">{label}</div>
+    <div className="text-[9px] uppercase tracking-wider text-zinc-500 flex items-center gap-1">
+      {label}{info && <InfoDot text={info} />}
+    </div>
     <div className={`font-mono text-base ${tone}`}>{value}</div>
     {sub != null && <div className="text-[9px] text-zinc-600">{sub}</div>}
   </div>
@@ -64,7 +78,7 @@ export const InventorySignal = () => {
             <SourceTag live={live} source="eia"
               note="Live crude-inventory cross-check engine (analytics/inventory_engine.py). Surprise = actual − model-expected (walk-forward seasonal + supply/demand balance + momentum). The verdict is damped by how strongly inventories drive WTI in the current regime; the cross-check compares the post-release call to the live WTI move." />
           </div>}>
-          Inventory Release Signal
+          Inventory Release Signal <InfoDot text={INV_EXPL.verdict} />
         </SectionTitle>
       </div>
 
@@ -87,14 +101,14 @@ export const InventorySignal = () => {
 
       {/* Current setup tiles */}
       <div className="grid grid-cols-3 md:grid-cols-6 gap-px bg-[#1c1d22] border-y border-[#1c1d22]">
-        <Tile label="US Crude" value={`${fmt(c.crude_stock, 1)}`} sub="MMbbl" />
-        <Tile label="WoW" value={fmtSigned(c.crude_wow, 1)}
+        <Tile label="US Crude" info={INV_EXPL.crude} value={`${fmt(c.crude_stock, 1)}`} sub="MMbbl" />
+        <Tile label="WoW" info={INV_EXPL.wow} value={fmtSigned(c.crude_wow, 1)}
           tone={c.crude_wow <= 0 ? "text-emerald-400" : "text-red-400"} sub="MMbbl" />
-        <Tile label="vs 5y norm" value={c.crude_z == null ? "—" : `${fmtSigned(c.crude_z, 1)}σ`}
+        <Tile label="vs 5y norm" info={INV_EXPL.norm} value={c.crude_z == null ? "—" : `${fmtSigned(c.crude_z, 1)}σ`}
           tone={c.crude_z <= 0 ? "text-emerald-400" : "text-red-400"} sub={c.crude_z <= 0 ? "tight" : "loose"} />
-        <Tile label="Cushing" value={fmt(c.cushing, 1)} sub={`${fmtSigned(c.cushing_wow, 1)} WoW`} />
-        <Tile label="Refinery" value={c.refutil == null ? "—" : `${fmt(c.refutil, 1)}%`} sub="utilization" />
-        <Tile label="Regime" value={c.vol_regime || "—"} sub={`${c.season || ""} · ${c.product_alignment || ""}`} />
+        <Tile label="Cushing" info={INV_EXPL.cushing} value={fmt(c.cushing, 1)} sub={`${fmtSigned(c.cushing_wow, 1)} WoW`} />
+        <Tile label="Refinery" info={INV_EXPL.refinery} value={c.refutil == null ? "—" : `${fmt(c.refutil, 1)}%`} sub="utilization" />
+        <Tile label="Regime" info={INV_EXPL.regime} value={c.vol_regime || "—"} sub={`${c.season || ""} · ${c.product_alignment || ""}`} />
       </div>
 
       {/* Last print + cross-check */}

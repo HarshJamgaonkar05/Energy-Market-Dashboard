@@ -6,6 +6,7 @@ import { Card } from "../components/primitives/Card";
 import { SectionTitle } from "../components/primitives/SectionTitle";
 import { SourceTag } from "../components/primitives/SourceTag";
 import { AsOf } from "../components/primitives/AsOf";
+import { InfoDot } from "../components/primitives/InfoDot";
 import { Sourced } from "../components/primitives/Sourced";
 import { InventorySnap } from "../components/panels/InventorySnap";
 import { InventorySignal } from "../components/panels/InventorySignal";
@@ -70,17 +71,17 @@ const SupplyDemandBalance = () => {
       </div>
       <div className="p-4 border-t border-[#1c1d22] grid grid-cols-3 gap-3 text-center">
         <div>
-          <div className="text-[9px] text-zinc-600 uppercase tracking-wider">Implied balance</div>
+          <div className="text-[9px] text-zinc-600 uppercase tracking-wider flex items-center justify-center gap-1">Implied balance <InfoDot text="Supply (production + imports) minus disposition (refinery runs + exports). Positive = surplus crude that piles into storage (a build); negative = a deficit that draws stocks down." /></div>
           <div className={`font-mono text-xl ${build ? "text-sky-400" : "text-amber-400"}`}>{fmtSigned(implied, 1)}</div>
           <div className="text-[9px] text-zinc-600">{build ? "build" : "draw"} · mb/d</div>
         </div>
         <div>
-          <div className="text-[9px] text-zinc-600 uppercase tracking-wider">Days of supply</div>
+          <div className="text-[9px] text-zinc-600 uppercase tracking-wider flex items-center justify-center gap-1">Days of supply <InfoDot text="How many days current crude stocks would last at the current refinery run rate (stocks ÷ daily runs). Lower = a tighter market." /></div>
           <div className="font-mono text-xl text-zinc-200">{fmt(data.daysOfSupply, 1)}</div>
           <div className="text-[9px] text-zinc-600">stocks ÷ runs</div>
         </div>
         <div>
-          <div className="text-[9px] text-zinc-600 uppercase tracking-wider">Stocks YoY</div>
+          <div className="text-[9px] text-zinc-600 uppercase tracking-wider flex items-center justify-center gap-1">Stocks YoY <InfoDot text="Crude stock level vs the same week a year ago. Below year-ago levels = tighter supply than last year (supportive for price)." /></div>
           <div className={`font-mono text-xl ${(data.yoyPct ?? 0) >= 0 ? "text-sky-400" : "text-amber-400"}`}>{fmtSigned(data.yoyPct, 1)}%</div>
           <div className="text-[9px] text-zinc-600">vs 1y ago</div>
         </div>
@@ -110,7 +111,7 @@ export const PageInventories = () => {
         <div className="col-span-12 lg:col-span-8 space-y-3">
           <Card padding={false}>
             <div className="p-4 pb-2">
-              <SectionTitle sub="52W vs 5-yr seasonal range" action={<div className="flex items-center gap-2"><AsOf date={data.asOf} /><SourceTag live={live} source="eia" note="EIA weekly U.S. crude stocks excl. SPR (WCESTUS1). Shaded band is the min–max across the 5 prior years for each week-of-year; dashed line is the 5-yr average." /></div>}>US Crude Stocks</SectionTitle>
+              <SectionTitle sub="52W vs 5-yr seasonal range" action={<div className="flex items-center gap-2"><AsOf date={data.asOf} /><SourceTag live={live} source="eia" note="EIA weekly U.S. crude stocks excl. SPR (WCESTUS1). Shaded band is the min–max across the 5 prior years for each week-of-year; dashed line is the 5-yr average." /></div>}>US Crude Stocks <InfoDot text="The shaded band is the range of stock levels seen in this same week over the past 5 years; the line is now. Below the band = unusually tight for the season (bullish); above = a glut (bearish)." /></SectionTitle>
               {/* Legend */}
               <div className="mt-2 flex items-center flex-wrap gap-x-4 gap-y-1 text-[9px] uppercase tracking-wider text-zinc-500">
                 <span className="flex items-center gap-1.5"><span className="w-3 h-1.5 bg-sky-500/20 border-y border-sky-500/30" /> 5-yr range</span>
