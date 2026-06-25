@@ -2,15 +2,28 @@
 node_modules
 dist
 Data
+.venv
 server/.env
 .env
 .git
+.claude
 *.log
 npm-debug.log*
 
-# Build-time / offline only — the runtime serves the precomputed JSON in
-# server/data/, so the Python analytics layer and notes aren't needed in the image.
-analytics
+# Python caches & regenerable analytics artifacts. NOTE: analytics/ itself IS
+# shipped now — the EIA Release Lab button runs analytics/release_lab.py at runtime
+# — but its caches, intermediate panel and venv are not needed in the image.
+**/__pycache__
+analytics/cache
+analytics/out
+analytics/.venv
+
+# Offline / deliverable artifacts — the runtime only serves the precomputed JSON in
+# server/data/, so reports, notebooks, figures and the offline bar database aren't
+# needed in the image (they stay tracked in git, just out of the build context).
 memory
+deliverables
+Backtesting/Data
 *.pdf
+*.ipynb
 PHASE2_PLAN.md

@@ -129,6 +129,7 @@ export const ENDPOINT_SOURCES = {
   "/api/signal-engine": { source: "signalEngine", mixed: ["regime"] },
   "/api/inventories": { source: "eia" },
   "/api/inventory-signal": { source: "eia", mixed: ["yahoo", "derived"] },
+  "/api/release-lab": { source: "eia", mixed: ["yahoo", "derived"] },
   "/api/balance": { source: "eia", mixed: ["derived"] },
   "/api/stockflows": { source: "eia" },
   "/api/spot": { source: "eia" },

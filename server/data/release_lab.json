@@ -1,0 +1,225 @@
+{
+  "generatedAt": "2026-06-25T02:18:36Z",
+  "generatedAtET": "2026-06-24 22:18:36 EDT",
+  "status": "awaiting-release",
+  "track_record": {
+    "all": {
+      "surprise_hit_rate": 0.578,
+      "surprise_hit_n": 147,
+      "avg_fav_move_pct": 0.294,
+      "lean": {
+        "hit_rate": 0.537,
+        "n": 214
+      },
+      "mae": {
+        "model": 4.18,
+        "seasonal": 4.5,
+        "n": 416
+      }
+    },
+    "recent": {
+      "surprise_hit_rate": 0.5,
+      "surprise_hit_n": 36,
+      "avg_fav_move_pct": 0.204,
+      "lean": {
+        "hit_rate": 0.481,
+        "n": 27
+      },
+      "mae": {
+        "model": 4.17,
+        "seasonal": 4.45,
+        "n": 52
+      }
+    },
+    "note": "Surprise->price = directional accuracy among material surprises (|z|>=0.5). Lean = our pre-release bias calling the surprise sign. MAE = avg miss of the model's expected weekly change vs the naive seasonal guess (lower is better)."
+  },
+  "target": {
+    "period": "2026-06-19",
+    "release_date": "2026-06-24",
+    "label": "24 June 2026 EIA crude release"
+  },
+  "current": {
+    "crude_stock": 412.1,
+    "cushing": 19.0,
+    "cushing_wow": -1.1,
+    "refutil": 96.1,
+    "crude_z": -1.37,
+    "days_supply": 24.1,
+    "season": "driving",
+    "vol_regime": "Normal",
+    "wti_struct": "Backwardation",
+    "product_alignment": "mixed"
+  },
+  "prediction": {
+    "asof": "2026-06-12",
+    "expected_wow": -4.15,
+    "expected_seasonal": -4.4,
+    "expected_surprise": 0.0,
+    "lean": "Bullish",
+    "lean_score": 2.53,
+    "confidence": "low",
+    "headline": "Structural lean BULLISH (score +2.53), but the RELEASE itself is a weak same-day catalyst (conditional R\u00b2=0.00). Base case: the market is positioned for ~-3.8 MMbbl \u2014 the day's move hinges on the surprise vs that, and in this regime inventories are rarely the decisive driver.",
+    "factors": [
+      "U.S. crude stocks are 1.3\u03c3 below the 5-year seasonal norm \u2014 structurally tight (bullish).",
+      "Last 4 weeks averaged a 6.7 MMbbl/week draw \u2014 bullish momentum into the print.",
+      "Cushing has drawn 5.8 MMbbl over 4 weeks (20.0 MMbbl now) \u2014 draining toward tank lows, very bullish for WTI structure.",
+      "Seasonally this week normally draws ~5.1 MMbbl (driving season); the model's expected change is -3.8 MMbbl.",
+      "Product alignment is 'mixed' \u2014 crude and products diverge, so the day-of read is muddier.",
+      "Release-day catalyst strength is a weak one: in the current High-vol / Backwardation / driving regime, the crude surprise has historically explained only R\u00b2=0.00 of the day's WTI move (n=30) \u2014 other drivers (macro, OPEC, positioning) usually dominate the day.",
+      "Asymmetry: a sizeable DRAW (~-3.8 MMbbl) is the base case and largely priced, so the bigger surprise risk is a BUILD (bearish). A draw merely in line confirms but adds little; a draw far bigger than -3.8 is the bullish tail."
+    ],
+    "products": [
+      "wti",
+      "brent",
+      "ho_wti",
+      "crack_321_wti",
+      "wti_m1m2"
+    ],
+    "catalyst_r2": 0.0148,
+    "catalyst_n": 104,
+    "beta_pct_per_mmbbl": -0.0592,
+    "beta_overall_pct_per_mmbbl": -0.0487,
+    "overall_r2": 0.0083,
+    "overall_n": 260,
+    "sigma_mmbbl": 5.1,
+    "scenarios": [
+      {
+        "label": "Big draw beat (-1\u03c3)",
+        "surprise": -5.1,
+        "pred_move_pct": 0.302,
+        "pred_move_pct_overall": 0.248,
+        "dir": "Bullish"
+      },
+      {
+        "label": "In line (0)",
+        "surprise": 0.0,
+        "pred_move_pct": -0.0,
+        "pred_move_pct_overall": -0.0,
+        "dir": "Neutral"
+      },
+      {
+        "label": "Big build miss (+1\u03c3)",
+        "surprise": 5.1,
+        "pred_move_pct": -0.302,
+        "pred_move_pct_overall": -0.248,
+        "dir": "Bearish"
+      }
+    ],
+    "narrative": "Before the print, the model expects a 4.1 MMbbl draw \u2014 that is the number the market is positioned for, so the EXPECTED SURPRISE is ~0 and a print in line should barely move WTI. Our structural lean is BULLISH. Crucially, the release is a weak same-day catalyst here (regime R\u00b2=0.01): even a 1\u03c3 miss (~5.1 MMbbl) maps to only a small WTI move on the inventory number alone. The real test is whether the print beats or misses that 4.1 MMbbl base case."
+  },
+  "impact_curve": {
+    "beta_pct_per_mmbbl": -0.0592,
+    "beta_overall_pct_per_mmbbl": -0.0487,
+    "sigma_mmbbl": 5.1,
+    "points": [
+      {
+        "surprise": -12.74,
+        "regime_pct": 0.755,
+        "overall_pct": 0.62
+      },
+      {
+        "surprise": -11.47,
+        "regime_pct": 0.679,
+        "overall_pct": 0.558
+      },
+      {
+        "surprise": -10.19,
+        "regime_pct": 0.604,
+        "overall_pct": 0.496
+      },
+      {
+        "surprise": -8.92,
+        "regime_pct": 0.528,
+        "overall_pct": 0.434
+      },
+      {
+        "surprise": -7.65,
+        "regime_pct": 0.453,
+        "overall_pct": 0.372
+      },
+      {
+        "surprise": -6.37,
+        "regime_pct": 0.377,
+        "overall_pct": 0.31
+      },
+      {
+        "surprise": -5.1,
+        "regime_pct": 0.302,
+        "overall_pct": 0.248
+      },
+      {
+        "surprise": -3.82,
+        "regime_pct": 0.226,
+        "overall_pct": 0.186
+      },
+      {
+        "surprise": -2.55,
+        "regime_pct": 0.151,
+        "overall_pct": 0.124
+      },
+      {
+        "surprise": -1.27,
+        "regime_pct": 0.075,
+        "overall_pct": 0.062
+      },
+      {
+        "surprise": 0.0,
+        "regime_pct": -0.0,
+        "overall_pct": -0.0
+      },
+      {
+        "surprise": 1.27,
+        "regime_pct": -0.075,
+        "overall_pct": -0.062
+      },
+      {
+        "surprise": 2.55,
+        "regime_pct": -0.151,
+        "overall_pct": -0.124
+      },
+      {
+        "surprise": 3.82,
+        "regime_pct": -0.226,
+        "overall_pct": -0.186
+      },
+      {
+        "surprise": 5.1,
+        "regime_pct": -0.302,
+        "overall_pct": -0.248
+      },
+      {
+        "surprise": 6.37,
+        "regime_pct": -0.377,
+        "overall_pct": -0.31
+      },
+      {
+        "surprise": 7.65,
+        "regime_pct": -0.453,
+        "overall_pct": -0.372
+      },
+      {
+        "surprise": 8.92,
+        "regime_pct": -0.528,
+        "overall_pct": -0.434
+      },
+      {
+        "surprise": 10.19,
+        "regime_pct": -0.604,
+        "overall_pct": -0.496
+      },
+      {
+        "surprise": 11.47,
+        "regime_pct": -0.679,
+        "overall_pct": -0.558
+      },
+      {
+        "surprise": 12.74,
+        "regime_pct": -0.755,
+        "overall_pct": -0.62
+      }
+    ]
+  },
+  "result": null,
+  "comparison": null,
+  "scorecard": null
+}

@@ -56,10 +56,11 @@ def main():
     print(f"#  mode: {mode}")
     print("#" * 74)
 
-    run("1/4  Analysis: tables + 7 figures + signal JSON", "run_inventory_analysis.py")
-    run("2/4  Live engine: surprise + verdict + market cross-check", "inventory_engine.py", engine_args)
-    run("3/4  Explained notebook (built + executed)", "build_notebook.py")
-    run("4/4  Plain-English PDF", "build_pdf.py")
+    run("1/5  Analysis: tables + 7 figures + signal JSON", "run_inventory_analysis.py")
+    run("2/5  Live engine: surprise + verdict + market cross-check", "inventory_engine.py", engine_args)
+    run("3/5  Release Lab: frozen pre-release prediction (dashboard button runs the rest)", "release_lab.py", ["--predict"])
+    run("4/5  Explained notebook (built + executed)", "build_notebook.py")
+    run("5/5  Plain-English PDF", "build_pdf.py")
 
     # ---- checklist of saved outputs -------------------------------------------
     deliv = ROOT / "deliverables"
@@ -71,6 +72,7 @@ def main():
         ("Research brief",         deliv / "research" / "research_brief.md"),
         ("Live signal (dashboard)", ROOT / "server" / "data" / "inventory_signal.json"),
         ("Cross-check track record", ROOT / "server" / "data" / "inventory_signal_log.json"),
+        ("Release Lab prediction",  ROOT / "server" / "data" / "release_lab.json"),
     ]
     figs = sorted((deliv / "figures").glob("*.png"))
 

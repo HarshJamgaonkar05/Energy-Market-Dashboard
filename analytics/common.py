@@ -8,6 +8,7 @@ numpy, requests) so `build_panel.py` runs even before the heavier ML libs land.
 from __future__ import annotations
 
 import json
+import os
 import time
 from pathlib import Path
 
@@ -49,6 +50,12 @@ def load_env() -> dict:
                 continue
             k, v = line.split("=", 1)
             env[k.strip()] = v.strip()
+    # Fall back to real environment variables when there is no server/.env file —
+    # e.g. on Hugging Face Spaces, where EIA_API_KEY is injected as a Space secret
+    # (the same value the Node server reads from process.env). The file wins locally.
+    for k in ("EIA_API_KEY", "PORT"):
+        if not env.get(k) and os.environ.get(k):
+            env[k] = os.environ[k].strip()
     return env
 
 

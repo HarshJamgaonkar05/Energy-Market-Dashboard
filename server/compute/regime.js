@@ -109,6 +109,16 @@ export function inventorySignal() {
   return loadJson("inventory_signal.json");
 }
 
+// ---- EIA Release Lab -------------------------------------------------------
+/** The "expected vs real surprise" experiment for the latest EIA crude release:
+ *  the frozen pre-release PREDICTION (expected build/draw, lean, impact curve) and,
+ *  once the run button is pressed, the RESULT (actual print, real surprise, verdict,
+ *  market cross-check) + the side-by-side comparison. Written by
+ *  analytics/release_lab.py and hot-reloaded on mtime change. */
+export function releaseLab() {
+  return loadJson("release_lab.json");
+}
+
 // ---- Historical Backtest (Phase 2 fair value, daily, 5y) -------------------
 /** The historical backtest feed: the Phase-2 fundamental fair value traded as a
  *  daily mean-reversion simulation over 2021-2026. Written by

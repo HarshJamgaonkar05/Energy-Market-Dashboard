@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import {
   LayoutDashboard, LineChart as LineIcon, Gauge, FlaskConical, Globe2, Warehouse, Newspaper,
-  ChevronLeft, ChevronRight, Circle, Zap, History,
+  ChevronLeft, ChevronRight, Circle, Zap, History, Beaker,
 } from "lucide-react";
 
 export const NAV = [
@@ -12,6 +12,7 @@ export const NAV = [
   { id: "historical", label: "Historical BT", icon: History },
   { id: "drivers", label: "Market Drivers", icon: Globe2 },
   { id: "inventories", label: "Inventories", icon: Warehouse },
+  { id: "releaselab", label: "EIA Release Lab", icon: Beaker },
   { id: "news", label: "News", icon: Newspaper },
 ];
 

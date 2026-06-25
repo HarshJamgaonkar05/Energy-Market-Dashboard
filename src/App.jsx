@@ -38,6 +38,7 @@ const PageSignalEngine = lazyRetry(() => import("./pages/SignalEngine").then((m)
 const PageHistoricalBacktest = lazyRetry(() => import("./pages/HistoricalBacktest").then((m) => ({ default: m.PageHistoricalBacktest })));
 const PageDrivers = lazyRetry(() => import("./pages/Drivers").then((m) => ({ default: m.PageDrivers })));
 const PageInventories = lazyRetry(() => import("./pages/Inventories").then((m) => ({ default: m.PageInventories })));
+const PageReleaseLab = lazyRetry(() => import("./pages/ReleaseLab").then((m) => ({ default: m.PageReleaseLab })));
 const PageNews = lazyRetry(() => import("./pages/News").then((m) => ({ default: m.PageNews })));
 
 const PAGES = {
@@ -48,6 +49,7 @@ const PAGES = {
   historical: { title: "Historical Backtest", el: PageHistoricalBacktest },
   drivers: { title: "Market Drivers", el: PageDrivers },
   inventories: { title: "Inventories & Storage", el: PageInventories },
+  releaselab: { title: "EIA Release Lab", el: PageReleaseLab },
   news: { title: "News & Sentiment", el: PageNews },
 };
 
