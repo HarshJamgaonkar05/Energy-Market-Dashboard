@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-06-25T02:51:41Z",
-  "generatedAtET": "2026-06-24 22:51:41 EDT",
-  "status": "awaiting-release",
+  "generatedAt": "2026-06-25T03:02:25Z",
+  "generatedAtET": "2026-06-24 23:02:25 EDT",
+  "status": "complete",
   "track_record": {
     "all": {
       "surprise_hit_rate": 0.578,
@@ -75,19 +75,19 @@
       "crack_321_wti",
       "wti_m1m2"
     ],
-    "catalyst_r2": 0.0149,
+    "catalyst_r2": 0.015,
     "catalyst_n": 104,
-    "beta_pct_per_mmbbl": -0.0593,
-    "beta_overall_pct_per_mmbbl": -0.0487,
-    "overall_r2": 0.0083,
+    "beta_pct_per_mmbbl": -0.0594,
+    "beta_overall_pct_per_mmbbl": -0.0488,
+    "overall_r2": 0.0084,
     "overall_n": 260,
     "sigma_mmbbl": 5.1,
     "scenarios": [
       {
         "label": "Big draw beat (-1\u03c3)",
         "surprise": -5.1,
-        "pred_move_pct": 0.302,
-        "pred_move_pct_overall": 0.248,
+        "pred_move_pct": 0.303,
+        "pred_move_pct_overall": 0.249,
         "dir": "Bullish"
       },
       {
@@ -100,52 +100,52 @@
       {
         "label": "Big build miss (+1\u03c3)",
         "surprise": 5.1,
-        "pred_move_pct": -0.302,
-        "pred_move_pct_overall": -0.248,
+        "pred_move_pct": -0.303,
+        "pred_move_pct_overall": -0.249,
         "dir": "Bearish"
       }
     ],
-    "narrative": "Before the print, the model expects a 4.1 MMbbl draw \u2014 that is the number the market is positioned for, so the EXPECTED SURPRISE is ~0 and a print in line should barely move WTI. Our structural lean is BULLISH. Crucially, the release is a weak same-day catalyst here (regime R\u00b2=0.01): even a 1\u03c3 miss (~5.1 MMbbl) maps to only a small WTI move on the inventory number alone. The real test is whether the print beats or misses that 4.1 MMbbl base case."
+    "narrative": "Before the print, the model expects a 4.1 MMbbl draw \u2014 that is the number the market is positioned for, so the EXPECTED SURPRISE is ~0 and a print in line should barely move WTI. Our structural lean is BULLISH. Crucially, the release is a weak same-day catalyst here (regime R\u00b2=0.02): even a 1\u03c3 miss (~5.1 MMbbl) maps to only a small WTI move on the inventory number alone. The real test is whether the print beats or misses that 4.1 MMbbl base case."
   },
   "impact_curve": {
-    "beta_pct_per_mmbbl": -0.0593,
-    "beta_overall_pct_per_mmbbl": -0.0487,
+    "beta_pct_per_mmbbl": -0.0594,
+    "beta_overall_pct_per_mmbbl": -0.0488,
     "sigma_mmbbl": 5.1,
     "points": [
       {
         "surprise": -12.74,
-        "regime_pct": 0.756,
+        "regime_pct": 0.757,
         "overall_pct": 0.621
       },
       {
         "surprise": -11.47,
-        "regime_pct": 0.68,
+        "regime_pct": 0.682,
         "overall_pct": 0.559
       },
       {
         "surprise": -10.19,
-        "regime_pct": 0.604,
-        "overall_pct": 0.496
+        "regime_pct": 0.606,
+        "overall_pct": 0.497
       },
       {
         "surprise": -8.92,
-        "regime_pct": 0.529,
-        "overall_pct": 0.434
+        "regime_pct": 0.53,
+        "overall_pct": 0.435
       },
       {
         "surprise": -7.65,
-        "regime_pct": 0.454,
+        "regime_pct": 0.455,
         "overall_pct": 0.373
       },
       {
         "surprise": -6.37,
-        "regime_pct": 0.378,
-        "overall_pct": 0.31
+        "regime_pct": 0.379,
+        "overall_pct": 0.311
       },
       {
         "surprise": -5.1,
-        "regime_pct": 0.302,
-        "overall_pct": 0.248
+        "regime_pct": 0.303,
+        "overall_pct": 0.249
       },
       {
         "surprise": -3.82,
@@ -154,7 +154,7 @@
       },
       {
         "surprise": -2.55,
-        "regime_pct": 0.151,
+        "regime_pct": 0.152,
         "overall_pct": 0.124
       },
       {
@@ -174,7 +174,7 @@
       },
       {
         "surprise": 2.55,
-        "regime_pct": -0.151,
+        "regime_pct": -0.152,
         "overall_pct": -0.124
       },
       {
@@ -184,44 +184,129 @@
       },
       {
         "surprise": 5.1,
-        "regime_pct": -0.302,
-        "overall_pct": -0.248
+        "regime_pct": -0.303,
+        "overall_pct": -0.249
       },
       {
         "surprise": 6.37,
-        "regime_pct": -0.378,
-        "overall_pct": -0.31
+        "regime_pct": -0.379,
+        "overall_pct": -0.311
       },
       {
         "surprise": 7.65,
-        "regime_pct": -0.454,
+        "regime_pct": -0.455,
         "overall_pct": -0.373
       },
       {
         "surprise": 8.92,
-        "regime_pct": -0.529,
-        "overall_pct": -0.434
+        "regime_pct": -0.53,
+        "overall_pct": -0.435
       },
       {
         "surprise": 10.19,
-        "regime_pct": -0.604,
-        "overall_pct": -0.496
+        "regime_pct": -0.606,
+        "overall_pct": -0.497
       },
       {
         "surprise": 11.47,
-        "regime_pct": -0.68,
+        "regime_pct": -0.682,
         "overall_pct": -0.559
       },
       {
         "surprise": 12.74,
-        "regime_pct": -0.756,
+        "regime_pct": -0.757,
         "overall_pct": -0.621
       }
     ]
   },
-  "result": null,
-  "comparison": null,
-  "scorecard": null,
+  "result": {
+    "ran_at": "2026-06-25T03:02:25Z",
+    "ran_at_et": "2026-06-24 23:02:25 EDT",
+    "actual_wow": -6.09,
+    "actual_stock": 412.1,
+    "real_surprise": -1.94,
+    "real_surprise_z": -0.36,
+    "real_surprise_dir": "bullish",
+    "verdict": {
+      "direction": "Neutral",
+      "score": 0.15,
+      "confidence": "medium",
+      "headline": "Neutral \u2014 model expects WTI to trade higher on the print (~0.12% on the surprise alone), confidence medium.",
+      "factors": [
+        "Surprise = -1.9 MMbbl (-0.4\u03c3) vs expected \u2014 a larger draw / smaller build than priced in (bullish).",
+        "In the current Normal-vol / Backwardation regime, release-day WTI moves about 0.06% per 1 MMbbl of surprise (conditional R\u00b2 0.02, n=104) \u2014 inventories are a weak driver here.",
+        "Product alignment: mixed  \u2014 crude and products diverge, so the read is muddier."
+      ],
+      "products": [
+        "wti",
+        "brent",
+        "ho_wti",
+        "crack_321_wti",
+        "wti_m1m2"
+      ]
+    },
+    "crosscheck": {
+      "status": "contradicted",
+      "predicted_dir": "up",
+      "actual_dir": "down",
+      "verdict_dir": "Neutral",
+      "preliminary": true,
+      "wti_reaction_pct": -5.177,
+      "wti_prior_close": 73.21,
+      "wti_release_close": 69.42,
+      "expected_move_pct": 0.115,
+      "note": "The inventory surprise (-1.9 MMbbl, a larger-than-expected draw) implied WTI should trade UP; WTI moved -5.18% on the print -> CONTRADICTED. The framework's regime-aware verdict was NEUTRAL \u2014 it made no firm directional bet here. (Preliminary: release-day bar still forming until the close.)"
+    },
+    "pred_move_pct": 0.115,
+    "pred_move_pct_overall": 0.095,
+    "actual_move_pct": -5.18,
+    "realized_point": {
+      "surprise": -1.94,
+      "pred_regime_pct": 0.115,
+      "pred_overall_pct": 0.095,
+      "actual_pct": -5.18
+    }
+  },
+  "comparison": {
+    "expected_wow": -4.15,
+    "actual_wow": -6.09,
+    "expected_surprise": 0.0,
+    "real_surprise": -1.94,
+    "real_surprise_z": -0.36,
+    "lean": "Bullish",
+    "verdict": "Neutral",
+    "lean_matched_surprise": true,
+    "pred_move_pct": 0.115,
+    "actual_move_pct": -5.18,
+    "crosscheck_status": "contradicted",
+    "narrative": "We expected a 4.1 MMbbl draw; the EIA reported 6.1 MMbbl draw. That is a REAL SURPRISE of -1.9 MMbbl (-0.4\u03c3) \u2014 a bigger draw than expected (bullish). Our pre-release lean was BULLISH; the surprise broke the SAME way. On the inventory surprise alone the regime model implied WTI ~+0.12%; WTI actually moved -5.18% on the print \u2014 the surprise was CONTRADICTED by the market, and the realized move sat WELL OFF the predicted impact line. That gap is the headline lesson, not a model failure: in this regime inventories explain almost none of release-day WTI (R\u00b2\u22480.02), so the day was driven by other forces (macro / OPEC / geopolitics / positioning) \u2014 exactly the low-catalyst read the framework flagged going in."
+  },
+  "scorecard": {
+    "lights": [
+      {
+        "key": "forecast",
+        "label": "Forecast the number",
+        "grade": "GOOD",
+        "ok": true,
+        "detail": "off by 1.9 MMbbl (-0.4\u03c3)"
+      },
+      {
+        "key": "surprise",
+        "label": "Surprise broke our way",
+        "grade": "YES",
+        "ok": true,
+        "detail": "lean Bullish vs a bullish beat"
+      },
+      {
+        "key": "price",
+        "label": "Price followed the surprise",
+        "grade": "NO",
+        "ok": false,
+        "detail": "WTI -5.2% vs +0.1% implied"
+      }
+    ],
+    "net": "Framework worked as designed: it flagged inventories as a WEAK same-day catalyst (R\u00b2\u22480.02), and sure enough WTI ignored the surprise and moved on other forces (macro / OPEC / geopolitics)."
+  },
   "intraday": {
     "model_source": "Data/CL_data.csv (1-min WTI front-month, weighted mid)",
     "model_n": 278,
@@ -242,11 +327,11 @@
         "r2": 0.026,
         "rmse_pct": 0.146,
         "n": 104,
-        "predicted_pct": null,
-        "lo": null,
-        "hi": null,
-        "actual_pct": null,
-        "hit": null
+        "predicted_pct": 0.008,
+        "lo": -0.138,
+        "hi": 0.154,
+        "actual_pct": -0.071,
+        "hit": false
       },
       {
         "min": 15,
@@ -254,11 +339,11 @@
         "r2": 0.0082,
         "rmse_pct": 0.263,
         "n": 104,
-        "predicted_pct": null,
-        "lo": null,
-        "hi": null,
-        "actual_pct": null,
-        "hit": null
+        "predicted_pct": -0.008,
+        "lo": -0.271,
+        "hi": 0.255,
+        "actual_pct": -0.47,
+        "hit": false
       },
       {
         "min": 30,
@@ -266,11 +351,11 @@
         "r2": 0.0005,
         "rmse_pct": 0.339,
         "n": 104,
-        "predicted_pct": null,
-        "lo": null,
-        "hi": null,
-        "actual_pct": null,
-        "hit": null
+        "predicted_pct": -0.003,
+        "lo": -0.342,
+        "hi": 0.336,
+        "actual_pct": -0.556,
+        "hit": false
       },
       {
         "min": 60,
@@ -278,11 +363,11 @@
         "r2": 0.0042,
         "rmse_pct": 0.497,
         "n": 104,
-        "predicted_pct": null,
-        "lo": null,
-        "hi": null,
-        "actual_pct": null,
-        "hit": null
+        "predicted_pct": -0.011,
+        "lo": -0.508,
+        "hi": 0.486,
+        "actual_pct": -0.014,
+        "hit": false
       },
       {
         "min": 120,
@@ -290,18 +375,156 @@
         "r2": 0.001,
         "rmse_pct": 0.807,
         "n": 104,
-        "predicted_pct": null,
-        "lo": null,
-        "hi": null,
-        "actual_pct": null,
-        "hit": null
+        "predicted_pct": 0.009,
+        "lo": -0.798,
+        "hi": 0.816,
+        "actual_pct": 0.741,
+        "hit": true
       }
     ],
     "path": {
-      "predicted": null,
-      "actual": null
+      "predicted": [
+        {
+          "min": 0,
+          "pct": 0.0,
+          "lo": 0.0,
+          "hi": 0.0
+        },
+        {
+          "min": 5,
+          "pct": 0.008,
+          "lo": -0.138,
+          "hi": 0.154
+        },
+        {
+          "min": 15,
+          "pct": -0.008,
+          "lo": -0.271,
+          "hi": 0.255
+        },
+        {
+          "min": 30,
+          "pct": -0.003,
+          "lo": -0.342,
+          "hi": 0.336
+        },
+        {
+          "min": 60,
+          "pct": -0.011,
+          "lo": -0.508,
+          "hi": 0.486
+        },
+        {
+          "min": 120,
+          "pct": 0.009,
+          "lo": -0.798,
+          "hi": 0.816
+        }
+      ],
+      "actual": [
+        {
+          "min": 0,
+          "pct": 0.0
+        },
+        {
+          "min": 5,
+          "pct": -0.071
+        },
+        {
+          "min": 10,
+          "pct": -0.271
+        },
+        {
+          "min": 15,
+          "pct": -0.47
+        },
+        {
+          "min": 20,
+          "pct": -0.371
+        },
+        {
+          "min": 25,
+          "pct": -0.428
+        },
+        {
+          "min": 30,
+          "pct": -0.556
+        },
+        {
+          "min": 35,
+          "pct": -0.599
+        },
+        {
+          "min": 40,
+          "pct": -0.599
+        },
+        {
+          "min": 45,
+          "pct": -0.527
+        },
+        {
+          "min": 50,
+          "pct": -0.342
+        },
+        {
+          "min": 55,
+          "pct": -0.214
+        },
+        {
+          "min": 60,
+          "pct": -0.014
+        },
+        {
+          "min": 65,
+          "pct": 0.356
+        },
+        {
+          "min": 70,
+          "pct": 0.171
+        },
+        {
+          "min": 75,
+          "pct": 0.328
+        },
+        {
+          "min": 80,
+          "pct": 0.328
+        },
+        {
+          "min": 85,
+          "pct": 0.456
+        },
+        {
+          "min": 90,
+          "pct": 0.371
+        },
+        {
+          "min": 95,
+          "pct": 0.356
+        },
+        {
+          "min": 100,
+          "pct": 0.314
+        },
+        {
+          "min": 105,
+          "pct": 0.542
+        },
+        {
+          "min": 110,
+          "pct": 0.741
+        },
+        {
+          "min": 115,
+          "pct": 0.67
+        },
+        {
+          "min": 120,
+          "pct": 0.741
+        }
+      ]
     },
     "max_r2": 0.026,
-    "narrative": "Minute-by-minute, the crude surprise explains almost none of WTI \u2014 the best any horizon reaches is R\u00b2\u22480.03. Press run to overlay the actual release-day path on the prediction."
+    "narrative": "Minute-by-minute, the crude surprise explains almost none of WTI \u2014 the best any horizon reaches is R\u00b2\u22480.03. Realized: +5m -0.07% (vs predicted +0.01%), +30m -0.56% (vs predicted -0.00%), +60m -0.01% (vs predicted -0.01%) \u2014 the realized path runs far from the near-zero prediction at every horizon, so the move came from other flows, not the inventory number."
   }
 }
