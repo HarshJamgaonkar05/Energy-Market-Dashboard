@@ -98,6 +98,99 @@ else:
     attribution_md = ""
 
 
+# Section 5 — the model, the prediction and the logic, in depth (always shown).
+_mae = alln.get("mae") or {}
+mae_model, mae_seasonal = _mae.get("model"), _mae.get("seasonal")
+model_logic_md = f"""## 5. Under the hood — the model, the prediction, and the logic
+
+This is the engine room: exactly how the Lab turns a raw government statistic into a graded
+call, and the reasoning behind every step. Nothing here is a black box.
+
+### 5a. The whole pipeline, in seven steps
+
+> **Data -> Expected -> Surprise -> Regime -> Verdict -> Grade -> Track record.**
+
+1. **Pull the data.** The weekly EIA report (crude stocks plus the flows behind them —
+   production, imports, exports, refinery runs), recent prices, and the broad market.
+2. **Predict the number (the model).** Estimate this week's draw/build *before* it is announced
+   — the "Expected" figure (detailed in 5b).
+3. **Measure the surprise.** When the real number lands: **Surprise = Actual - Expected.** Only
+   this gap is genuinely *new* information.
+4. **Read the regime.** Gauge how much the market is *listening* to inventories right now (calm
+   vs. stormy market, the season, whether crude and fuels agree) — the "catalyst strength".
+5. **Form the verdict.** Translate the surprise, scaled by the regime, into Bullish / Bearish /
+   Neutral — alongside a slower **structural lean** from the multi-week backdrop (5d).
+6. **Grade the outcome.** After the price moves, the scorecard checks the call and the
+   attribution splits the move into inventory vs. macro vs. everything else.
+7. **Repeat across history.** Run the identical logic on ~260 past releases (the track record),
+   so nothing rests on a single lucky week.
+
+### 5b. The model that predicts the number — ingredient by ingredient
+
+The model's only job is to answer, *before* Wednesday's release: **how much will crude stocks
+change this week?** It learns from about a dozen clues, all known the day *before* the release —
+each chosen because there is a real-world reason it should help:
+
+| Clue the model uses | Why it helps predict this week's draw/build |
+|---|---|
+| Seasonal-normal change | demand and refinery schedules follow the calendar every year |
+| Last 1-2 weeks' change | draws and builds arrive in runs (momentum) |
+| Last week's supply/demand balance | physical flows are sticky from week to week |
+| Refinery utilization & runs (lagged) | the harder refineries run, the more crude they pull from tanks |
+| Crude production (lagged) | more barrels pumped tilts toward a build |
+| Net imports (lagged) | imports add to storage; exports remove from it |
+| Cushing change (lagged) | the WTI delivery hub often moves first |
+| Gasoline & distillate draws (lagged) | strong fuel demand pulls crude through refineries |
+| Stock level vs. seasonal norm (lagged) | unusually high or low stocks tend to revert |
+| Week-of-year (sine/cosine) | smooth seasonality the weekly average alone misses |
+
+These are blended with a **ridge regression** — a standard, transparent way to weigh many clues
+at once. Every weight is learned only from the past (5c).
+
+### 5c. Two ideas that keep the prediction honest
+
+- **Ridge (don't over-trust any one clue).** With a dozen clues but only a few hundred weeks of
+  history, a naive fit would start "memorising" random noise — looking brilliant on the past and
+  then failing on the future (**overfitting**). Ridge deliberately *shrinks* the weights so no
+  single clue dominates, trading a little fit on old data for reliability on new data.
+- **Walk-forward (no peeking).** To predict any given week, the model may use **only the weeks
+  before it**. So every "Expected" number is a genuine out-of-sample forecast, never hindsight.
+  (This is the **leak-free** rule from earlier, applied across the whole history.)
+
+### 5d. From a number to a call — the chain of reasoning
+
+> Expected -> Surprise -> (scaled by) Regime -> Verdict, with a separate structural Lean.
+
+- **Expected** is the consensus the price is *already positioned for* — so a print in line with it
+  should barely move anything.
+- **Surprise** (actual - expected) is the only part that is news. We size it in **sigma** (how
+  unusual the miss is) rather than raw barrels, so "big" means the same thing in every season.
+- **Regime** decides how loudly that news lands: the same surprise is worth more in a calm,
+  inventory-driven market than in a war-driven one. The Lab measures this as the catalyst **R2**.
+- **Verdict** = the direction of the surprise (a bigger draw -> bullish), *scaled down* by both how
+  ordinary the surprise was and how weak the catalyst is. A large surprise in a deaf market still
+  yields a muted, low-confidence call — on purpose.
+- **Structural lean** is separate and slower: where stocks sit vs. the seasonal norm, the recent
+  draw/build momentum, and the Cushing trend. It is the background tilt, not the day's trade.
+- **The honesty built in:** when the catalyst R2 is near zero, the Lab actively says *don't trust
+  the number today* — and counts being right about that as a success, not a dodge.
+
+### 5e. Does the prediction actually work?
+
+Two different questions, answered honestly and *separately*:
+
+- **Does it forecast the number well?** Yes. On the long walk-forward backtest its average miss is
+  **{f(mae_model)} MMbbl vs {f(mae_seasonal)} MMbbl** for the naive "just use the seasonal average"
+  guess (lower is better) — and its week-to-week forecasts track the real draws and builds far more
+  closely (their correlation with reality **nearly doubles** versus the seasonal guess).
+- **Does forecasting the number mean predicting the price?** *Not necessarily* — and the Lab is
+  blunt about it. The price reacts only to the *surprise*, and only when inventories are the day's
+  catalyst; often they are not. So a good number-forecast and a small price reaction can both be
+  true at once. Bridging that gap is exactly what the catalyst R2 and the move attribution are for.
+
+"""
+
+
 # ===========================================================================
 MD = f"""
 # Phase 4 — The EIA Release Lab, Explained for Everyone
@@ -271,7 +364,10 @@ When you press **Run**, the Lab fetches the real number and computes everything:
 
 <hr/>
 
-## 5. The Scorecard — three traffic lights and a verdict
+{model_logic_md}
+<hr/>
+
+## 6. The Scorecard — three traffic lights and a verdict
 
 The Lab boils the whole experiment down to three yes/no questions, each shown as a traffic
 light (green = yes, red = no, amber = unclear):
@@ -301,7 +397,7 @@ make a call; it tells you how much to trust the call — and is right about its 
 {attribution_md}
 <hr/>
 
-## 6. The minute-by-minute view ("Intraday reaction")
+## 7. The minute-by-minute view ("Intraday reaction")
 
 The headline number above is the move over the whole release day. The Lab also zooms in to the
 **intraday** level — *intra-day* simply means "within the same day", here minute by minute right
@@ -324,7 +420,7 @@ moving to different drums.
 
 <hr/>
 
-## 7. "Is this just luck?" — the Track Record
+## 8. "Is this just luck?" — the Track Record
 
 One experiment proves nothing — maybe the Lab got this one release right (or wrong) by chance. So
 the Lab also **backtests** the whole framework: it replays history and asks the same questions of
@@ -349,7 +445,7 @@ flip — precisely why the Lab leans on the *regime* read rather than the raw nu
 
 <hr/>
 
-## 8. Putting it all together — the story of {t['label']}
+## 9. Putting it all together — the story of {t['label']}
 
 1. **Before** the release, the Lab predicted a **{f(abs(exp))} MMbbl draw** and leaned
    **{p['lean']}** — while flagging that the number itself was a **weak catalyst** today.
