@@ -13,6 +13,7 @@
 import { useState } from "react";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine, ReferenceDot,
+  ComposedChart, Area,
 } from "recharts";
 import { ResponsiveContainer } from "../lib/ResponsiveContainer";
 import { Card } from "../components/primitives/Card";
@@ -216,6 +217,109 @@ const ImpactCurve = ({ curve, result }) => {
 };
 
 // ===========================================================================
+// INTRADAY REACTION — predicted vs actual cumulative WTI move over +5…+120 min,
+// from the 1-min event study (intraday_impact.json) + live Yahoo 5-min path.
+// ===========================================================================
+const r2Tone = (v) => (v == null ? "text-zinc-400" : v >= 0.1 ? "text-emerald-400" : v >= 0.03 ? "text-amber-400" : "text-zinc-500");
+
+const IntradayReaction = ({ intraday }) => {
+  if (!intraday) return null;
+  const rows = intraday.horizons || [];
+  const featured = (intraday.headline_min || [5, 30, 60])
+    .map((m) => rows.find((r) => r.min === m)).filter(Boolean);
+
+  // merge predicted + actual paths into one minute-keyed series for the chart
+  const pred = intraday.path?.predicted || [];
+  const act = intraday.path?.actual || [];
+  const byMin = {};
+  pred.forEach((p) => { byMin[p.min] = { ...(byMin[p.min] || { min: p.min }), pred: p.pct, lo: p.lo, hi: p.hi }; });
+  act.forEach((a) => { byMin[a.min] = { ...(byMin[a.min] || { min: a.min }), actual: a.pct }; });
+  const data = Object.values(byMin).sort((a, b) => a.min - b.min)
+    .map((d) => ({ ...d, band: d.lo != null && d.hi != null ? [d.lo, d.hi] : undefined }));
+  const hasPath = data.some((d) => d.actual != null) || pred.length > 1;
+  const [sP, eP] = intraday.sample_period || [];
+
+  return (
+    <Card padding={false}>
+      <div className="p-4 pb-1">
+        <SectionTitle
+          sub={`how the reaction builds · regime: ${intraday.vol_regime_used}`}
+          action={<SourceTag source="derived"
+            note={`Per-horizon OLS of WTI cumulative return on the crude surprise, from ${intraday.model_n} historical releases on the 1-min tape (${sP || "?"}→${eP || "?"}). Predicted = β×surprise with a ±RMSE band; actual is the live Yahoo 5-min path.`} />}>
+          Intraday reaction — predicted vs actual by horizon
+        </SectionTitle>
+      </div>
+
+      {/* headline horizon cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 px-4 pt-2">
+        {featured.map((r) => {
+          const has = r.actual_pct != null;
+          const c = r.hit == null ? LIGHT(null) : LIGHT(r.hit);
+          return (
+            <div key={r.min} className={`rounded-lg border p-3 ${has ? c.br + " " + c.bg : "border-[#1c1d22] bg-[#0e0f12]"}`}>
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] uppercase tracking-wider text-zinc-400">+{r.min} min</span>
+                {has && <c.Icon size={14} className={c.fg} />}
+              </div>
+              <div className={`font-mono text-2xl mt-1 ${has ? toneFor(r.actual_pct, false) : "text-zinc-600"}`}>
+                {has ? pct(r.actual_pct) : "—"}
+              </div>
+              <div className="text-[9px] text-zinc-500 leading-tight mt-0.5">
+                actual {has ? "" : "(run to reveal)"}
+                {r.predicted_pct != null && <> · predicted {pct(r.predicted_pct)}</>}
+              </div>
+              <div className={`text-[9px] mt-1 ${r2Tone(r.r2)}`}>
+                inventories explain R² {fmt(r.r2, 2)} here
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* path chart */}
+      <div className="px-3 pt-3 pb-2">
+        {hasPath ? (
+          <>
+            <div className="flex items-center flex-wrap gap-x-4 gap-y-1 text-[9px] uppercase tracking-wider text-zinc-500 mb-1 px-1">
+              <span className="flex items-center gap-1.5"><span className="w-3 h-[2px] bg-amber-400" /> Actual path</span>
+              <span className="flex items-center gap-1.5"><span className="w-3 border-t border-dashed border-sky-500" /> Predicted (β×surprise)</span>
+              <span className="flex items-center gap-1.5"><span className="w-3 h-2 bg-sky-500/20" /> ±1σ band</span>
+            </div>
+            <div className="h-60">
+              <ResponsiveContainer>
+                <ComposedChart data={data} margin={{ top: 8, right: 12, bottom: 16, left: 4 }}>
+                  <CartesianGrid {...chartProps.grid} />
+                  <XAxis type="number" dataKey="min" {...chartProps.axis} domain={[0, "dataMax"]}
+                    ticks={[0, 5, 15, 30, 60, 120]} tickFormatter={(v) => `${v}m`}
+                    label={{ value: "minutes after 10:30 ET release", position: "bottom", offset: 2, fill: "#6b6d75", fontSize: 9 }} />
+                  <YAxis {...chartProps.axis} width={44} tickFormatter={(v) => `${v}%`} domain={["auto", "auto"]} />
+                  <Tooltip contentStyle={{ background: "#0a0b0e", border: "1px solid #2a2b31", fontSize: 11 }}
+                    labelFormatter={(v) => `+${v} min`}
+                    formatter={(val, name) => {
+                      if (name === "band" || val == null) return [null, null];
+                      return [`${Number(val).toFixed(2)}%`, name === "actual" ? "Actual" : "Predicted"];
+                    }} />
+                  <ReferenceLine y={0} stroke="#3a3b41" />
+                  <Area dataKey="band" stroke="none" fill="#38bdf8" fillOpacity={0.12} connectNulls isAnimationActive={false} />
+                  <Line dataKey="pred" stroke="#38bdf8" strokeWidth={1.2} strokeDasharray="4 3" dot={false} connectNulls isAnimationActive={false} />
+                  <Line dataKey="actual" stroke="#f59e0b" strokeWidth={1.8} dot={false} connectNulls isAnimationActive={false} />
+                </ComposedChart>
+              </ResponsiveContainer>
+            </div>
+          </>
+        ) : (
+          <div className="rounded-md border border-dashed border-[#2a2b31] p-6 text-center text-[11px] text-zinc-500">
+            The model is built (per-horizon R² shown above). Press <span className="text-amber-400 font-semibold">Run</span> to overlay
+            the live release-day reaction path on the prediction.
+          </div>
+        )}
+      </div>
+      <p className="text-[11px] text-zinc-400 leading-relaxed px-4 pb-4">{intraday.narrative}</p>
+    </Card>
+  );
+};
+
+// ===========================================================================
 export const PageReleaseLab = () => {
   const { data, live } = useLive("/api/release-lab", FALLBACK, useLive.REFRESH.hourly);
   const [override, setOverride] = useState(null);
@@ -388,6 +492,9 @@ export const PageReleaseLab = () => {
           <ImpactCurve curve={view.impact_curve || FALLBACK.impact_curve} result={r} />
         </div>
       </Card>
+
+      {/* ---- Intraday reaction (predicted vs actual by horizon) --------- */}
+      <IntradayReaction intraday={view.intraday} />
 
       {/* ---- Track record + affected products --------------------------- */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">

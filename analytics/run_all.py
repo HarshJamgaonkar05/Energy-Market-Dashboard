@@ -56,11 +56,12 @@ def main():
     print(f"#  mode: {mode}")
     print("#" * 74)
 
-    run("1/5  Analysis: tables + 7 figures + signal JSON", "run_inventory_analysis.py")
-    run("2/5  Live engine: surprise + verdict + market cross-check", "inventory_engine.py", engine_args)
-    run("3/5  Release Lab: frozen pre-release prediction (dashboard button runs the rest)", "release_lab.py", ["--predict"])
-    run("4/5  Explained notebook (built + executed)", "build_notebook.py")
-    run("5/5  Plain-English PDF", "build_pdf.py")
+    run("1/6  Analysis: tables + 7 figures + signal JSON", "run_inventory_analysis.py")
+    run("2/6  Live engine: surprise + verdict + market cross-check", "inventory_engine.py", engine_args)
+    run("3/6  Intraday event study: per-horizon reaction model (needs raw 1-min tape; auto-skips if absent)", "intraday_event_study.py")
+    run("4/6  Release Lab: frozen pre-release prediction (dashboard button runs the rest)", "release_lab.py", ["--predict"])
+    run("5/6  Explained notebook (built + executed)", "build_notebook.py")
+    run("6/6  Plain-English PDF", "build_pdf.py")
 
     # ---- checklist of saved outputs -------------------------------------------
     deliv = ROOT / "deliverables"
@@ -73,6 +74,7 @@ def main():
         ("Live signal (dashboard)", ROOT / "server" / "data" / "inventory_signal.json"),
         ("Cross-check track record", ROOT / "server" / "data" / "inventory_signal_log.json"),
         ("Release Lab prediction",  ROOT / "server" / "data" / "release_lab.json"),
+        ("Intraday impact model",   ROOT / "server" / "data" / "intraday_impact.json"),
     ]
     figs = sorted((deliv / "figures").glob("*.png"))
 

@@ -58,13 +58,17 @@ except Exception:
 import numpy as np
 import pandas as pd
 
-from common import ROOT
+from datetime import datetime as _dt, timedelta
+
+from common import ROOT, yahoo_intraday
 import inventory_lib as lib
 from inventory_engine import market_crosscheck   # reuse the live cross-check
 
 DATA_DIR = ROOT / "server" / "data"
 OUT = DATA_DIR / "release_lab.json"
+IMPACT = DATA_DIR / "intraday_impact.json"
 ET = ZoneInfo("America/New_York")
+HEADLINE_HORIZONS = [5, 30, 60]      # the three the dashboard features
 
 
 def now_iso() -> str:
@@ -187,6 +191,9 @@ def build(run_result: bool = True) -> dict:
                          "beta_overall_pct_per_mmbbl": round(beta_ov * 100, 4),
                          "sigma_mmbbl": round(sigma, 2), "points": curve},
         "result": None, "comparison": None, "scorecard": None,
+        # pre-release: ship the intraday MODEL (per-horizon beta/r2) only; the predicted
+        # path needs the surprise and the actual path needs the print, both added on run.
+        "intraday": _intraday_block(t_vol, None, False, t_rel.strftime("%Y-%m-%d")),
     }
 
     if not run_result:
@@ -224,6 +231,8 @@ def build(run_result: bool = True) -> dict:
                                      cross, pred_move, actual_move, r2)
     snap["scorecard"] = _scorecard(expected, actual, surprise, sz, lean, cross,
                                    pred_move, actual_move, r2)
+    # full intraday: predicted path at the REAL surprise + the live actual 5-min path.
+    snap["intraday"] = _intraday_block(t_vol, surprise, True, t_rel.strftime("%Y-%m-%d"))
     return snap
 
 
@@ -384,6 +393,115 @@ def _scorecard(expected, actual, surprise, sz, lean, cross, pred_move, actual_mo
         ],
         "net": net,
     }
+
+
+# ---------------------------------------------------------------------------
+def _load_impact():
+    try:
+        return json.loads(IMPACT.read_text())
+    except Exception:
+        return None
+
+
+def _actual_path(t_rel_str: str, max_min: int = 120):
+    """The live release-day WTI reaction path from Yahoo 5-min bars: cumulative % move
+    from the last pre-print bar, sampled every 5 min. Returns (path_list, {h: frac})."""
+    bars = yahoo_intraday("CL=F", "5m", "60d", cache_hours=1.0)
+    if not bars:
+        return None, {}
+    ser = [(_dt.fromtimestamp(ep, tz=timezone.utc).astimezone(ET), px) for ep, px in bars]
+    rel = _dt.strptime(t_rel_str, "%Y-%m-%d")
+    release = _dt(rel.year, rel.month, rel.day, 10, 30, tzinfo=ET)
+    pre = [(d, p) for d, p in ser if d < release]
+    post = [(d, p) for d, p in ser if release <= d <= release + timedelta(minutes=max_min + 10)]
+    if not pre or len(post) < 2:
+        return None, {}
+    ref_px = pre[-1][1]
+
+    def at(minutes):
+        target = release + timedelta(minutes=minutes)
+        best, gap = None, timedelta(minutes=6)
+        for d, p in post:
+            g = abs(d - target)
+            if g < gap:
+                best, gap = p, g
+        return None if best is None or ref_px in (0, None) else best / ref_px - 1.0
+
+    path = [{"min": 0, "pct": 0.0}]
+    for m in range(5, max_min + 1, 5):
+        v = at(m)
+        if v is not None:
+            path.append({"min": m, "pct": round(v * 100, 3)})
+    return path, {h: at(h) for h in (5, 15, 30, 60, 120)}
+
+
+def _intraday_block(t_vol, surprise, with_actual: bool, t_rel_str: str) -> dict | None:
+    """Per-horizon predicted vs actual reaction. The MODEL (beta/r2/rmse per horizon)
+    comes from the precomputed intraday_impact.json; the PREDICTED move = beta x the
+    real surprise; the ACTUAL path is the live Yahoo 5-min reaction on the print day."""
+    model = _load_impact()
+    if not model:
+        return None
+    horizons = model.get("horizons_min", [5, 15, 30, 60, 120])
+    by_h, by_reg = model.get("by_horizon", {}), model.get("by_regime", {})
+
+    def pick(h):
+        reg = (by_reg.get(str(t_vol)) or {}).get(str(h)) if t_vol else None
+        return reg if (reg and reg.get("n", 0) >= 12) else by_h.get(str(h))
+
+    path_actual, actual_by_h = (_actual_path(t_rel_str) if with_actual else (None, {}))
+
+    rows, pred_path = [], [{"min": 0, "pct": 0.0, "lo": 0.0, "hi": 0.0}]
+    for h in horizons:
+        s = pick(h)
+        if not s:
+            continue
+        beta = s["beta_pct_per_mmbbl"]
+        rmse = s.get("rmse_pct")
+        pred = round(beta * surprise, 3) if surprise is not None else None
+        lo = round(pred - rmse, 3) if (pred is not None and rmse is not None) else None
+        hi = round(pred + rmse, 3) if (pred is not None and rmse is not None) else None
+        af = actual_by_h.get(h)
+        actual = round(af * 100, 3) if af is not None else None
+        hit = None
+        if actual is not None and surprise not in (None, 0):
+            hit = (actual > 0) if surprise < 0 else (actual < 0)
+        rows.append({"min": h, "beta_pct_per_mmbbl": beta, "r2": s.get("r2"),
+                     "rmse_pct": rmse, "n": s.get("n"), "predicted_pct": pred,
+                     "lo": lo, "hi": hi, "actual_pct": actual, "hit": hit})
+        if pred is not None:
+            pred_path.append({"min": h, "pct": pred, "lo": lo, "hi": hi})
+
+    best_r2 = max((r["r2"] for r in rows if r.get("r2") is not None), default=0.0)
+    return {
+        "model_source": model.get("source"), "model_n": model.get("n_releases"),
+        "sample_period": model.get("sample_period"),
+        "vol_regime_used": t_vol or "overall",
+        "headline_min": HEADLINE_HORIZONS,
+        "horizons": rows,
+        "path": {"predicted": pred_path if surprise is not None else None, "actual": path_actual},
+        "max_r2": round(float(best_r2), 4),
+        "narrative": _intraday_narrative(rows, best_r2, with_actual),
+    }
+
+
+def _intraday_narrative(rows, best_r2, with_actual) -> str:
+    head = ("Minute-by-minute, the crude surprise explains almost none of WTI — the best "
+            f"any horizon reaches is R²≈{best_r2:.2f}. ") if best_r2 < 0.05 else \
+           (f"The surprise's intraday signal peaks at R²≈{best_r2:.2f}. ")
+    if not with_actual:
+        return head + "Press run to overlay the actual release-day path on the prediction."
+    feat = [r for r in rows if r["min"] in HEADLINE_HORIZONS and r.get("actual_pct") is not None]
+    if not feat:
+        return head + "Live 5-min reaction path unavailable for this release."
+    parts = ", ".join(f"+{r['min']}m {r['actual_pct']:+.2f}% (vs predicted {r['predicted_pct']:+.2f}%)"
+                      for r in feat)
+    misses = sum(1 for r in feat if r.get("hit") is False)
+    tail = (" — the realized path runs far from the near-zero prediction at every horizon, so "
+            "the move came from other flows, not the inventory number."
+            if misses >= len(feat) - 1 else
+            " — the early reaction tracked the surprise before other flows took over.")
+    return head + "Realized: " + parts + tail
 
 
 # ---------------------------------------------------------------------------

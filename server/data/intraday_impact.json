@@ -1,0 +1,215 @@
+{
+  "generatedAt": "2026-06-25T02:44:15Z",
+  "source": "Data/CL_data.csv (1-min WTI front-month, weighted mid)",
+  "horizons_min": [
+    5,
+    15,
+    30,
+    60,
+    120
+  ],
+  "n_releases": 278,
+  "sample_period": [
+    "2021-01-01",
+    "2026-05-15"
+  ],
+  "match_tolerance_min": 4,
+  "by_horizon": {
+    "5": {
+      "n": 278,
+      "beta_pct_per_mmbbl": -0.0004,
+      "r2": 0.0002,
+      "rmse_pct": 0.147,
+      "per_1sigma_pct": -0.002,
+      "hit_rate": 0.503,
+      "avg_move_pct": -0.005
+    },
+    "15": {
+      "n": 278,
+      "beta_pct_per_mmbbl": 0.0019,
+      "r2": 0.0012,
+      "rmse_pct": 0.28,
+      "per_1sigma_pct": 0.01,
+      "hit_rate": 0.447,
+      "avg_move_pct": -0.019
+    },
+    "30": {
+      "n": 278,
+      "beta_pct_per_mmbbl": 0.001,
+      "r2": 0.0002,
+      "rmse_pct": 0.402,
+      "per_1sigma_pct": 0.005,
+      "hit_rate": 0.465,
+      "avg_move_pct": -0.035
+    },
+    "60": {
+      "n": 278,
+      "beta_pct_per_mmbbl": 0.0066,
+      "r2": 0.0061,
+      "rmse_pct": 0.44,
+      "per_1sigma_pct": 0.034,
+      "hit_rate": 0.415,
+      "avg_move_pct": -0.02
+    },
+    "120": {
+      "n": 278,
+      "beta_pct_per_mmbbl": 0.0043,
+      "r2": 0.0011,
+      "rmse_pct": 0.683,
+      "per_1sigma_pct": 0.023,
+      "hit_rate": 0.478,
+      "avg_move_pct": 0.023
+    }
+  },
+  "by_regime": {
+    "High": {
+      "5": {
+        "n": 29,
+        "beta_pct_per_mmbbl": 0.0048,
+        "r2": 0.0062,
+        "rmse_pct": 0.264,
+        "per_1sigma_pct": 0.02,
+        "hit_rate": 0.5,
+        "avg_move_pct": -0.077
+      },
+      "15": {
+        "n": 29,
+        "beta_pct_per_mmbbl": 0.0048,
+        "r2": 0.0012,
+        "rmse_pct": 0.591,
+        "per_1sigma_pct": 0.02,
+        "hit_rate": 0.5,
+        "avg_move_pct": -0.205
+      },
+      "30": {
+        "n": 29,
+        "beta_pct_per_mmbbl": -0.0086,
+        "r2": 0.0018,
+        "rmse_pct": 0.88,
+        "per_1sigma_pct": -0.036,
+        "hit_rate": 0.562,
+        "avg_move_pct": -0.255
+      },
+      "60": {
+        "n": 29,
+        "beta_pct_per_mmbbl": 0.0079,
+        "r2": 0.0027,
+        "rmse_pct": 0.663,
+        "per_1sigma_pct": 0.033,
+        "hit_rate": 0.438,
+        "avg_move_pct": -0.238
+      },
+      "120": {
+        "n": 29,
+        "beta_pct_per_mmbbl": 0.0138,
+        "r2": 0.0038,
+        "rmse_pct": 0.972,
+        "per_1sigma_pct": 0.058,
+        "hit_rate": 0.562,
+        "avg_move_pct": 0.112
+      }
+    },
+    "Low": {
+      "5": {
+        "n": 141,
+        "beta_pct_per_mmbbl": 0.0036,
+        "r2": 0.0279,
+        "rmse_pct": 0.106,
+        "per_1sigma_pct": 0.018,
+        "hit_rate": 0.462,
+        "avg_move_pct": -0.003
+      },
+      "15": {
+        "n": 141,
+        "beta_pct_per_mmbbl": 0.0019,
+        "r2": 0.0034,
+        "rmse_pct": 0.165,
+        "per_1sigma_pct": 0.01,
+        "hit_rate": 0.5,
+        "avg_move_pct": 0.007
+      },
+      "30": {
+        "n": 141,
+        "beta_pct_per_mmbbl": 0.0039,
+        "r2": 0.0051,
+        "rmse_pct": 0.268,
+        "per_1sigma_pct": 0.019,
+        "hit_rate": 0.449,
+        "avg_move_pct": -0.003
+      },
+      "60": {
+        "n": 141,
+        "beta_pct_per_mmbbl": 0.0087,
+        "r2": 0.0175,
+        "rmse_pct": 0.322,
+        "per_1sigma_pct": 0.043,
+        "hit_rate": 0.423,
+        "avg_move_pct": 0.023
+      },
+      "120": {
+        "n": 141,
+        "beta_pct_per_mmbbl": 0.0075,
+        "r2": 0.0055,
+        "rmse_pct": 0.5,
+        "per_1sigma_pct": 0.037,
+        "hit_rate": 0.462,
+        "avg_move_pct": 0.031
+      }
+    },
+    "Normal": {
+      "5": {
+        "n": 104,
+        "beta_pct_per_mmbbl": -0.0041,
+        "r2": 0.026,
+        "rmse_pct": 0.146,
+        "per_1sigma_pct": -0.024,
+        "hit_rate": 0.532,
+        "avg_move_pct": 0.01
+      },
+      "15": {
+        "n": 104,
+        "beta_pct_per_mmbbl": 0.0041,
+        "r2": 0.0082,
+        "rmse_pct": 0.263,
+        "per_1sigma_pct": 0.024,
+        "hit_rate": 0.371,
+        "avg_move_pct": -0.01
+      },
+      "30": {
+        "n": 104,
+        "beta_pct_per_mmbbl": 0.0013,
+        "r2": 0.0005,
+        "rmse_pct": 0.339,
+        "per_1sigma_pct": 0.007,
+        "hit_rate": 0.468,
+        "avg_move_pct": -0.02
+      },
+      "60": {
+        "n": 104,
+        "beta_pct_per_mmbbl": 0.0056,
+        "r2": 0.0042,
+        "rmse_pct": 0.497,
+        "per_1sigma_pct": 0.032,
+        "hit_rate": 0.419,
+        "avg_move_pct": -0.016
+      },
+      "120": {
+        "n": 104,
+        "beta_pct_per_mmbbl": -0.0045,
+        "r2": 0.001,
+        "rmse_pct": 0.807,
+        "per_1sigma_pct": -0.026,
+        "hit_rate": 0.5,
+        "avg_move_pct": 0.001
+      }
+    }
+  },
+  "avg_path_pct": {
+    "5": -0.005,
+    "15": -0.019,
+    "30": -0.035,
+    "60": -0.02,
+    "120": 0.023
+  },
+  "note": "Per-horizon OLS of WTI cumulative return on the crude surprise. beta = %/MMbbl, r2 = variance explained, rmse = unexplained move (prediction band), hit_rate = directional accuracy among material surprises (|z|>=0.5)."
+}
