@@ -372,6 +372,25 @@ export const PageReleaseLab = () => {
                 <Tile label="Real surprise" value={fmtSigned(r.real_surprise, 1)} tone={toneFor(r.real_surprise)} sub={`${fmtSigned(r.real_surprise_z, 1)}σ · ${r.real_surprise_dir}`} />
                 <Tile label="WTI on print" value={pct(r.actual_move_pct, 1)} tone={toneFor(r.actual_move_pct, false)} sub={`pred ${pct(r.pred_move_pct)}`} />
               </div>
+              {r.attribution && (
+                <div className="px-4 pt-3 pb-1">
+                  <div className="text-[9px] uppercase tracking-wider text-zinc-600 mb-1.5">Move attribution · what drove it</div>
+                  <div className="grid grid-cols-3 gap-2 text-center">
+                    <div className="rounded-md border border-[#1c1d22] bg-[#0e0f12] p-2">
+                      <div className="text-[9px] text-zinc-500">Inventory</div>
+                      <div className="font-mono text-sm text-sky-400">{pct(r.attribution.inventory_pct)}</div>
+                    </div>
+                    <div className="rounded-md border border-[#1c1d22] bg-[#0e0f12] p-2">
+                      <div className="text-[9px] text-zinc-500">Macro</div>
+                      <div className="font-mono text-sm text-zinc-300">{r.attribution.macro_pct == null ? "—" : pct(r.attribution.macro_pct)}</div>
+                    </div>
+                    <div className="rounded-md border border-[#1c1d22] bg-[#0e0f12] p-2">
+                      <div className="text-[9px] text-zinc-500">Other (residual)</div>
+                      <div className={`font-mono text-sm ${toneFor(r.attribution.residual_pct, false)}`}>{pct(r.attribution.residual_pct)}</div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </>
           )}
         </Card>

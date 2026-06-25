@@ -60,10 +60,42 @@ lights = sc.get("lights", [])
 L = {l["key"]: l for l in lights}
 rec = tr.get("recent") or {}
 alln = tr.get("all") or {}
+att = r.get("attribution") or {}
 
 
 def grade_word(ok):
     return "PASS (green)" if ok is True else "FAIL (red)" if ok is False else "MIXED (amber)"
+
+
+# Section 5b — move attribution (inventory vs macro vs everything else). Built only
+# when a run has produced the decomposition; empty string otherwise.
+if att:
+    _macro_txt = pct(att.get("macro_pct")) if att.get("macro_pct") is not None else "n/a"
+    attribution_md = f"""
+### The receipts — splitting the move into inventory vs macro vs everything else
+
+A fair question: if the inventory surprise barely moved the price, what *did*? The Lab now
+splits the release-day move into measurable parts (a technique called **attribution**): the
+piece explained by the crude **surprise**, the piece explained by the broad **market** that
+day (the S&P 500 and the US dollar — a "risk-on/risk-off" reading), and the **residual** —
+everything left over (oil-specific news, OPEC, geopolitics, positioning).
+
+| Part of the {pct(att.get('actual_pct'))} day's move | Size | Plain meaning |
+|---|---|---|
+| Inventory surprise | {pct(att.get('inventory_pct'))} | what the crude number itself was worth |
+| Broad market (macro) | {_macro_txt} | risk-on/off + the dollar |
+| Other / residual | {pct(att.get('residual_pct'))} | **the dominant driver** — oil-specific other forces |
+
+So of the day's {pct(att.get('actual_pct'))} move, the inventory number was worth only
+{pct(att.get('inventory_pct'))} and the broad market {_macro_txt} — the rest,
+**{pct(att.get('residual_pct'))}**, was other forces. That is the same message as the R-squared,
+now in plain percentage terms you can read straight off. (Looking at the *whole* report rather
+than crude alone — adding petrol, diesel and Cushing — nudges the explained share from
+R2 {f(att.get('crude_only_r2'), 3)} to {f(att.get('report_r2'), 3)}; still small, but it confirms
+the day really was driven from outside the report.)
+"""
+else:
+    attribution_md = ""
 
 
 # ===========================================================================
@@ -168,9 +200,16 @@ peek at the answer it is trying to predict. (In data science this is called bein
 **leak-free**: no information "leaks" backwards from the future into the prediction.)
 
 **The expected number.** Real Wall-Street forecasts are paywalled, so the Lab builds its own
-stand-in for "what everyone expects", from three ingredients available the day before:
-the *normal* change for this calendar week (the seasonal pattern), last week's change
-(weeks tend to cluster), and the recent supply/demand balance.
+stand-in for "what everyone expects". It learns from roughly a dozen clues that are all known
+*the day before* the release — the *normal* change for this calendar week (the seasonal
+pattern), the last couple of weeks' changes (weeks tend to cluster), the recent supply/demand
+balance, and the lagged flow drivers: how hard refineries were running, production, imports vs
+exports, and last week's draws at **Cushing** and in petrol/diesel stocks (product draws often
+lead crude). These are blended with a **ridge regression** — a standard statistical recipe that
+weighs many clues at once while deliberately staying cautious so it doesn't over-fit the few
+hundred weeks of history. Crucially it is fit **walk-forward**: to predict any given week it may
+only use weeks *before* it. On the long backtest this beats the naive "just use the seasonal
+average" guess (see the Track Record below).
 
 > For **{t['label']}**, the model expected a **{f(abs(exp))} million-barrel {('draw' if exp < 0 else 'build')}**
 > ({f(exp, sign=True)} MMbbl).
@@ -259,7 +298,7 @@ trust the signal* is itself the valuable output.
 
 This is the single most important takeaway of the whole phase: **a good framework doesn't just
 make a call; it tells you how much to trust the call — and is right about its own limits.**
-
+{attribution_md}
 <hr/>
 
 ## 6. The minute-by-minute view ("Intraday reaction")

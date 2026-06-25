@@ -127,6 +127,26 @@ def load_panel() -> pd.DataFrame:
     return pd.read_parquet(p)
 
 
+# Broad-market controls so we can separate the inventory reaction from the day's
+# macro move (risk-on/off via the S&P, the dollar via DXY).
+MACRO = {"spx": "^GSPC", "dxy": "DX-Y.NYB"}
+
+
+def fetch_macro(cache_hours: float = 6.0) -> pd.DataFrame:
+    """Daily S&P 500 and US dollar index closes — the macro controls for the impact
+    decomposition (release-day WTI move = inventory + macro + residual)."""
+    out = {}
+    for name, sym in MACRO.items():
+        d = yahoo_daily(sym, "5y", cache_hours=cache_hours)
+        if d:
+            s = pd.Series(d)
+            s.index = pd.to_datetime(s.index)
+            out[name] = s.sort_index()
+    mx = pd.DataFrame(out).sort_index()
+    mx.index.name = "date"
+    return mx
+
+
 # ===========================================================================
 # 2. THE WEEKLY FRAME  (release calendar, WoW changes, balance, seasonality)
 # ===========================================================================
@@ -226,47 +246,80 @@ def build_frame(weekly: pd.DataFrame) -> pd.DataFrame:
 # ===========================================================================
 # 3. EXPECTED BUILD (consensus proxy)  +  SURPRISE
 # ===========================================================================
-def add_expected_and_surprise(f: pd.DataFrame, min_train: int = 78) -> pd.DataFrame:
+def add_expected_and_surprise(f: pd.DataFrame, min_train: int = 104, lam: float = 10.0) -> pd.DataFrame:
     """Build a LEAK-FREE expected weekly crude change and the surprise around it.
 
     The analyst consensus is paywalled, so we reconstruct an ex-ante expectation from
-    information available the DAY BEFORE the release:
-        expected_wow_t = OLS( seasonal_wow_t , lag1_wow , lag1_balance )
-    fit walk-forward on an EXPANDING window (only weeks strictly before t), so the
-    model never peeks at the value it is predicting. Features:
-      * seasonal_wow_t  — the normal change for this week-of-year (prior years only).
-      * lag1_wow        — last week's actual change (known; persistence/momentum).
-      * lag1_balance    — last week's implied supply/demand balance (known; flows are
-                          sticky week to week, so last week's balance forecasts this
-                          week's draw/build).
+    everything KNOWN THE DAY BEFORE the release and fit it walk-forward (expanding
+    window, only weeks strictly before t — never peeks at what it predicts):
+
+        expected_wow_t = Ridge( leak-free feature set )
+
+    Features — all observable before week t's report (this week's flows publish WITH the
+    stock number, so only LAGGED flows are usable):
+      * crude_seasonal_wow  — the normal change for this week-of-year (prior years).
+      * lag1/lag2 crude_wow — recent draw/build momentum.
+      * lag1 implied_balance — last week's supply/demand balance (flows are sticky).
+      * lag1 Δrefinery-util, Δruns, Δproduction, net-imports — the flow drivers, lagged.
+      * lag1 Cushing / gasoline / distillate WoW — hub + product draws lead crude.
+      * lag1 crude_z          — mean reversion from seasonally extreme stock levels.
+      * week-of-year sin/cos  — smooth seasonality the per-week mean can't capture.
+    Ridge (standardised features, train-mean imputation, an L2 penalty `lam`) keeps the
+    ~13-feature fit stable on a few hundred weekly rows. Early weeks (< min_train) fall
+    back to the SEASONAL-NAIVE expectation, which we also keep for robustness.
+
     surprise = actual_wow - expected_wow.  surprise_z standardises it by the expanding
-    standard deviation of the model's own past errors, so "1 sigma" means a typically-
-    sized miss. We also keep a simpler SEASONAL-NAIVE expectation (just seasonal_wow)
-    for intuition/robustness."""
+    std of past surprises, so "1 sigma" means a typically-sized miss."""
     f = f.copy()
     f["lag1_wow"] = f["crude_wow"].shift(1)
+    f["lag2_wow"] = f["crude_wow"].shift(2)
     f["lag1_balance"] = f["implied_balance"].shift(1) if "implied_balance" in f else np.nan
+    f["lag1_refutil_chg"] = f["refutil"].diff().shift(1) if "refutil" in f else np.nan
+    f["lag1_runs_chg"] = f["runs"].diff().shift(1) if "runs" in f else np.nan
+    f["lag1_prod_chg"] = f["production"].diff().shift(1) if "production" in f else np.nan
+    f["lag1_net_imports"] = ((f["imports"] - f["exports"]).shift(1)
+                             if ("imports" in f and "exports" in f) else np.nan)
+    f["lag1_cushing_wow"] = f["cushing_wow"].shift(1) if "cushing_wow" in f else np.nan
+    f["lag1_gasoline_wow"] = f["gasoline_wow"].shift(1) if "gasoline_wow" in f else np.nan
+    f["lag1_distillate_wow"] = f["distillate_wow"].shift(1) if "distillate_wow" in f else np.nan
+    f["lag1_crude_z"] = f["crude_z"].shift(1) if "crude_z" in f else np.nan
+    woy = np.array([week_of_year(p) for p in f["period"]], dtype=float)
+    f["woy_sin"] = np.sin(2 * np.pi * woy / 52.0)
+    f["woy_cos"] = np.cos(2 * np.pi * woy / 52.0)
 
-    # Seasonal-naive expectation & its surprise (baseline).
+    # Seasonal-naive expectation & its surprise (baseline / fallback).
     f["expected_seasonal"] = f["crude_seasonal_wow"]
     f["surprise_seasonal"] = f["crude_wow"] - f["expected_seasonal"]
 
-    feats = ["crude_seasonal_wow", "lag1_wow", "lag1_balance"]
+    feats = ["crude_seasonal_wow", "lag1_wow", "lag2_wow", "lag1_balance",
+             "lag1_refutil_chg", "lag1_runs_chg", "lag1_prod_chg", "lag1_net_imports",
+             "lag1_cushing_wow", "lag1_gasoline_wow", "lag1_distillate_wow",
+             "lag1_crude_z", "woy_sin", "woy_cos"]
     have = [c for c in feats if c in f and f[c].notna().any()]
-    y = f["crude_wow"]
 
-    exp_model = pd.Series(index=f.index, dtype=float)
     rows = f.reset_index(drop=True)
+    F = rows[have].astype(float)
+    y = rows["crude_wow"].astype(float)
+    exp_model = pd.Series(index=f.index, dtype=float)
+
     for i in range(len(rows)):
-        train = rows.iloc[:i]                              # strictly earlier weeks
-        train = train.dropna(subset=have + ["crude_wow"])
-        cur = rows.iloc[i]
-        if len(train) < min_train or any(pd.isna(cur[c]) for c in have):
+        ytr = y.iloc[:i]
+        mask = ytr.notna()
+        if mask.sum() < min_train:
             continue
-        X = np.column_stack([np.ones(len(train))] + [train[c].values for c in have])
-        b, *_ = np.linalg.lstsq(X, train["crude_wow"].values, rcond=None)
-        xrow = np.array([1.0] + [cur[c] for c in have])
-        exp_model.iloc[i] = float(xrow @ b)
+        Xtr = F.iloc[:i][mask.values]
+        ytr = ytr[mask]
+        mu = Xtr.mean()                                   # leak-free: train-only stats
+        sd = Xtr.std(ddof=0).replace(0, 1.0)
+        Xs = ((Xtr.fillna(mu) - mu) / sd).values
+        ybar = float(ytr.mean())
+        A = Xs.T @ Xs + lam * np.eye(Xs.shape[1])         # ridge (intercept unpenalised)
+        try:
+            w = np.linalg.solve(A, Xs.T @ (ytr.values - ybar))
+        except np.linalg.LinAlgError:
+            continue
+        xs = ((F.iloc[i].fillna(mu) - mu) / sd).values
+        exp_model.iloc[i] = ybar + float(xs @ w)
 
     f["expected_model"] = exp_model.values
     # Primary expectation: the model where available, else the seasonal naive.
@@ -278,6 +331,20 @@ def add_expected_and_surprise(f: pd.DataFrame, min_train: int = 78) -> pd.DataFr
     exp_std = s.shift(1).expanding(min_periods=26).std()
     f["surprise_z"] = s / exp_std
     f["surprise_std"] = exp_std
+    return f
+
+
+def add_product_surprises(f: pd.DataFrame) -> pd.DataFrame:
+    """Seasonal-naive surprises for the OTHER series in the report (gasoline, distillate,
+    Cushing): actual WoW minus the prior-years seasonal-normal WoW. Cheap and leak-free,
+    so the impact decomposition can ask whether the broader report — not just crude —
+    moves WTI on the day."""
+    f = f.copy()
+    for c in ("gasoline", "distillate", "cushing"):
+        col = f"{c}_wow"
+        if col in f:
+            f[f"{c}_seasonal_wow"] = seasonal_wow_norm(f[col])
+            f[f"{c}_surprise"] = f[col] - f[f"{c}_seasonal_wow"]
     return f
 
 
@@ -373,9 +440,11 @@ def _reaction_diff(series: pd.Series, when: pd.Timestamp) -> float:
     return float(after.iloc[0] - before.iloc[-1])
 
 
-def add_reactions(f: pd.DataFrame, panel: pd.DataFrame, prices: pd.DataFrame) -> pd.DataFrame:
-    """For each release, the WTI & Brent outright % reactions (fresh Yahoo fronts) and
-    the level-change reactions of the key spreads (from the panel)."""
+def add_reactions(f: pd.DataFrame, panel: pd.DataFrame, prices: pd.DataFrame,
+                  macro: pd.DataFrame | None = None) -> pd.DataFrame:
+    """For each release, the WTI & Brent outright % reactions (fresh Yahoo fronts), the
+    level-change reactions of the key spreads (from the panel), and the macro controls'
+    release-day returns (S&P, dollar) so the move can be split inventory vs macro."""
     f = f.copy()
     for name in ("wti", "brent"):
         if name in prices:
@@ -387,7 +456,75 @@ def add_reactions(f: pd.DataFrame, panel: pd.DataFrame, prices: pd.DataFrame) ->
                 f[f"rxn_panel_{col}"] = [_reaction(panel[col], w) for w in f["release_date"]]
             else:
                 f[f"rxn_{col}"] = [_reaction_diff(panel[col], w) for w in f["release_date"]]
+    # Macro controls' release-day returns (S&P risk-on/off, dollar).
+    if macro is not None and not macro.empty:
+        for name in ("spx", "dxy"):
+            if name in macro:
+                f[f"rxn_{name}"] = [_reaction(macro[name], w) for w in f["release_date"]]
     return f
+
+
+def mreg(y: pd.Series, X: pd.DataFrame) -> dict | None:
+    """Plain multivariate OLS (with intercept) -> coefficients + R². Used to attribute
+    the release-day move to several drivers at once."""
+    m = pd.concat([y, X], axis=1).dropna()
+    if len(m) < 12:
+        return None
+    yv = m.iloc[:, 0].values
+    Xv = m.iloc[:, 1:].values
+    A = np.column_stack([np.ones(len(m)), Xv])
+    beta, *_ = np.linalg.lstsq(A, yv, rcond=None)
+    yhat = A @ beta
+    ss_res = float(np.sum((yv - yhat) ** 2))
+    ss_tot = float(np.sum((yv - yv.mean()) ** 2))
+    r2 = 1 - ss_res / ss_tot if ss_tot > 0 else 0.0
+    return {"n": int(len(m)), "intercept": float(beta[0]), "r2": float(r2),
+            "coef": {c: float(b) for c, b in zip(X.columns, beta[1:])}}
+
+
+def impact_decomposition(f: pd.DataFrame) -> dict:
+    """Three nested models of the release-day WTI move, to see what really drives it:
+      * crude_only      — move ~ crude surprise (the original headline).
+      * report          — + gasoline / distillate / Cushing surprises (whole report).
+      * macro_controlled— crude surprise + S&P + dollar (separate inventory vs macro).
+    The rising R² across the three tells the story."""
+    out = {"crude_only": mreg(f["rxn_wti"], f[["surprise"]]) if "surprise" in f else None}
+    rcols = [c for c in ("surprise", "gasoline_surprise", "distillate_surprise", "cushing_surprise") if c in f]
+    out["report"] = mreg(f["rxn_wti"], f[rcols]) if len(rcols) > 1 else None
+    mcols = [c for c in ("surprise", "rxn_spx", "rxn_dxy") if c in f]
+    out["macro_controlled"] = mreg(f["rxn_wti"], f[mcols]) if ("rxn_spx" in f or "rxn_dxy" in f) else None
+    return out
+
+
+def decompose_move(decomp: dict, row) -> dict | None:
+    """Split ONE release-day WTI move into inventory + macro + residual using the fitted
+    macro-controlled model. The residual is everything neither the surprise nor the
+    broad market explains — the honest size of 'other forces'."""
+    mc = decomp.get("macro_controlled")
+    if not mc:
+        return None
+    coef, inter = mc["coef"], mc["intercept"]
+    surp = row.get("surprise")
+    actual = row.get("rxn_wti")
+    if actual != actual or surp != surp:
+        return None
+    inv = coef.get("surprise", 0.0) * surp
+    macro, have_macro = 0.0, False
+    for k in ("rxn_spx", "rxn_dxy"):
+        v = row.get(k)
+        if k in coef and v == v:
+            macro += coef[k] * v
+            have_macro = True
+    resid = actual - inter - inv - (macro if have_macro else 0.0)
+    return {
+        "actual_pct": round(actual * 100, 3),
+        "inventory_pct": round(inv * 100, 3),
+        "macro_pct": round(macro * 100, 3) if have_macro else None,
+        "residual_pct": round(resid * 100, 3),
+        "crude_only_r2": round((decomp.get("crude_only") or {}).get("r2", 0.0), 4),
+        "report_r2": round((decomp.get("report") or {}).get("r2", 0.0), 4) if decomp.get("report") else None,
+        "macro_r2": round(mc["r2"], 4), "n": mc["n"],
+    }
 
 
 @dataclass
@@ -501,7 +638,8 @@ def spread_sensitivity(f: pd.DataFrame, x_col: str = "surprise") -> dict:
     most likely to be affected' deliverable). Ranks by |correlation| with the surprise."""
     sigma = float(f[x_col].std())
     out = {}
-    for col in [c for c in f.columns if c.startswith("rxn_")]:
+    macro_cols = ("rxn_spx", "rxn_dxy")          # macro controls, not tradable products
+    for col in [c for c in f.columns if c.startswith("rxn_") and c not in macro_cols]:
         fit = regress(f[x_col], f[col], sigma)
         if fit:
             out[col.replace("rxn_", "")] = {
@@ -515,21 +653,30 @@ def spread_sensitivity(f: pd.DataFrame, x_col: str = "surprise") -> dict:
 # ===========================================================================
 # 6. VERDICT  (bullish / bearish / neutral)
 # ===========================================================================
-def analyze(weekly: pd.DataFrame, prices: pd.DataFrame, panel: pd.DataFrame) -> dict:
-    """One call that runs the whole pipeline: frame -> expected/surprise -> market
-    state -> reactions -> event study + spread sensitivity + hit-rate. Shared by the
-    batch runner, the notebook and the live engine so they can never diverge."""
+def analyze(weekly: pd.DataFrame, prices: pd.DataFrame, panel: pd.DataFrame,
+            macro: pd.DataFrame | None = None) -> dict:
+    """One call that runs the whole pipeline: frame -> expected/surprise -> product
+    surprises -> market state -> reactions (incl. macro controls) -> event study +
+    spread sensitivity + hit-rate + impact decomposition. Shared by the batch runner,
+    the notebook and the live engine so they can never diverge."""
     f = build_frame(weekly)
     f = add_expected_and_surprise(f)
+    f = add_product_surprises(f)
     f = add_market_state(f, panel, prices)
-    f = add_reactions(f, panel, prices)
+    if macro is None:
+        try:
+            macro = fetch_macro()
+        except Exception:
+            macro = None
+    f = add_reactions(f, panel, prices, macro)
     es_df = f.dropna(subset=["surprise", "rxn_wti"]).copy()
     es = event_study(es_df, y_col="rxn_wti", x_col="surprise")
     es_z = event_study(es_df, y_col="rxn_wti", x_col="surprise_z")
     sens = spread_sensitivity(es_df, x_col="surprise")
     hits = hit_rate_table(es_df, x_col="surprise", y_col="rxn_wti")
+    decomp = impact_decomposition(es_df)
     return {"frame": f, "es_df": es_df, "event_study": es, "event_study_z": es_z,
-            "spread_sensitivity": sens, "hit_rate": hits}
+            "spread_sensitivity": sens, "hit_rate": hits, "impact_decomp": decomp}
 
 
 def reliability_for(es: dict, vol_regime: str | None) -> tuple[float, int, float]:

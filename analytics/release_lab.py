@@ -226,6 +226,8 @@ def build(run_result: bool = True) -> dict:
         "realized_point": {"surprise": _r(surprise, 2),
                            "pred_regime_pct": pred_move, "pred_overall_pct": pred_move_ov,
                            "actual_pct": _r(actual_move, 2)},
+        # split the realized move into inventory vs macro vs residual (#3)
+        "attribution": lib.decompose_move(A.get("impact_decomp", {}), target),
     }
     snap["comparison"] = _comparison(expected, actual, surprise, sz, lean, verdict,
                                      cross, pred_move, actual_move, r2)
