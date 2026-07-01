@@ -3,25 +3,24 @@
 ------------------
 Build the merged weekly dataset for the CFTC-positioning vs WTI-price study.
 
-DATA-SOURCE NOTE (important)
-  The file  ../Data/CFTC 2016-2026 CL.xlsx  (instrument CFTC-D_F_CL_OR_NET_1W)
-  is, despite the assignment naming it "Managed Money", actually the CFTC
-  **Other Reportables** net series. This was verified by matching its values
-  one-for-one against the official CFTC Disaggregated report:
-      2026-06-16  Excel=28,255  = Other-Reportables net (Managed-Money net was 96,228)
-  "OR" in the instrument code = Other Reportables (MM would be coded "MM").
+DATA-SOURCE NOTE
+  The file Data/CFTC 2016-2026 CL.xlsx (instrument CFTC-D_F_CL_OR_NET_1W) is,
+  despite the assignment naming it "Managed Money", actually the CFTC
+  **Other Reportables** net series (verified value-for-value against the official
+  CFTC report, e.g. 2026-06-16 Excel=28,255 = Other-Reportables; Managed-Money
+  net was 96,228). "OR" in the code = Other Reportables (MM would be "MM").
 
   The assignment asks about **Managed Money**, so we pull BOTH categories
   directly from the official CFTC Socrata API (free, no key) for WTI
-  (contract code 067651). Managed Money is the PRIMARY series; Other
-  Reportables (= what the supplied file contained) is kept for comparison.
+  (contract code 067651). Managed Money is PRIMARY; Other Reportables (= the
+  supplied file) is kept for comparison only.
 
 Price
   Daily Cushing WTI spot ($/bbl) from EIA series RWTC, 2015-12 -> present.
 
 Methodology
   * COT positions are AS-OF Tuesday close but PUBLISHED the following Friday
-    ~15:30 ET. To avoid look-ahead, forward returns are entered at the Friday
+    (~15:30 ET). To avoid look-ahead, forward returns are entered at the Friday
     release (asof + 3 days), not the Tuesday as-of date.
   * Prices are taken "as-of" (last daily close on/before a calendar date).
   * Forward N-week return = P(entry + 7N days) / P(entry) - 1, NaN past history end.
@@ -119,8 +118,7 @@ def add_signal_cols(df, col, prefix):
 def main():
     price = fetch_wti_spot()
     cf = fetch_cftc()
-    # keep 2016-01-01 onward (assignment: "2016 onwards")
-    cf = cf[cf["asof"] >= "2016-01-01"].reset_index(drop=True)
+    cf = cf[cf["asof"] >= "2016-01-01"].reset_index(drop=True)  # "2016 onwards"
 
     # release = Friday following the Tuesday as-of (CFTC publishes T+3)
     cf["release"] = cf["asof"] + pd.Timedelta(days=3)
