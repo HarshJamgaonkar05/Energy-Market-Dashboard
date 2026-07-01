@@ -18,13 +18,13 @@ const FALLBACK = {
 };
 
 export const SentimentPanel = () => {
-  const { data, live } = useLive("/api/sentiment", FALLBACK, useLive.REFRESH.slow);
+  const { data, live, stale } = useLive("/api/sentiment", FALLBACK, useLive.REFRESH.slow);
   const groups = data.groups || FALLBACK.groups;
   const idx = data.newsIndex || FALLBACK.newsIndex;
   const finbert = idx.model === "FinBERT";
   return (
     <Card>
-      <SectionTitle sub="Momentum + FinBERT news" action={<SourceTag live={live} source="derived" note="Per-group gauges are live price momentum (Yahoo). The news tone index is FinBERT scoring recent headlines positive/negative/neutral." />}>Sentiment</SectionTitle>
+      <SectionTitle sub="Momentum + FinBERT news" action={<SourceTag live={live} stale={stale} source="derived" note="Per-group gauges are live price momentum (Yahoo). The news tone index is FinBERT scoring recent headlines positive/negative/neutral." />}>Sentiment</SectionTitle>
       {/* FinBERT news tone — model read of the wire, separate from price momentum */}
       <div className="flex items-center justify-between mb-3 pb-3 border-b border-[#1c1d22]">
         <span className="text-[10px] text-zinc-400 uppercase tracking-wider">

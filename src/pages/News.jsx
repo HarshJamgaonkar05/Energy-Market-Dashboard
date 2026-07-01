@@ -21,7 +21,7 @@ const SENT_FALLBACK = {
 export const PageNews = () => {
   const [filter, setFilter] = useState("ALL");
   // Live financial newswire (Financial Juice) + FinBERT-scored sentiment.
-  const { data: news, live } = useLive("/api/news", NEWS, useLive.REFRESH.slow);
+  const { data: news, live, stale } = useLive("/api/news", NEWS, useLive.REFRESH.slow);
   const { data: sent } = useLive("/api/sentiment", SENT_FALLBACK, useLive.REFRESH.slow);
   const dist = sent.distribution || SENT_FALLBACK.distribution;
   const idx = sent.newsIndex || SENT_FALLBACK.newsIndex;
@@ -39,7 +39,7 @@ export const PageNews = () => {
             <div className="p-4 pb-3 border-b border-[#1c1d22]">
               <SectionTitle
                 sub={`${live ? "Live · Financial Juice" : "Cached"} · ${filtered.length} ${filtered.length === 1 ? "story" : "stories"}`}
-                action={<SourceTag live={live} source="financialjuice" note="Real-time financial newswire (Financial Juice RSS)." />}
+                action={<SourceTag live={live} stale={stale} source="financialjuice" note="Real-time financial newswire (Financial Juice RSS)." />}
               >
                 Newswire
               </SectionTitle>

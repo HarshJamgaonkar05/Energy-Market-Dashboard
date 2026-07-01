@@ -17,7 +17,7 @@ export const NAV = [
   { id: "cftcstudy", label: "CFTC Study", icon: Sigma },
 ];
 
-export const Sidebar = ({ active, setActive, collapsed, setCollapsed }) => (
+export const Sidebar = ({ active, setActive, collapsed, setCollapsed, online = false, eia = false }) => (
   <motion.aside
     animate={{ width: collapsed ? 56 : 208 }}
     transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
@@ -68,25 +68,31 @@ export const Sidebar = ({ active, setActive, collapsed, setCollapsed }) => (
       })}
     </nav>
 
-    {/* Status footer */}
+    {/* Status footer — reflects the real backend health (same /api/health the
+        top-bar banner + footer use), not a decorative "Live / 12ms". */}
     <div className="border-t border-[#1c1d22] p-2">
       {!collapsed ? (
         <div className="space-y-1.5">
           <div className="flex items-center justify-between text-[10px]">
             <span className="text-zinc-600 uppercase tracking-wider">Feed</span>
-            <span className="flex items-center gap-1 text-emerald-400">
-              <Circle size={6} fill="#10b981" className="animate-pulse" />
-              Live
-            </span>
+            {online ? (
+              <span className="flex items-center gap-1 text-emerald-400">
+                <Circle size={6} fill="#10b981" className="animate-pulse" /> Live
+              </span>
+            ) : (
+              <span className="flex items-center gap-1 text-red-400">
+                <Circle size={6} fill="#ef4444" /> Offline
+              </span>
+            )}
           </div>
           <div className="flex items-center justify-between text-[10px]">
-            <span className="text-zinc-600 uppercase tracking-wider">Latency</span>
-            <span className="font-mono text-zinc-300">12ms</span>
+            <span className="text-zinc-600 uppercase tracking-wider">EIA</span>
+            <span className={`font-mono ${eia ? "text-emerald-400" : "text-zinc-500"}`}>{eia ? "✓ key" : "no key"}</span>
           </div>
         </div>
       ) : (
         <div className="flex justify-center">
-          <Circle size={6} fill="#10b981" className="text-emerald-500 animate-pulse" />
+          <Circle size={6} fill={online ? "#10b981" : "#ef4444"} className={online ? "text-emerald-500 animate-pulse" : "text-red-500"} />
         </div>
       )}
     </div>

@@ -38,7 +38,7 @@ export const MultiChart = () => {
   const [open, setOpen] = useState(false);
   const menuRef = useRef(null);
   // Live normalized price action (Yahoo daily closes, indexed to 100).
-  const { data: series, live } = useLive("/api/series", MULTI_SERIES, useLive.REFRESH.slow);
+  const { data: series, live, stale } = useLive("/api/series", MULTI_SERIES, useLive.REFRESH.slow);
 
   // Close the dropdown when clicking outside of it.
   useEffect(() => {
@@ -76,7 +76,7 @@ export const MultiChart = () => {
           <div>
             <h3 className="text-[11px] font-semibold tracking-[0.12em] text-zinc-300 uppercase inline-flex items-center gap-2">
               Price Action — Normalized
-              <SourceTag source="dataset" label="Dataset" note="Daily front-month closes from the historical dataset (2021→present), indexed to 100 at the start of the window." />
+              <SourceTag live={live} stale={stale} source="dataset" label={live && !stale ? "Dataset" : undefined} note="Daily front-month closes from the historical dataset (2021→present), indexed to 100 at the start of the window." />
             </h3>
             <p className="text-[10px] text-zinc-600 mt-0.5 flex items-center gap-2">
               <span>Indexed to 100 at start of window · daily closes</span>
@@ -101,7 +101,7 @@ export const MultiChart = () => {
         </div>
 
         <div className="flex items-center flex-wrap gap-3 mt-3">
-          {/* Instrument selector — single instrument or compare all five */}
+          {/* Instrument selector — single instrument or compare all four */}
           <div className="relative" ref={menuRef}>
             <button
               onClick={() => setOpen((o) => !o)}

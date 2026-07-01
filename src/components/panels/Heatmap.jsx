@@ -10,7 +10,7 @@ import { useLive } from "../../lib/useLive";
 // (server/compute/markets.js) across WTI, Brent, Heating Oil and Gas Oil — all
 // real front-month series from the dataset.
 export const Heatmap = ({ title = "Correlation Matrix", sub = "30D rolling" }) => {
-  const { data, live } = useLive(
+  const { data, live, stale } = useLive(
     "/api/correlation",
     { labels: CORR_LABELS, matrix: CORR_MATRIX },
     useLive.REFRESH.slow
@@ -26,7 +26,7 @@ export const Heatmap = ({ title = "Correlation Matrix", sub = "30D rolling" }) =
   };
   return (
     <Card>
-      {title && <SectionTitle sub={sub} action={<SourceTag source="dataset" label="Dataset" note="30-day rolling correlation of daily returns, computed from the historical dataset's real front-month closes (WTI · Brent · HO · Gas Oil)." />}>{title}</SectionTitle>}
+      {title && <SectionTitle sub={sub} action={<SourceTag live={live} stale={stale} source="dataset" label={live && !stale ? "Dataset" : undefined} note="30-day rolling correlation of daily returns, computed from the historical dataset's real front-month closes (WTI · Brent · HO · Gas Oil)." />}>{title}</SectionTitle>}
       <div className="grid gap-px" style={{ gridTemplateColumns: `52px repeat(${labels.length}, 1fr)` }}>
         <div />
         {labels.map((l) => (

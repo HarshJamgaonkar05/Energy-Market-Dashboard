@@ -45,14 +45,14 @@ const BAL_FALLBACK = {
 };
 
 const SupplyDemandBalance = () => {
-  const { data, live } = useLive("/api/balance", BAL_FALLBACK, useLive.REFRESH.hourly);
+  const { data, live, stale } = useLive("/api/balance", BAL_FALLBACK, useLive.REFRESH.hourly);
   const flows = data.flows?.length ? data.flows : BAL_FALLBACK.flows;
   const implied = data.implied ?? BAL_FALLBACK.implied;
   const build = implied >= 0;
   return (
     <Card padding={false}>
       <div className="p-4 pb-2">
-        <SectionTitle sub="Weekly crude flows · mb/d" action={<div className="flex items-center gap-2"><AsOf date={data.asOf} /><SourceTag live={live} source="eia" note="EIA weekly crude balance: field production + imports (supply) vs refinery inputs + exports (disposition). Implied = supply − disposition; an EIA adjustment term means it won't exactly match the observed stock change." /></div>}>Supply / Demand Balance</SectionTitle>
+        <SectionTitle sub="Weekly crude flows · mb/d" action={<div className="flex items-center gap-2"><AsOf date={data.asOf} /><SourceTag live={live} stale={stale} source="eia" note="EIA weekly crude balance: field production + imports (supply) vs refinery inputs + exports (disposition). Implied = supply − disposition; an EIA adjustment term means it won't exactly match the observed stock change." /></div>}>Supply / Demand Balance</SectionTitle>
       </div>
       <div className="grid grid-cols-2 gap-px bg-[#1c1d22] border-t border-[#1c1d22]">
         {flows.map((f) => (
@@ -91,7 +91,7 @@ const SupplyDemandBalance = () => {
 };
 
 export const PageInventories = () => {
-  const { data, live } = useLive("/api/inventories", INV_FALLBACK, useLive.REFRESH.hourly);
+  const { data, live, stale } = useLive("/api/inventories", INV_FALLBACK, useLive.REFRESH.hourly);
   const heroes = data.heroes?.length ? data.heroes : INV_FALLBACK.heroes;
   const hist = data.hist?.length ? data.hist : INV_HIST;
   const refUtil = data.refineryUtil ?? 91.2;
@@ -111,7 +111,7 @@ export const PageInventories = () => {
         <div className="col-span-12 lg:col-span-8 space-y-3">
           <Card padding={false}>
             <div className="p-4 pb-2">
-              <SectionTitle sub="52W vs 5-yr seasonal range" action={<div className="flex items-center gap-2"><AsOf date={data.asOf} /><SourceTag live={live} source="eia" note="EIA weekly U.S. crude stocks excl. SPR (WCESTUS1). Shaded band is the min–max across the 5 prior years for each week-of-year; dashed line is the 5-yr average." /></div>}>US Crude Stocks <InfoDot text="The shaded band is the range of stock levels seen in this same week over the past 5 years; the line is now. Below the band = unusually tight for the season (bullish); above = a glut (bearish)." /></SectionTitle>
+              <SectionTitle sub="52W vs 5-yr seasonal range" action={<div className="flex items-center gap-2"><AsOf date={data.asOf} /><SourceTag live={live} stale={stale} source="eia" note="EIA weekly U.S. crude stocks excl. SPR (WCESTUS1). Shaded band is the min–max across the 5 prior years for each week-of-year; dashed line is the 5-yr average." /></div>}>US Crude Stocks <InfoDot text="The shaded band is the range of stock levels seen in this same week over the past 5 years; the line is now. Below the band = unusually tight for the season (bullish); above = a glut (bearish)." /></SectionTitle>
               {/* Legend */}
               <div className="mt-2 flex items-center flex-wrap gap-x-4 gap-y-1 text-[9px] uppercase tracking-wider text-zinc-500">
                 <span className="flex items-center gap-1.5"><span className="w-3 h-1.5 bg-sky-500/20 border-y border-sky-500/30" /> 5-yr range</span>
@@ -138,7 +138,7 @@ export const PageInventories = () => {
           <div className="grid grid-cols-2 gap-3">
             <InventorySnap />
             <Card>
-              <SectionTitle sub="US Refinery Utilization" action={<SourceTag live={live} source="eia" note="EIA refinery % utilization of operable capacity (WPULEUS3), weekly." />}>Refining</SectionTitle>
+              <SectionTitle sub="US Refinery Utilization" action={<SourceTag live={live} stale={stale} source="eia" note="EIA refinery % utilization of operable capacity (WPULEUS3), weekly." />}>Refining</SectionTitle>
               <div className="text-center py-3">
                 <div className="font-mono text-4xl text-amber-400">
                   <Sourced source="eia" note="EIA refinery % utilization of operable capacity (WPULEUS3)">{fmt(refUtil, 1)}%</Sourced>

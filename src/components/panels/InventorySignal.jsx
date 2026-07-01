@@ -57,7 +57,7 @@ const Tile = ({ label, value, sub, tone = "text-zinc-100", info }) => (
 );
 
 export const InventorySignal = () => {
-  const { data, live } = useLive("/api/inventory-signal", FALLBACK, useLive.REFRESH.hourly);
+  const { data, live, stale } = useLive("/api/inventory-signal", FALLBACK, useLive.REFRESH.hourly);
   const v = data.verdict || FALLBACK.verdict;
   const c = data.current || {};
   const lp = data.last_print;
@@ -75,7 +75,7 @@ export const InventorySignal = () => {
           sub="EIA crude release · framework verdict + market cross-check"
           action={<div className="flex items-center gap-2">
             <AsOf date={data.asOf_period} />
-            <SourceTag live={live} source="eia"
+            <SourceTag live={live} stale={stale} source="eia"
               note="Live crude-inventory cross-check engine (analytics/inventory_engine.py). Surprise = actual − model-expected (walk-forward seasonal + supply/demand balance + momentum). The verdict is damped by how strongly inventories drive WTI in the current regime; the cross-check compares the post-release call to the live WTI move." />
           </div>}>
           Inventory Release Signal <InfoDot text={INV_EXPL.verdict} />

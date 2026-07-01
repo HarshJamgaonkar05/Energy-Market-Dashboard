@@ -12,12 +12,12 @@ const SIG_COLOR = { bullish: "text-emerald-400", bearish: "text-red-400", neutra
 // Live regional temperatures + heating-degree-days from Open-Meteo (no key).
 // Anomaly = current vs climatological monthly normal. See server/sources/openmeteo.js.
 export const WeatherRisk = () => {
-  const { data, live } = useLive("/api/weather", { regions: WEATHER }, useLive.REFRESH.hourly);
+  const { data, live, stale } = useLive("/api/weather", { regions: WEATHER }, useLive.REFRESH.hourly);
   const regions = data.regions || WEATHER;
   const demand = data.demand;
   return (
     <Card>
-      <SectionTitle sub="vs normal" action={<SourceTag live={live} source="openmeteo" note="Open-Meteo forecast model; anomaly is vs the climatological monthly normal." />}>Weather Risk</SectionTitle>
+      <SectionTitle sub="vs normal" action={<SourceTag live={live} stale={stale} source="openmeteo" note="Open-Meteo forecast model; anomaly is vs the climatological monthly normal." />}>Weather Risk</SectionTitle>
       <div className="space-y-1.5">
         {regions.map((w) => (
           <div key={w.reg} className="flex items-center gap-2 py-1 border-b border-[#15161a] last:border-0">

@@ -41,7 +41,7 @@ const CRACK_TO_SPREAD = {
 
 const CrackSpreads = () => {
   const [id, setId] = useState("321-wti");
-  const { data: cracks, live } = useLive("/api/cracks", CRACKS_FALLBACK);
+  const { data: cracks, live, stale } = useLive("/api/cracks", CRACKS_FALLBACK);
   const { data: chist } = useLive("/api/crackhistory", {}, useLive.REFRESH.slow);
   const { data: regCur } = useLive("/api/regime/current", {}, useLive.REFRESH.slow);
   const { data: regCat } = useLive("/api/regime/catalog", { catalog: [] }, useLive.REFRESH.slow);
@@ -99,7 +99,7 @@ const CrackSpreads = () => {
             <div key={g}>
               <div className="px-3 py-1.5 text-[9px] uppercase tracking-[0.16em] text-zinc-600 bg-[#0a0b0e] sticky top-0 flex items-center justify-between">
                 {g}
-                {g === groups[0] && <SourceTag live={live} source="derived" note="Crack value = product − crude, in $/bbl, from live Yahoo quotes." />}
+                {g === groups[0] && <SourceTag live={live} stale={stale} source="derived" note="Crack value = product − crude, in $/bbl, from live Yahoo quotes." />}
               </div>
               {cracks.filter((c) => c.group === g).map((c) => {
                 const v = c.value;
@@ -219,7 +219,7 @@ const CrackSpreads = () => {
 // ----------------------------------------------------------------------------
 const FuturesSpreads = () => {
   const [id, setId] = useState("brent");
-  const { data: curves } = useLive("/api/curves", CURVES_FALLBACK, useLive.REFRESH.slow);
+  const { data: curves, live: curvesLive, stale: curvesStale } = useLive("/api/curves", CURVES_FALLBACK, useLive.REFRESH.slow);
   const curveMap = { brent: curves.brent, wti: curves.wti, ho: curves.ho, rbob: curves.rbob, gasoil: curves.gasoil };
   const curve = curveMap[id] || CURVES_FALLBACK[id] || {};
   const d = curve.data;
@@ -237,7 +237,7 @@ const FuturesSpreads = () => {
   // Provenance: WTI/Brent/HO/RBOB curves are live Yahoo dated-contract strips
   // (source "yahoo"); Gas Oil carries the live front along the dataset's real
   // term structure (source "dataset"). Both fall back to the modeled slope.
-  const isLive = curve.modeled === false;
+  const isLive = curvesLive && !curvesStale && curve.modeled === false;
   const src = curve.source || "modeled";
   const curveNote = curve.sourceNote
     || (isLive ? "Live front month (Yahoo) carried along the real dataset forward-curve structure (M1–M12)." : "Front month anchored to the live Yahoo quote; term structure uses a curated slope (no dataset curve for this instrument).");
@@ -259,6 +259,8 @@ const FuturesSpreads = () => {
             <div className="text-[11px] font-semibold tracking-[0.12em] text-zinc-300 uppercase inline-flex items-center gap-2">
               Forward Curve {isLive
                 ? <SourceTag live label={src === "yahoo" ? "Live curve" : "Live + dataset"} source={src} note={curveNote} />
+                : curvesStale
+                ? <SourceTag stale source={src} note="Cached — showing the last curve; the live feed is currently unreachable." />
                 : <SourceTag modeled label="Modeled curve" source={src} note={curveNote} />}
             </div>
             <div className="text-[10px] text-zinc-600 mt-0.5">{curve.label} · M1–M12 · {curve.unit}</div>

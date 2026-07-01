@@ -34,7 +34,7 @@ const Pctile = ({ v }) => (
 );
 
 export const CotPanel = ({ title = "Speculative Positioning" }) => {
-  const { data, live } = useLive("/api/cot", COT_FALLBACK, useLive.REFRESH.slow);
+  const { data, live, stale } = useLive("/api/cot", COT_FALLBACK, useLive.REFRESH.slow);
   const markets = data.markets?.length ? data.markets : COT_FALLBACK.markets;
   const [id, setId] = useState("WTI");
   const m = markets.find((x) => x.id === id) || markets[0];
@@ -43,7 +43,7 @@ export const CotPanel = ({ title = "Speculative Positioning" }) => {
   return (
     <Card padding={false}>
       <div className="p-4 pb-2 flex items-center justify-between flex-wrap gap-2">
-        <SectionTitle sub={`Managed money · net = long − short · as of ${data.asOf || "—"}`} action={<SourceTag live={live} source="cftc" note="CFTC Commitments of Traders (Disaggregated). Managed Money = speculative funds. Weekly, as of each Tuesday." />}>{title}</SectionTitle>
+        <SectionTitle sub={`Managed money · net = long − short · as of ${data.asOf || "—"}`} action={<SourceTag live={live} stale={stale} source="cftc" note="CFTC Commitments of Traders (Disaggregated). Managed Money = speculative funds. Weekly, as of each Tuesday." />}>{title}</SectionTitle>
       </div>
 
       <div className="grid grid-cols-12">

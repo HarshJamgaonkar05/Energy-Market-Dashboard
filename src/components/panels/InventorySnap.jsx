@@ -16,24 +16,28 @@ const FALLBACK = {
 };
 
 export const InventorySnap = () => {
-  const { data, live } = useLive("/api/inventories", FALLBACK, useLive.REFRESH.hourly);
+  const { data, live, stale } = useLive("/api/inventories", FALLBACK, useLive.REFRESH.hourly);
   const padd = data.padd || INV;
   const crude = (data.heroes || []).find((h) => h.sym === "US CRUDE") || FALLBACK.heroes[0];
   const total = crude.val ?? 429.1;
   const dWeek = crude.chg ?? -4.2;
   const hist = data.hist || [];
+  // Only compute a "vs average" figure when we actually have history — no magic
+  // constant masquerading as a derived stat.
   const vs5y = hist.length
     ? ((hist.at(-1).total - hist.at(-1).avg5y) / hist.at(-1).avg5y) * 100
-    : 2.8;
+    : null;
+  // Convention (matches InventorySignal / Release Lab): a DRAW (stocks fall) is
+  // bullish → green; a BUILD (stocks rise) is bearish → red.
+  const flowTone = (chg) => (chg == null ? "text-zinc-400" : chg < 0 ? "text-emerald-400" : chg > 0 ? "text-red-400" : "text-zinc-400");
 
   return (
     <Card>
-      <SectionTitle sub="EIA Weekly · MMbbl" action={<SourceTag live={live} source="eia" note="EIA Weekly Petroleum Status Report — crude stocks by PADD (WCESTP1..5)." />}>US Crude Inventory by PADD</SectionTitle>
+      <SectionTitle sub="EIA Weekly · MMbbl" action={<SourceTag live={live} stale={stale} source="eia" note="EIA Weekly Petroleum Status Report — crude stocks by PADD (WCESTP1..5)." />}>US Crude Inventory by PADD</SectionTitle>
       <div className="space-y-1.5">
         {padd.map((p) => {
           const max = 250;
           const w = (p.val / max) * 100;
-          const up = p.chg >= 0;
           return (
             <div key={p.reg} className="flex items-center gap-2">
               <span className="text-[10px] text-zinc-400 w-14 font-mono">{p.reg}</span>
@@ -48,8 +52,8 @@ export const InventorySnap = () => {
                   <Sourced source="eia" note={`${p.reg} crude stocks · EIA Weekly Petroleum Status Report`} align="start">{fmt(p.val, 1)}</Sourced>
                 </span>
               </div>
-              <span className={`font-mono text-[10px] w-14 text-right ${up ? "text-emerald-400" : "text-red-400"}`}>
-                <Sourced source="eia" note="Week-over-week change · EIA" align="end">{fmtSigned(p.chg, 1)}</Sourced>
+              <span className={`font-mono text-[10px] w-14 text-right ${flowTone(p.chg)}`}>
+                <Sourced source="eia" note="Week-over-week change · EIA · draw (−) is bullish" align="end">{fmtSigned(p.chg, 1)}</Sourced>
               </span>
             </div>
           );
@@ -64,14 +68,14 @@ export const InventorySnap = () => {
         </div>
         <div>
           <div className="text-[9px] text-zinc-600 uppercase tracking-wider">Δ Week</div>
-          <div className={`font-mono text-[13px] ${dWeek >= 0 ? "text-emerald-400" : "text-red-400"}`}>
-            <Sourced source="eia" note="Week-over-week build/draw · EIA" align="start">{fmtSigned(dWeek, 1)}</Sourced>
+          <div className={`font-mono text-[13px] ${flowTone(dWeek)}`}>
+            <Sourced source="eia" note="Week-over-week build/draw · EIA · draw (−) is bullish" align="start">{fmtSigned(dWeek, 1)}</Sourced>
           </div>
         </div>
         <div>
-          <div className="text-[9px] text-zinc-600 uppercase tracking-wider">vs 5Y</div>
-          <div className={`font-mono text-[13px] ${vs5y >= 0 ? "text-emerald-400" : "text-red-400"}`}>
-            <Sourced source="derived" note="Latest crude stocks vs trailing-year average (proxy for the 5-year band) · derived from EIA" align="end">{fmtSigned(vs5y, 1)}%</Sourced>
+          <div className="text-[9px] text-zinc-600 uppercase tracking-wider">vs avg</div>
+          <div className={`font-mono text-[13px] ${vs5y == null ? "text-zinc-500" : vs5y < 0 ? "text-emerald-400" : "text-red-400"}`}>
+            <Sourced source="derived" note="Latest crude stocks vs trailing-year average (proxy for the 5-year band) · derived from EIA · below-average (−) is tight/bullish" align="end">{vs5y == null ? "—" : `${fmtSigned(vs5y, 1)}%`}</Sourced>
           </div>
         </div>
       </div>

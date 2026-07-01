@@ -8,10 +8,10 @@ import { useLive } from "../../lib/useLive";
 
 // Live movers — instruments ranked by absolute daily move (Yahoo Finance).
 export const MoversPanel = () => {
-  const { data: movers, live } = useLive("/api/movers", MOVERS);
+  const { data: movers, live, stale } = useLive("/api/movers", MOVERS);
   return (
     <Card>
-      <SectionTitle sub="Last 24h" action={<SourceTag live={live} source="yahoo" />}>Market Movers</SectionTitle>
+      <SectionTitle sub="Last 24h" action={<SourceTag live={live} stale={stale} source="yahoo" />}>Market Movers</SectionTitle>
       <div className="-mx-1">
         <div className="grid grid-cols-12 px-2 py-1 text-[9px] text-zinc-600 uppercase tracking-wider border-b border-[#1c1d22]">
           <div className="col-span-4">Symbol</div>

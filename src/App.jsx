@@ -85,7 +85,8 @@ export default function App() {
   return (
     <AlertsProvider>
     <div className="flex h-screen w-full bg-[#08090b] text-zinc-100 overflow-hidden print:h-auto print:overflow-visible print:block" style={{ fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif" }}>
-      <Sidebar active={active} setActive={setActive} collapsed={collapsed} setCollapsed={setCollapsed} />
+      <Sidebar active={active} setActive={setActive} collapsed={collapsed} setCollapsed={setCollapsed}
+        online={health.ok && !backendDown} eia={!!health.eia} />
 
       <div className="flex-1 flex flex-col overflow-hidden print:overflow-visible">
         <TopBar pageTitle={PAGES[active].title} />
@@ -123,12 +124,17 @@ export default function App() {
         {/* Status bar */}
         <footer className="no-print h-6 bg-[#0a0b0e] border-t border-[#1c1d22] flex items-center px-4 gap-4 text-[10px] font-mono text-zinc-500">
           {health.ok ? (
-            <span className="flex items-center gap-1.5"><Wifi size={10} className="text-emerald-500" /> {live ? "Live feed" : "Connected"}</span>
+            <>
+              <span className="flex items-center gap-1.5"><Wifi size={10} className="text-emerald-500" /> {live ? "Live feed" : "Connected"}</span>
+              <span>Yahoo · EIA{health.eia ? " ✓" : " ✗"} · Open-Meteo · Financial Juice</span>
+              <span className="hidden md:inline">{health.eia ? "Fundamentals live" : "Fundamentals: add EIA key"}</span>
+            </>
           ) : (
-            <span className="flex items-center gap-1.5"><WifiOff size={10} className="text-red-500" /> Offline · mock data</span>
+            <>
+              <span className="flex items-center gap-1.5"><WifiOff size={10} className="text-red-500" /> Offline · sample data</span>
+              <span className="text-zinc-600">Live feeds unavailable — start the API to connect Yahoo · EIA · Open-Meteo · Financial Juice</span>
+            </>
           )}
-          <span>Yahoo · EIA{health.eia ? " ✓" : " ✗"} · Open-Meteo · Financial Juice</span>
-          <span className="hidden md:inline">{health.eia ? "Fundamentals live" : "Fundamentals: add EIA key"}</span>
         </footer>
       </div>
       <ToastHost />

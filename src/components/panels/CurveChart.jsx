@@ -23,15 +23,17 @@ const MODEL_NOTE = "Front month anchored to the live Yahoo quote; the term struc
 // without a curve falls back to a modeled slope (flagged via `modeled`).
 // Backend: server/compute/markets.js → forwardCurves().
 export const CurveChart = () => {
-  const { data: curves } = useLive("/api/curves", FWD_CURVES, useLive.REFRESH.slow);
+  const { data: curves, live, stale } = useLive("/api/curves", FWD_CURVES, useLive.REFRESH.slow);
   const brentCurve = curves.brent || FWD_CURVES.brent;
   const wtiCurve = curves.wti || FWD_CURVES.wti;
   const brent = brentCurve.data;
   const wti = wtiCurve.data;
   const data = brent.map((p, i) => ({ m: p.m, brent: p.v, wti: wti[i]?.v }));
 
-  // Real when the backend served a live or dataset-backed curve (modeled === false).
-  const real = brentCurve.modeled === false && wtiCurve.modeled === false;
+  // Real when the backend actually served a live or dataset-backed curve
+  // (modeled === false) — and only once a live response has arrived and isn't stale,
+  // so the seeded fallback never claims to be a "Live curve".
+  const real = live && !stale && brentCurve.modeled === false && wtiCurve.modeled === false;
   const src = real ? (brentCurve.source || "dataset") : "modeled";
   const note = real ? (brentCurve.sourceNote || DATASET_NOTE) : MODEL_NOTE;
 
@@ -46,6 +48,8 @@ export const CurveChart = () => {
           {real && brentCurve.structureAsOf && <AsOf date={brentCurve.structureAsOf} prefix="structure" />}
           {real
             ? <SourceTag live label={src === "yahoo" ? "Live curve" : "Live + dataset"} source={src} note={note} />
+            : stale
+            ? <SourceTag stale source={brentCurve.source || "dataset"} note="Cached — showing the last curve; the live feed is currently unreachable." />
             : <SourceTag modeled label="Modeled curve" source="modeled" note={MODEL_NOTE} />}
         </div>}>Forward Curve Structure</SectionTitle>
       </div>

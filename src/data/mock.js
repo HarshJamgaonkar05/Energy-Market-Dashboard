@@ -215,7 +215,10 @@ export const INV_HIST = (() => {
   let v = 460;
   return Array.from({ length: 52 }, (_, i) => {
     v += (r() - 0.5) * 8;
-    return { w: i, total: +v.toFixed(1), avg5y: 465 + Math.sin(i / 8) * 12 };
+    const avg5y = 465 + Math.sin(i / 8) * 12;
+    // 5-yr min–max envelope so the shaded seasonal band renders in the fallback
+    // too (the live EIA payload supplies a real [min,max]).
+    return { w: i, total: +v.toFixed(1), avg5y: +avg5y.toFixed(1), band: [+(avg5y - 17).toFixed(1), +(avg5y + 17).toFixed(1)] };
   });
 })();
 

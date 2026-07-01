@@ -41,7 +41,7 @@ const FALLBACK = {
 };
 
 export const SeasonalityPanel = () => {
-  const { data, live } = useLive("/api/seasonality", FALLBACK, useLive.REFRESH.slow);
+  const { data, live, stale } = useLive("/api/seasonality", FALLBACK, useLive.REFRESH.slow);
   const series = data.series?.length ? data.series : FALLBACK.series;
   const [id, setId] = useState("HO-WTI");
   const s = series.find((x) => x.id === id) || series[0];
@@ -75,7 +75,7 @@ export const SeasonalityPanel = () => {
   return (
     <Card padding={false}>
       <div className="p-4 pb-2 flex items-start justify-between flex-wrap gap-2">
-        <SectionTitle sub={`${s.years}-yr average by calendar month · ${isPrice ? "avg monthly return" : "avg crack ($/bbl)"}`} action={<SourceTag source="dataset" label="Dataset" note="Average by calendar month over the historical dataset (2021→present), collapsed to monthly closes (cracks: product − crude, $/bbl)." />}>Seasonality</SectionTitle>
+        <SectionTitle sub={`${s.years}-yr average by calendar month · ${isPrice ? "avg monthly return" : "avg crack ($/bbl)"}`} action={<SourceTag live={live} stale={stale} source="dataset" label={live && !stale ? "Dataset" : undefined} note="Average by calendar month over the historical dataset (2021→present), collapsed to monthly closes (cracks: product − crude, $/bbl)." />}>Seasonality</SectionTitle>
         <div className="flex flex-col items-end gap-1">
           <div className="flex items-center gap-1 flex-wrap justify-end">{priceSeries.map((x) => <Btn key={x.id} x={x} />)}</div>
           <div className="flex items-center gap-1 flex-wrap justify-end">{crackSeries.map((x) => <Btn key={x.id} x={x} />)}</div>
