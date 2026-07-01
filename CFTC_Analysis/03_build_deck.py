@@ -5,7 +5,7 @@ Assemble a self-contained 8-slide HTML presentation (dark dashboard theme),
 embedding the charts as base64 and pulling headline numbers from
 data/stats_summary.json so text and figures never drift apart.
 
-Output: presentation.html
+Output: ../public/cftc/presentation.html  (the served deck the dashboard links to)
 """
 import base64
 import json
@@ -306,6 +306,10 @@ go(0);
 </script>
 </body></html>"""
 
-out = HERE / "presentation.html"
+# Single source of truth: write straight to the web app's served location
+# (public/cftc/) so the in-dashboard "Open deck" link and the standalone file are
+# the same artifact — no duplicated copy to drift.
+out = HERE.parent / "public" / "cftc" / "presentation.html"
+out.parent.mkdir(parents=True, exist_ok=True)
 out.write_text(HTML, encoding="utf-8")
 print(f"wrote {out}  ({len(HTML)/1024:.0f} KB incl. embedded charts)")

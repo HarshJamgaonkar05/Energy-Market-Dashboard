@@ -2,7 +2,7 @@
 
 **Managed-Money net positioning vs WTI spot, weekly, 2016–2026**
 Analysis folder: `CFTC_Analysis/` (standalone — not wired into the dashboard)
-**Slide deck:** [`presentation.html`](presentation.html) (self-contained, dark dashboard theme)
+**Slide deck:** [`../public/cftc/presentation.html`](../public/cftc/presentation.html) (self-contained, dark dashboard theme; served in-app at `/cftc/presentation.html`)
 
 ---
 
@@ -169,9 +169,9 @@ CFTC_Analysis/
   04_deep_analysis.py  econometric deep-dive (CCF, Granger, VAR/IRF, half-life,
                        quantile & logit regression, OOS backtest, BH-FDR) + charts 07..12
   05_export_dashboard.py  distil stats_summary.json + deep_stats.json -> src/data/cftcStudy.json
-  03_build_deck.py     assemble presentation.html (base64-embedded charts)
+  03_build_deck.py     assemble the deck → ../public/cftc/presentation.html (base64-embedded charts)
   REPORT.md            this report
-  presentation.html    8-slide deck (open in any browser; ← → to navigate)
+  (deck output)        ../public/cftc/presentation.html — 8-slide deck, served in-app at /cftc/
   data/                weekly_merged.csv, cftc_wti_official.csv, wti_spot_daily.csv,
                        stats_summary.json, deep_stats.json
   charts/              01_timeseries .. 12_fdr (dark dashboard theme)
