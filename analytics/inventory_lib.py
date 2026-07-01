@@ -750,16 +750,25 @@ def verdict_from_surprise(surprise: float, surprise_z: float, context: dict,
                    products=context.get("products", []))
 
 
-def forward_base_case(f: pd.DataFrame, context: dict, reliability_r2: float, n: int) -> Verdict:
+def forward_base_case(f: pd.DataFrame, context: dict, reliability_r2: float, n: int,
+                      expected_override: float | None = None,
+                      seasonal_override: float | None = None,
+                      season_override: str | None = None) -> Verdict:
     """PRE-release base case (for the assignment's Thursday deliverable). Before the
     number lands we don't have a surprise, so the lean comes from the structural
     backdrop: where stocks sit vs the seasonal norm (crude_z), the recent draw/build
     momentum, the Cushing trend, the seasonal expectation, and product alignment.
     The model's *expected* build/draw is the base case the market is positioned for —
-    if it prints near expected, the reaction is neutral; the asymmetry is the story."""
+    if it prints near expected, the reaction is neutral; the asymmetry is the story.
+
+    The structural lean (stocks-vs-norm, momentum, Cushing) is always read from the
+    latest PUBLISHED week. When leaning into a NOT-YET-RELEASED week, pass
+    expected_override / seasonal_override / season_override so the base-case number,
+    seasonal-normal and season label describe the UPCOMING week rather than the last
+    published one (the structural signals stay the freshest known)."""
     last = f.dropna(subset=["crude_wow"]).iloc[-1]
     z = last.get("crude_z", np.nan)
-    exp = last.get("expected", np.nan)
+    exp = expected_override if expected_override is not None else last.get("expected", np.nan)
     mom = f["crude_wow"].tail(4).mean()
     cush = f["cushing_wow"].tail(4).sum() if "cushing_wow" in f else np.nan
 
@@ -785,11 +794,12 @@ def forward_base_case(f: pd.DataFrame, context: dict, reliability_r2: float, n: 
             f"({last.get('cushing', np.nan):.1f} MMbbl now) — "
             f"{'draining toward tank lows, very bullish for WTI structure' if cush < 0 else 'refilling, bearish for WTI structure'}.")
     # 4) Seasonal expectation.
-    sw = last.get("crude_seasonal_wow", np.nan)
+    sw = seasonal_override if seasonal_override is not None else last.get("crude_seasonal_wow", np.nan)
+    season_lbl = season_override or last["season"]
     if sw == sw:
         factors.append(
             f"Seasonally this week normally {'draws' if sw < 0 else 'builds'} ~{abs(sw):.1f} MMbbl "
-            f"({last['season']} season); the model's expected change is {exp:+.1f} MMbbl.")
+            f"({season_lbl} season); the model's expected change is {exp:+.1f} MMbbl.")
     # 5) Alignment.
     align = context.get("product_alignment", "n/a")
     factors.append(

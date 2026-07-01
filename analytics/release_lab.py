@@ -94,68 +94,114 @@ def _vdict(v: lib.Verdict) -> dict:
 
 
 # ---------------------------------------------------------------------------
-def build(run_result: bool = True) -> dict:
-    """Build the full Release-Lab snapshot. The PREDICTION half is always derived
-    leak-free from data strictly before the target week; the RESULT half (the actual
-    print, real surprise, verdict, cross-check) is added when run_result is True."""
-    weekly = lib.fetch_weekly(length=600, cache_hours=0.0)
-    prices = lib.fetch_prices(cache_hours=0.0)
-    panel = lib.load_panel()
+# Live track record: persist each frozen FORWARD forecast, then grade it once the
+# week actually publishes — a genuine out-of-sample record of real pre-release calls
+# (distinct from the backtested track_record). Survives across runs via a JSON log.
+HISTORY = DATA_DIR / "release_lab_history.json"
 
-    if weekly.empty or "crude" not in weekly or weekly["crude"].dropna().empty:
-        return {"generatedAt": now_iso(), "generatedAtET": now_et(), "status": "no-data",
-                "error": "EIA returned no crude data (API outage or rate-limit?)."}
 
-    A = lib.analyze(weekly, prices, panel)
-    f, es = A["frame"], A["event_study"]
+def _load_history() -> list:
+    try:
+        h = json.loads(HISTORY.read_text())
+        return h if isinstance(h, list) else []
+    except Exception:
+        return []
 
-    # The TARGET = the most recent published week (the one the latest release covers).
-    target = f.dropna(subset=["crude_wow"]).iloc[-1]
-    t_period = target["period"]
-    t_rel = lib.release_date(t_period)
-    prior_cutoff = t_period - pd.Timedelta(days=7)
 
-    # --- regime / catalyst strength the print landed in (drives verdict + curve) ---
-    t_vol = target.get("vol_regime")
-    r2, n, beta = lib.reliability_for(es, t_vol)          # conditional reaction-per-MMbbl
-    ov = es.get("overall") or {}
-    beta_ov, r2_ov, n_ov = ov.get("beta", 0.0), ov.get("r2", 0.0), ov.get("n", 0)
-    sigma = float(es.get("surprise_sigma_mmbbl") or target.get("surprise_std") or 5.0)
+def _write_history(hist: list):
+    try:
+        HISTORY.write_text(json.dumps(hist[-260:], indent=2))
+    except Exception as e:
+        print(f"[release-lab] could not write history: {e}")
 
-    expected = float(target["expected"])                  # walk-forward, leak-free consensus
-    expected_seasonal = _r(target.get("expected_seasonal"), 1)
 
-    # ===================================================================
-    # PREDICTION — what we knew BEFORE the print (rows strictly before target).
-    # ===================================================================
-    f_pre = f[f["period"] < t_period]
-    prior = f_pre.dropna(subset=["crude_wow"]).iloc[-1]
-    sens = A["spread_sensitivity"]
-    products = [k for k in sens.keys() if k not in ("panel_wti", "panel_brent")][:5]
-    ctx_pre = {"vol_regime": prior.get("vol_regime"), "wti_struct": prior.get("wti_struct"),
-               "product_alignment": prior.get("product_alignment"), "products": products}
-    r2_pre, n_pre, _ = lib.reliability_for(es, prior.get("vol_regime"))
-    lean = lib.forward_base_case(f_pre, ctx_pre, r2_pre, n_pre)
+def _freeze_history(period, u_rel, pred: dict):
+    """Upsert the current forward call for `period` (keeps it fresh until it publishes)."""
+    hist = _load_history()
+    key = period.strftime("%Y-%m-%d")
+    idx = next((i for i, e in enumerate(hist) if e.get("period") == key), None)
+    if idx is not None and hist[idx].get("graded_at"):
+        return                                   # already graded — never overwrite the record
+    entry = {"period": key, "release_date": u_rel.strftime("%Y-%m-%d"),
+             "frozen_at": now_iso(),
+             "expected_wow": pred.get("expected_wow"), "expected_seasonal": pred.get("expected_seasonal"),
+             "lean": pred.get("lean"), "lean_score": pred.get("lean_score"),
+             "catalyst_r2": pred.get("catalyst_r2"),
+             "actual_wow": None, "surprise": None, "lean_hit": None, "graded_at": None}
+    if idx is None:
+        hist.append(entry)
+    else:
+        entry["frozen_at"] = hist[idx].get("frozen_at") or entry["frozen_at"]   # keep first freeze
+        hist[idx] = entry
+    _write_history(hist)
 
-    # The impact curve: predicted release-day WTI move = beta * surprise, drawn across a
-    # +/- 2.5 sigma band, both in the current regime and over all history (the textbook line).
+
+def _grade_history(published: pd.DataFrame):
+    """Fill in the actual + surprise for any frozen call whose week has now published."""
+    hist = _load_history()
+    if not hist:
+        return
+    idx = {r["period"].strftime("%Y-%m-%d"): r for _, r in published.iterrows()}
+    changed = False
+    for e in hist:
+        if e.get("graded_at") or e.get("period") not in idx:
+            continue
+        r = idx[e["period"]]
+        actual, surprise = r.get("crude_wow"), r.get("surprise")
+        if actual != actual:
+            continue
+        e["actual_wow"] = round(float(actual), 2)
+        e["surprise"] = round(float(surprise), 2) if surprise == surprise else None
+        if e.get("lean") and surprise == surprise:
+            e["lean_hit"] = bool((e["lean"] == "Bullish" and surprise < 0) or
+                                 (e["lean"] == "Bearish" and surprise > 0))
+        e["graded_at"] = now_iso()
+        changed = True
+    if changed:
+        _write_history(hist)
+
+
+def _live_record() -> dict:
+    """Summarise the engine's ACTUAL forward calls: how many graded, forecast accuracy
+    vs the seasonal-naive guess, and how often the pre-release lean called the surprise."""
+    hist = _load_history()
+    graded = [e for e in hist if e.get("graded_at") and e.get("actual_wow") is not None]
+    pending = [e for e in hist if not e.get("graded_at")]
+    out = {"n": len(graded), "pending": len(pending),
+           "recent": [{"period": e["period"], "expected_wow": e.get("expected_wow"),
+                       "actual_wow": e.get("actual_wow"), "lean": e.get("lean"),
+                       "lean_hit": e.get("lean_hit")} for e in graded[-6:]]}
+    if len(graded) >= 3:
+        me = [abs(e["actual_wow"] - e["expected_wow"]) for e in graded if e.get("expected_wow") is not None]
+        se = [abs(e["actual_wow"] - e["expected_seasonal"]) for e in graded if e.get("expected_seasonal") is not None]
+        lh = [e["lean_hit"] for e in graded if isinstance(e.get("lean_hit"), bool)]
+        out["mae"] = round(float(np.mean(me)), 2) if me else None
+        out["mae_seasonal"] = round(float(np.mean(se)), 2) if se else None
+        out["lean_hit_rate"] = round(float(np.mean(lh)), 3) if lh else None
+    return out
+
+
+# ---------------------------------------------------------------------------
+def _impact_curve(beta, beta_ov, sigma):
+    """predicted release-day WTI move = beta * surprise across +/- 2.5 sigma."""
     span = [round(sigma * k, 2) for k in np.linspace(-2.5, 2.5, 21)]
-    curve = [{"surprise": s,
-              "regime_pct": round(beta * s * 100, 3),
-              "overall_pct": round(beta_ov * s * 100, 3)} for s in span]
+    return [{"surprise": s, "regime_pct": round(beta * s * 100, 3),
+             "overall_pct": round(beta_ov * s * 100, 3)} for s in span]
 
-    # Expected-surprise scenarios (pre-release): a print in line = ~0 surprise = muted;
-    # a 1-sigma beat / miss tells you the asymmetric payoff in THIS regime.
+
+def _prediction(expected, expected_seasonal, lean, r2, n, beta, beta_ov, r2_ov, n_ov,
+                sigma, asof, products):
+    """The pre-release PREDICTION half, shared by the upcoming (forward) and the last
+    (retrospective, leak-free) blocks so the two can never diverge in construction."""
     def scen(label, surp):
         return {"label": label, "surprise": round(surp, 1),
                 "pred_move_pct": round(beta * surp * 100, 3),
                 "pred_move_pct_overall": round(beta_ov * surp * 100, 3),
                 "dir": "Bullish" if surp < 0 else "Bearish" if surp > 0 else "Neutral"}
-
-    prediction = {
-        "asof": prior_cutoff.strftime("%Y-%m-%d"),
+    return {
+        "asof": asof,
         "expected_wow": _r(expected, 2),
-        "expected_seasonal": expected_seasonal,
+        "expected_seasonal": _r(expected_seasonal, 1),
         "expected_surprise": 0.0,            # by construction the model expects to be right
         "lean": lean.direction, "lean_score": lean.score, "confidence": lean.confidence,
         "headline": lean.headline, "factors": lean.factors, "products": products,
@@ -170,38 +216,145 @@ def build(run_result: bool = True) -> dict:
         "narrative": _predict_narrative(expected, lean, r2, beta_ov, sigma),
     }
 
+
+def _levels(row, vol):
+    return {
+        "crude_stock": _r(row.get("crude"), 1), "cushing": _r(row.get("cushing"), 1),
+        "cushing_wow": _r(row.get("cushing_wow"), 1), "refutil": _r(row.get("refutil"), 1),
+        "crude_z": _r(row.get("crude_z"), 2), "days_supply": _r(row.get("days_supply"), 1),
+        "season": row.get("season"), "vol_regime": vol,
+        "wti_struct": row.get("wti_struct"), "product_alignment": row.get("product_alignment"),
+    }
+
+
+def build(run_result: bool = True) -> dict:
+    """Build the full Release-Lab snapshot with TWO experiments:
+
+      * UPCOMING — a live, forward, leak-free forecast for the NEXT (not-yet-released)
+        week: the model's one-step-ahead expected build/draw, the structural lean into
+        the print, the regime catalyst strength and the impact curve. Refreshed every
+        run so it always describes the next release; graded automatically once it lands.
+
+      * LAST — the most recent PUBLISHED week: the same pre-release prediction (derived
+        leak-free from rows strictly before that week) PLUS the result (actual print,
+        real surprise, verdict, cross-check, scorecard) when run_result is True.
+
+    Implementation: we append one synthetic future week to the EIA series and run the
+    single analyze() pipeline once. The future row picks up the walk-forward `expected`
+    (its features are all lagged/seasonal, known pre-release) and the CURRENT regime
+    context (vol/structure read as-of its release date), while its NaN reaction simply
+    drops out of the event study — so both experiments come from one consistent frame."""
+    weekly = lib.fetch_weekly(length=600, cache_hours=0.0)
+    prices = lib.fetch_prices(cache_hours=0.0)
+    panel = lib.load_panel()
+
+    if weekly.empty or "crude" not in weekly or weekly["crude"].dropna().empty:
+        return {"generatedAt": now_iso(), "generatedAtET": now_et(), "status": "no-data",
+                "error": "EIA returned no crude data (API outage or rate-limit?)."}
+
+    # Append the NEXT week (all-NaN) so the pipeline produces a forward forecast for it.
+    next_period = weekly.index.max() + pd.Timedelta(days=7)
+    weekly_ext = weekly.copy()
+    weekly_ext.loc[next_period] = np.nan
+    weekly_ext = weekly_ext.sort_index()
+
+    A = lib.analyze(weekly_ext, prices, panel)
+    f, es = A["frame"], A["event_study"]
+    sens = A["spread_sensitivity"]
+    products = [k for k in sens.keys() if k not in ("panel_wti", "panel_brent")][:5]
+    ov = es.get("overall") or {}
+    beta_ov, r2_ov, n_ov = ov.get("beta", 0.0), ov.get("r2", 0.0), ov.get("n", 0)
+    sigma = float(es.get("surprise_sigma_mmbbl") or 5.0)
     track = _track_record(f, A)
+
+    published = f.dropna(subset=["crude_wow"])
+    last_pub = published.iloc[-1]
+    _grade_history(published)                 # grade any frozen calls that have now published
+
+    # ===================================================================
+    # UPCOMING — forward, leak-free forecast for the next unreleased week.
+    # ===================================================================
+    up_row = f.iloc[-1]                                    # the synthetic future row
+    upcoming = None
+    if up_row["period"] == next_period:
+        u_rel = lib.release_date(next_period)
+        u_vol = up_row.get("vol_regime")
+        ur2, un, ubeta = lib.reliability_for(es, u_vol)
+        u_exp = float(up_row["expected"]) if up_row.get("expected") == up_row.get("expected") else float(last_pub["expected"])
+        u_seasonal = up_row.get("expected_seasonal")
+        u_sigma = float(up_row.get("surprise_std") or sigma)
+        ctx_now = {"vol_regime": u_vol, "wti_struct": up_row.get("wti_struct"),
+                   "product_alignment": up_row.get("product_alignment"), "products": products}
+        u_lean = lib.forward_base_case(f, ctx_now, ur2, un, expected_override=u_exp,
+                                       seasonal_override=(u_seasonal if u_seasonal == u_seasonal else None),
+                                       season_override=up_row.get("season"))
+        today = datetime.now(ET).date()
+        days_until = (u_rel.date() - today).days
+        upcoming = {
+            "status": "awaiting-release",
+            "target": {"period": next_period.strftime("%Y-%m-%d"),
+                       "release_date": u_rel.strftime("%Y-%m-%d"),
+                       "days_until": days_until,
+                       "label": f"{u_rel.day} {u_rel.strftime('%B %Y')} EIA crude release"},
+            "current": _levels(last_pub, last_pub.get("vol_regime")),   # stocks going INTO the print
+            "prediction": _prediction(u_exp, u_seasonal, u_lean, ur2, un, ubeta, beta_ov,
+                                      r2_ov, n_ov, u_sigma, now_et(), products),
+            "impact_curve": {"beta_pct_per_mmbbl": round(ubeta * 100, 4),
+                             "beta_overall_pct_per_mmbbl": round(beta_ov * 100, 4),
+                             "sigma_mmbbl": round(u_sigma, 2),
+                             "points": _impact_curve(ubeta, beta_ov, u_sigma)},
+            "intraday": _intraday_block(u_vol, None, False, u_rel.strftime("%Y-%m-%d")),
+            "result": None,
+        }
+        _freeze_history(next_period, u_rel, upcoming["prediction"])
+
+    # ===================================================================
+    # LAST — the most recent PUBLISHED week (prediction + graded result).
+    # ===================================================================
+    target = last_pub
+    t_period = target["period"]
+    t_rel = lib.release_date(t_period)
+    prior_cutoff = t_period - pd.Timedelta(days=7)
+    t_vol = target.get("vol_regime")
+    r2, n, beta = lib.reliability_for(es, t_vol)
+    expected = float(target["expected"])
+    expected_seasonal = target.get("expected_seasonal")
+
+    # leak-free retrospective lean: rows strictly before the target week.
+    f_pre = f[f["period"] < t_period]
+    prior = f_pre.dropna(subset=["crude_wow"]).iloc[-1]
+    ctx_pre = {"vol_regime": prior.get("vol_regime"), "wti_struct": prior.get("wti_struct"),
+               "product_alignment": prior.get("product_alignment"), "products": products}
+    r2_pre, n_pre, _ = lib.reliability_for(es, prior.get("vol_regime"))
+    lean = lib.forward_base_case(f_pre, ctx_pre, r2_pre, n_pre)
+
+    last_block = {
+        "target": {"period": t_period.strftime("%Y-%m-%d"),
+                   "release_date": t_rel.strftime("%Y-%m-%d"),
+                   "label": f"{t_rel.day} {t_rel.strftime('%B %Y')} EIA crude release"},
+        "current": _levels(target, t_vol),
+        "prediction": _prediction(expected, expected_seasonal, lean, r2, n, beta, beta_ov,
+                                  r2_ov, n_ov, sigma, prior_cutoff.strftime("%Y-%m-%d"), products),
+        "impact_curve": {"beta_pct_per_mmbbl": round(beta * 100, 4),
+                         "beta_overall_pct_per_mmbbl": round(beta_ov * 100, 4),
+                         "sigma_mmbbl": round(sigma, 2), "points": _impact_curve(beta, beta_ov, sigma)},
+        "intraday": _intraday_block(t_vol, None, False, t_rel.strftime("%Y-%m-%d")),
+        "result": None, "comparison": None, "scorecard": None,
+    }
 
     snap = {
         "generatedAt": now_iso(), "generatedAtET": now_et(),
         "status": "complete" if run_result else "awaiting-release",
         "track_record": track,
-        "target": {"period": t_period.strftime("%Y-%m-%d"),
-                   "release_date": t_rel.strftime("%Y-%m-%d"),
-                   "label": f"{t_rel.day} {t_rel.strftime('%B %Y')} EIA crude release"},
-        "current": {
-            "crude_stock": _r(target.get("crude"), 1), "cushing": _r(target.get("cushing"), 1),
-            "cushing_wow": _r(target.get("cushing_wow"), 1), "refutil": _r(target.get("refutil"), 1),
-            "crude_z": _r(target.get("crude_z"), 2), "days_supply": _r(target.get("days_supply"), 1),
-            "season": target.get("season"), "vol_regime": t_vol,
-            "wti_struct": target.get("wti_struct"), "product_alignment": target.get("product_alignment"),
-        },
-        "prediction": prediction,
-        "impact_curve": {"beta_pct_per_mmbbl": round(beta * 100, 4),
-                         "beta_overall_pct_per_mmbbl": round(beta_ov * 100, 4),
-                         "sigma_mmbbl": round(sigma, 2), "points": curve},
-        "result": None, "comparison": None, "scorecard": None,
-        # pre-release: ship the intraday MODEL (per-horizon beta/r2) only; the predicted
-        # path needs the surprise and the actual path needs the print, both added on run.
-        "intraday": _intraday_block(t_vol, None, False, t_rel.strftime("%Y-%m-%d")),
+        "live_record": _live_record(),
+        "upcoming": upcoming,
+        "last": last_block,
     }
 
     if not run_result:
         return snap
 
-    # ===================================================================
-    # RESULT — the actual print, the REAL surprise, verdict and cross-check.
-    # ===================================================================
+    # ---- grade the LAST release ----
     actual = float(target["crude_wow"])
     surprise = float(target["surprise"])
     sz = float(target["surprise_z"]) if target.get("surprise_z") == target.get("surprise_z") else 0.0
@@ -209,32 +362,28 @@ def build(run_result: bool = True) -> dict:
              "product_alignment": target.get("product_alignment"), "products": products}
     verdict = lib.verdict_from_surprise(surprise, sz, ctx_t, r2, n, beta)
     cross = market_crosscheck(prices, target, surprise, beta, verdict.direction)
-    actual_move = cross.get("wti_reaction_pct")          # % WTI move on the print
-    pred_move = round(beta * surprise * 100, 3)           # regime-implied move at the real surprise
+    actual_move = cross.get("wti_reaction_pct")
+    pred_move = round(beta * surprise * 100, 3)
     pred_move_ov = round(beta_ov * surprise * 100, 3)
 
-    snap["result"] = {
+    last_block["result"] = {
         "ran_at": now_iso(), "ran_at_et": now_et(),
         "actual_wow": _r(actual, 2), "actual_stock": _r(target.get("crude"), 1),
         "real_surprise": _r(surprise, 2), "real_surprise_z": _r(sz, 2),
         "real_surprise_dir": "bullish" if surprise < 0 else "bearish" if surprise > 0 else "neutral",
-        "verdict": _vdict(verdict),
-        "crosscheck": cross,
+        "verdict": _vdict(verdict), "crosscheck": cross,
         "pred_move_pct": pred_move, "pred_move_pct_overall": pred_move_ov,
         "actual_move_pct": _r(actual_move, 2),
-        # the realized dot for the impact-curve chart
         "realized_point": {"surprise": _r(surprise, 2),
                            "pred_regime_pct": pred_move, "pred_overall_pct": pred_move_ov,
                            "actual_pct": _r(actual_move, 2)},
-        # split the realized move into inventory vs macro vs residual (#3)
         "attribution": lib.decompose_move(A.get("impact_decomp", {}), target),
     }
-    snap["comparison"] = _comparison(expected, actual, surprise, sz, lean, verdict,
-                                     cross, pred_move, actual_move, r2)
-    snap["scorecard"] = _scorecard(expected, actual, surprise, sz, lean, cross,
-                                   pred_move, actual_move, r2)
-    # full intraday: predicted path at the REAL surprise + the live actual 5-min path.
-    snap["intraday"] = _intraday_block(t_vol, surprise, True, t_rel.strftime("%Y-%m-%d"))
+    last_block["comparison"] = _comparison(expected, actual, surprise, sz, lean, verdict,
+                                           cross, pred_move, actual_move, r2)
+    last_block["scorecard"] = _scorecard(expected, actual, surprise, sz, lean, cross,
+                                         pred_move, actual_move, r2)
+    last_block["intraday"] = _intraday_block(t_vol, surprise, True, t_rel.strftime("%Y-%m-%d"))
     return snap
 
 
@@ -518,19 +667,27 @@ def write(snap: dict):
 def print_summary(snap: dict):
     if snap.get("status") == "no-data":
         print("[NO-DATA]", snap.get("error"));  return
-    t = snap["target"]; p = snap["prediction"]
-    print(f"\n=== EIA RELEASE LAB — {t['label']} (week {t['period']}) ===")
-    print(f"\n  PREDICTION (as of {p['asof']}):")
-    print(f"    Expected {p['expected_wow']:+.1f} MMbbl  | expected surprise ~0  | lean {p['lean']} ({p['confidence']})")
-    print(f"    Catalyst R²={p['catalyst_r2']} (n={p['catalyst_n']})  beta={p['beta_pct_per_mmbbl']}%/MMbbl")
-    r = snap.get("result")
+    u = snap.get("upcoming")
+    if u:
+        ut, up = u["target"], u["prediction"]
+        print(f"\n=== UPCOMING (live forecast) — {ut['label']} · in {ut['days_until']}d (week {ut['period']}) ===")
+        print(f"    Expected {up['expected_wow']:+.1f} MMbbl  | lean {up['lean']} ({up['confidence']})  "
+              f"| catalyst R²={up['catalyst_r2']} (n={up['catalyst_n']})")
+    last = snap.get("last") or {}
+    t, p = last.get("target", {}), last.get("prediction", {})
+    print(f"\n=== LAST (graded) — {t.get('label')} (week {t.get('period')}) ===")
+    print(f"    Expected {p.get('expected_wow'):+.1f} MMbbl (as of {p.get('asof')})  | lean {p.get('lean')} ({p.get('confidence')})")
+    r = last.get("result")
     if r:
-        print(f"\n  RESULT:")
         print(f"    Actual {r['actual_wow']:+.1f} MMbbl  | REAL surprise {r['real_surprise']:+.1f} "
               f"({r['real_surprise_z']:+.1f}σ, {r['real_surprise_dir']})  | verdict {r['verdict']['direction']}")
         print(f"    Predicted move {r['pred_move_pct']:+.2f}%  | actual move {r['actual_move_pct']:+.2f}%  "
               f"-> {(r['crosscheck'] or {}).get('status','?').upper()}")
-        print(f"\n  {snap['comparison']['narrative']}")
+        print(f"\n  {last['comparison']['narrative']}")
+    lr = snap.get("live_record") or {}
+    print(f"\n  LIVE RECORD: {lr.get('n',0)} graded · {lr.get('pending',0)} pending"
+          + (f" · MAE {lr.get('mae')} vs seasonal {lr.get('mae_seasonal')} · lean hit {lr.get('lean_hit_rate')}"
+             if lr.get('n',0) >= 3 else ""))
 
 
 def main():

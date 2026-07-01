@@ -118,9 +118,11 @@ app.get("/api/inventories", route(() => eia.inventories(), "/api/inventories"));
 // Live crude-inventory cross-check engine (analytics/inventory_engine.py): the
 // pre-release verdict for the next EIA release + the last print's surprise/cross-check.
 app.get("/api/inventory-signal", route(() => inventorySignal(), "/api/inventory-signal"));
-// EIA Release Lab — the frozen pre-release prediction + (after the run button) the
-// real surprise, verdict and cross-check for the latest crude release.
-app.get("/api/release-lab", route(() => releaseLab(), "/api/release-lab"));
+// EIA Release Lab — the live FORWARD forecast for the next release + the graded last
+// print. On every visit we check whether the snapshot is stale (old, or a new EIA week
+// has landed) and, if so, kick a throttled background regenerate so the page keeps
+// updating itself without the button — while still returning the current data instantly.
+app.get("/api/release-lab", route(() => { maybeRefreshReleaseLab(); return releaseLab(); }, "/api/release-lab"));
 // The dashboard's "Run the latest EIA release" button: spawn the Python pipeline
 // (analytics/release_lab.py --run), then return the fresh snapshot. Single-flight:
 // concurrent presses share the one in-progress run instead of stacking processes.
@@ -174,6 +176,43 @@ app.post("/api/release-lab/run", async (_req, res) => {
     res.status(503).json({ error: e.message, fallback: true });
   }
 });
+
+// ---- On-visit auto-refresh: keep the "live engine" fresh with no button press. -----
+// Regenerate in the background when the snapshot is stale — older than a window that
+// tightens as the next release approaches, or when the upcoming release date has passed
+// (a new print likely landed). Throttled so concurrent visits never stack Python runs.
+const RL_STALE_HOURS = Number(process.env.RELEASE_LAB_STALE_HOURS) || 6;
+const RL_AUTORUN_MIN_MS = Number(process.env.RELEASE_LAB_AUTORUN_MS) || 60 * 60 * 1000;
+let lastReleaseAutoRun = 0;
+
+function releaseLabStale(snap) {
+  if (!snap || !snap.generatedAt || (!snap.upcoming && !snap.last)) return true;
+  const gen = Date.parse(snap.generatedAt);
+  if (!Number.isFinite(gen)) return true;
+  const ageHours = (Date.now() - gen) / 3.6e6;
+  // A new EIA week has probably published: the upcoming release date is now in the past
+  // yet the snapshot was generated before it — regenerate to roll forward + grade it.
+  const relStr = snap.upcoming?.target?.release_date;
+  if (relStr) {
+    const rel = Date.parse(`${relStr}T14:30:00Z`); // ~10:30 ET WPSR
+    if (Number.isFinite(rel) && Date.now() > rel && gen < rel) return true;
+  }
+  const days = snap.upcoming?.target?.days_until;
+  const window = typeof days === "number" && days <= 2 ? 3 : RL_STALE_HOURS; // refresh eagerly near the print
+  return ageHours >= window;
+}
+
+function maybeRefreshReleaseLab() {
+  const now = Date.now();
+  if (releaseRun) return;                                  // a run is already in flight
+  if (now - lastReleaseAutoRun < RL_AUTORUN_MIN_MS) return; // throttle
+  let snap = null;
+  try { snap = releaseLab(); } catch { /* missing/corrupt → treat as stale */ }
+  if (!releaseLabStale(snap)) return;
+  lastReleaseAutoRun = now;
+  console.log("[release-lab] snapshot stale — background auto-refresh");
+  runReleaseLab().catch(() => {});                         // fire-and-forget; next poll serves it
+}
 app.get("/api/balance", route(() => eia.supplyDemand(), "/api/balance"));
 app.get("/api/stockflows", route(() => eia.stockFlows(), "/api/stockflows"));
 app.get("/api/spot", route(() => eia.spot(), "/api/spot"));

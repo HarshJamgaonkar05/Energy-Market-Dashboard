@@ -1,0 +1,63 @@
+name: EIA Release Lab — live engine
+
+# Scheduled "cloud routine" that keeps the Release Lab live even with zero visitors:
+#   * Tue 22:00 UTC — freeze the FORWARD forecast for Wednesday's crude print.
+#   * Wed 16:00 / 18:00 UTC — after the 10:30 ET WPSR, grade the print, roll the
+#     forecast to the next week, and capture the intraday reaction.
+# It regenerates server/data/release_lab.json (+ the accumulating live-record history),
+# commits them, and pings the live Hugging Face container so it refreshes too.
+#
+# One-time setup: add a repo secret EIA_API_KEY (Settings → Secrets → Actions).
+# The on-visit auto-refresh in the server keeps the site fresh between these runs;
+# this workflow is the belt-and-suspenders that also freezes/grades on the real cadence.
+
+on:
+  schedule:
+    - cron: "0 22 * * 2"     # Tue 22:00 UTC — freeze the upcoming forecast
+    - cron: "0 16 * * 3"     # Wed 16:00 UTC — grade the print (after 10:30 ET)
+    - cron: "0 18 * * 3"     # Wed 18:00 UTC — backup grade + intraday reaction
+  workflow_dispatch: {}       # allow manual runs
+
+concurrency:
+  group: release-lab
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install analytics deps
+        run: pip install --quiet numpy pandas requests
+
+      - name: Regenerate Release Lab (forward forecast + grade)
+        env:
+          EIA_API_KEY: ${{ secrets.EIA_API_KEY }}
+        run: python analytics/release_lab.py --run
+
+      - name: Commit refreshed snapshot + history
+        run: |
+          git config user.name  "release-lab-bot"
+          git config user.email "actions@github.com"
+          git add server/data/release_lab.json server/data/release_lab_history.json
+          if git diff --cached --quiet; then
+            echo "No change in the Release Lab snapshot — nothing to commit."
+          else
+            git commit -m "chore(release-lab): scheduled forward forecast + grade [skip ci]"
+            git push
+          fi
+
+      - name: Refresh the live Hugging Face container (best-effort)
+        continue-on-error: true
+        run: |
+          curl -s -m 200 -X POST \
+            https://harshj12-oil-market-dashboard.hf.space/api/release-lab/run \
+            -H "Accept: application/json" -o /dev/null -w "HF refresh: HTTP %{http_code}\n" || true

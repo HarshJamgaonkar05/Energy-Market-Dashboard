@@ -1,9 +1,13 @@
 // ============================================================================
-// EIA Release Lab — expected vs real surprise for one crude release.
-// Reads /api/release-lab (analytics/release_lab.py): frozen pre-release PREDICTION,
-// the RESULT after the run button (real surprise, verdict, scorecard, cross-check),
-// the impact curve, the intraday reaction model, and the framework track record.
-// The run button POSTs /api/release-lab/run, which spawns the Python pipeline.
+// EIA Release Lab — a LIVE forward engine.
+//   • UPCOMING: a leak-free forecast for the NEXT (not-yet-released) crude print —
+//     the model's expected build/draw, structural lean, catalyst strength & impact
+//     curve. It refreshes itself (on-visit + a scheduled routine) so it always
+//     describes the next release, and is graded automatically once it lands.
+//   • LAST: the most recent published week, graded (expected vs real, scorecard,
+//     cross-check, intraday reaction).
+//   • LIVE RECORD: how the engine's own frozen forward calls have actually done.
+// Reads /api/release-lab (analytics/release_lab.py). The Run button forces a refresh.
 // ============================================================================
 import { useState } from "react";
 import {
@@ -13,24 +17,34 @@ import {
 import { ResponsiveContainer } from "../lib/ResponsiveContainer";
 import { Card } from "../components/primitives/Card";
 import { SectionTitle } from "../components/primitives/SectionTitle";
+import { Band } from "../components/primitives/Band";
 import { SourceTag } from "../components/primitives/SourceTag";
 import { AsOf } from "../components/primitives/AsOf";
 import { InfoDot } from "../components/primitives/InfoDot";
 import { fmt, fmtSigned } from "../lib/format";
 import { useLive } from "../lib/useLive";
 import { chartProps } from "../lib/chart-theme";
-import { Play, Loader2, CheckCircle2, XCircle, MinusCircle } from "lucide-react";
+import {
+  Play, Loader2, CheckCircle2, XCircle, MinusCircle, Radio, CalendarClock, Beaker, History, Target,
+} from "lucide-react";
 
+const EMPTY_PRED = {
+  expected_wow: null, expected_surprise: 0, lean: "Neutral", confidence: "low",
+  factors: [], products: [], scenarios: [], catalyst_r2: null, catalyst_n: null, asof: null,
+};
 const FALLBACK = {
   status: "awaiting-release",
-  target: { label: "EIA crude release", period: null, release_date: null },
-  current: {},
-  prediction: {
-    expected_wow: null, expected_surprise: 0, lean: "Neutral", confidence: "low",
-    factors: [], products: [], scenarios: [], catalyst_r2: null, catalyst_n: null,
+  track_record: null, live_record: null,
+  upcoming: {
+    status: "awaiting-release",
+    target: { label: "next EIA crude release", period: null, release_date: null, days_until: null },
+    current: {}, prediction: EMPTY_PRED, impact_curve: { points: [] }, intraday: null, result: null,
   },
-  impact_curve: { points: [] },
-  intraday: null, track_record: null, result: null, comparison: null, scorecard: null,
+  last: {
+    target: { label: "EIA crude release", period: null, release_date: null },
+    current: {}, prediction: EMPTY_PRED, impact_curve: { points: [] },
+    intraday: null, result: null, comparison: null, scorecard: null,
+  },
 };
 
 const DIR = {
@@ -38,8 +52,6 @@ const DIR = {
   Bearish: { fg: "text-red-400", bg: "bg-red-500/10", br: "border-red-500/30", dot: "bg-red-500" },
   Neutral: { fg: "text-amber-400", bg: "bg-amber-500/10", br: "border-amber-500/30", dot: "bg-amber-500" },
 };
-
-// tri-state light: true -> green, false -> red, null -> amber
 const LIGHT = (ok) =>
   ok === true ? { fg: "text-emerald-400", br: "border-emerald-500/30", bg: "bg-emerald-500/[0.06]", Icon: CheckCircle2 }
   : ok === false ? { fg: "text-red-400", br: "border-red-500/30", bg: "bg-red-500/[0.06]", Icon: XCircle }
@@ -48,13 +60,12 @@ const LIGHT = (ok) =>
 const SPREAD = { wti: "WTI", brent: "Brent", brent_wti: "Brent–WTI", wti_m1m2: "WTI M1–M2",
   crack_321_wti: "3-2-1 crack", ho_wti: "HO crack", gasoil_brent: "Gasoil crack" };
 
-// Plain-English explanations, surfaced as subtle hover info dots. Inventory terms
-// are spelled out most fully — that's the concept this page exists to teach.
 const EXPL = {
   page: "The lesson here: what the EIA's weekly U.S. crude-inventory number does to the oil price. " +
     "Inventory = how much crude sits in storage tanks. A draw (stocks fall) is usually bullish, a build (stocks rise) bearish — " +
     "but the price only reacts to the SURPRISE vs what was expected, and only when inventories are a strong driver that week.",
-  expected: "Our leak-free estimate of this week's crude build/draw — the stand-in for the market consensus the price is already positioned for. Built only from data known before the release.",
+  upcoming: "A live forecast for the NEXT crude release, built only from data known before it. It refreshes automatically as new data lands and is graded once the number prints.",
+  expected: "Our leak-free estimate of the week's crude build/draw — the stand-in for the market consensus the price is already positioned for. Built only from data known before the release.",
   expSurprise: "Zero by design: the model expects the print to land on its own forecast. Only the miss — the real surprise — moves price.",
   catalyst: "How strongly the crude surprise has driven WTI in conditions like today's (R² of release-day move on the surprise). Near 0 = inventories barely move price right now; other forces rule.",
   actual: "The crude build/draw the EIA actually reported vs last week, in million barrels (MMbbl). Negative = draw, positive = build.",
@@ -66,6 +77,7 @@ const EXPL = {
   scorecard: "Did the call work? Three checks: did we forecast the number, did the surprise break our way, and did price actually follow the surprise.",
   curve: "Predicted release-day WTI move = β × surprise. A near-flat line means inventories barely move WTI in this regime — so the gap to the actual dot is the real story.",
   intraday: "How the reaction builds minute-by-minute after the 10:30 ET release: the (near-flat) predicted path vs the live actual path. R² per horizon shows inventories explain almost none of the intraday move.",
+  liveRecord: "How the engine's OWN frozen forward calls have done since it went live — forecast accuracy vs the naive seasonal guess, and how often the pre-release lean called the surprise. Distinct from the backtest below.",
   trSurprise: "Among sizeable surprises in history, how often WTI moved the way the surprise implied. 50% = coin-flip; higher = a real edge.",
   trLean: "How often our pre-release bias (lean) called the direction of the surprise.",
   trMae: "Average miss of our expected build/draw vs a naive 'just use the seasonal average' guess (million barrels; lower is better). Shows the forecast has genuine skill.",
@@ -86,12 +98,108 @@ const Tile = ({ label, value, sub, tone = "text-zinc-100", info }) => (
   </div>
 );
 
-// ---- Scorecard: 3 lights + one-line verdict -------------------------------
+// ---- Shared "Expected" (prediction) content -------------------------------
+const ExpectedBody = ({ p }) => {
+  const leanColor = DIR[p.lean] || DIR.Neutral;
+  return (
+    <>
+      <div className={`mx-4 mb-3 rounded-md border ${leanColor.br} ${leanColor.bg} px-3 py-2 flex items-center gap-2`}>
+        <span className={`w-2.5 h-2.5 rounded-full ${leanColor.dot}`} />
+        <span className={`font-mono text-sm font-semibold ${leanColor.fg}`}>{p.lean}</span>
+        <span className="text-[10px] uppercase tracking-wider text-zinc-500">lean · conf {p.confidence}</span>
+      </div>
+      <div className="grid grid-cols-3 gap-px bg-[#1c1d22] border-y border-[#1c1d22]">
+        <Tile label="Expected" info={EXPL.expected} value={fmtSigned(p.expected_wow, 1)} tone={toneFor(p.expected_wow)} sub={`MMbbl ${drawWord(p.expected_wow)}`} />
+        <Tile label="Exp. surprise" info={EXPL.expSurprise} value={fmtSigned(p.expected_surprise, 1)} tone="text-zinc-300" sub="≈0 (consensus)" />
+        <Tile label="Catalyst" info={EXPL.catalyst} value={p.catalyst_r2 == null ? "—" : `R² ${fmt(p.catalyst_r2, 2)}`}
+          tone={(p.catalyst_r2 ?? 0) >= 0.05 ? "text-emerald-400" : "text-amber-400"}
+          sub={`${(p.catalyst_r2 ?? 0) >= 0.05 ? "drives" : "weak"} · n=${p.catalyst_n ?? "—"}`} />
+      </div>
+      {p.scenarios?.length > 0 && (
+        <div className="px-4 pt-3">
+          <div className="text-[9px] uppercase tracking-wider text-zinc-600 mb-1.5">Scenarios · predicted WTI move</div>
+          <div className="grid grid-cols-3 gap-2">
+            {p.scenarios.map((s, i) => (
+              <div key={i} className="rounded-md border border-[#1c1d22] bg-[#0e0f12] p-2 text-center">
+                <div className="text-[9px] text-zinc-500 leading-tight h-7">{s.label}</div>
+                <div className={`font-mono text-sm ${toneFor(s.pred_move_pct, false)}`}>{pct(s.pred_move_pct)}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      {p.factors?.length > 0 && (
+        <ol className="px-4 py-3 space-y-1">
+          {p.factors.slice(0, 3).map((f, i) => (
+            <li key={i} className="text-[11px] text-zinc-400 leading-snug flex gap-1.5">
+              <span className="text-zinc-600 font-mono">{i + 1}.</span><span>{f}</span>
+            </li>
+          ))}
+        </ol>
+      )}
+    </>
+  );
+};
+
+// ---- Real (post-release result) content -----------------------------------
+const RealBody = ({ r }) => {
+  const verdictColor = DIR[r.verdict?.direction] || DIR.Neutral;
+  return (
+    <>
+      <div className={`mx-4 mb-3 rounded-md border ${verdictColor.br} ${verdictColor.bg} px-3 py-2 flex items-center gap-2`}>
+        <span className={`w-2.5 h-2.5 rounded-full ${verdictColor.dot}`} />
+        <span className={`font-mono text-sm font-semibold ${verdictColor.fg}`}>{r.verdict?.direction}</span>
+        <span className="text-[10px] uppercase tracking-wider text-zinc-500">verdict · conf {r.verdict?.confidence}</span>
+      </div>
+      <div className="grid grid-cols-3 gap-px bg-[#1c1d22] border-y border-[#1c1d22]">
+        <Tile label="Actual" info={EXPL.actual} value={fmtSigned(r.actual_wow, 1)} tone={toneFor(r.actual_wow)} sub={`MMbbl ${drawWord(r.actual_wow)}`} />
+        <Tile label="Real surprise" info={EXPL.realSurprise} value={fmtSigned(r.real_surprise, 1)} tone={toneFor(r.real_surprise)} sub={`${fmtSigned(r.real_surprise_z, 1)}σ · ${r.real_surprise_dir}`} />
+        <Tile label="WTI on print" info={EXPL.wtiMove} value={pct(r.actual_move_pct, 1)} tone={toneFor(r.actual_move_pct, false)} sub={`pred ${pct(r.pred_move_pct)}`} />
+      </div>
+      {r.attribution && (
+        <div className="px-4 pt-3 pb-1">
+          <div className="text-[9px] uppercase tracking-wider text-zinc-600 mb-1.5 flex items-center gap-1">
+            Move attribution · what drove it <InfoDot text="The day's WTI move split into the part from the inventory surprise, the part from the broad market, and everything else." />
+          </div>
+          <div className="grid grid-cols-3 gap-2 text-center">
+            <div className="rounded-md border border-[#1c1d22] bg-[#0e0f12] p-2">
+              <div className="text-[9px] text-zinc-500 flex items-center justify-center gap-1">Inventory <InfoDot text={EXPL.attrInv} /></div>
+              <div className="font-mono text-sm text-sky-400">{pct(r.attribution.inventory_pct)}</div>
+            </div>
+            <div className="rounded-md border border-[#1c1d22] bg-[#0e0f12] p-2">
+              <div className="text-[9px] text-zinc-500 flex items-center justify-center gap-1">Macro <InfoDot text={EXPL.attrMacro} /></div>
+              <div className="font-mono text-sm text-zinc-300">{r.attribution.macro_pct == null ? "—" : pct(r.attribution.macro_pct)}</div>
+            </div>
+            <div className="rounded-md border border-[#1c1d22] bg-[#0e0f12] p-2">
+              <div className="text-[9px] text-zinc-500 flex items-center justify-center gap-1">Other <InfoDot text={EXPL.attrOther} /></div>
+              <div className={`font-mono text-sm ${toneFor(r.attribution.residual_pct, false)}`}>{pct(r.attribution.residual_pct)}</div>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+};
+
+// ---- Countdown pill --------------------------------------------------------
+const Countdown = ({ days }) => {
+  if (days == null) return null;
+  const soon = days <= 2;
+  return (
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono border ${
+      soon ? "text-emerald-300 border-emerald-500/30 bg-emerald-500/10" : "text-zinc-400 border-[#2a2b31] bg-[#0e0f12]"}`}>
+      <CalendarClock size={11} />
+      {days <= 0 ? "due now" : days === 1 ? "in 1 day" : `in ${days} days`}
+    </span>
+  );
+};
+
+// ---- Scorecard -------------------------------------------------------------
 const Scorecard = ({ scorecard }) => (
   <Card>
-    <SectionTitle sub="prediction vs reality">Scorecard <InfoDot text={EXPL.scorecard} /></SectionTitle>
+    <SectionTitle sub="last print · prediction vs reality">Scorecard <InfoDot text={EXPL.scorecard} /></SectionTitle>
     {!scorecard ? (
-      <div className="text-[11px] text-zinc-500 py-2">Run the release to grade the call.</div>
+      <div className="text-[11px] text-zinc-500 py-2">Awaiting the print to grade the call.</div>
     ) : (
       <>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -145,9 +253,7 @@ const TrackRecord = ({ track }) => {
   );
   return (
     <Card>
-      <SectionTitle sub="backtested" action={<SourceTag source="derived" note={track.note} />}>
-        Track record
-      </SectionTitle>
+      <SectionTitle sub="backtested" action={<SourceTag source="derived" note={track.note} />}>Track record</SectionTitle>
       <div className="flex gap-6">
         <Col w={track.recent} title="Last 52" />
         <div className="w-px bg-[#1c1d22]" />
@@ -157,9 +263,51 @@ const TrackRecord = ({ track }) => {
   );
 };
 
+// ---- Live record (the engine's OWN forward calls) --------------------------
+const LiveRecord = ({ live }) => {
+  if (!live) return null;
+  const graded = live.n || 0;
+  const skill = live.mae != null && live.mae_seasonal != null ? live.mae < live.mae_seasonal : null;
+  return (
+    <Card>
+      <SectionTitle sub="frozen forward calls, graded" action={<SourceTag source="derived"
+        note="Every pre-release forecast is frozen to disk, then graded when the week prints — an honest, growing out-of-sample record of the live engine (separate from the backtest)." />}>
+        Live record <InfoDot text={EXPL.liveRecord} />
+      </SectionTitle>
+      {graded < 3 ? (
+        <div className="text-[11px] text-zinc-500 py-1 leading-snug">
+          <span className="font-mono text-zinc-300">{graded}</span> graded · <span className="font-mono text-zinc-300">{live.pending || 0}</span> pending.
+          The live track record starts filling as each frozen forecast prints — check back after a few releases.
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <Row label="Forward calls graded" value={`${graded}`} sub={live.pending ? `${live.pending} pending` : ""} tone="text-zinc-200" />
+          <Row label="Forecast MAE vs seasonal" value={`${fmt(live.mae, 1)} / ${fmt(live.mae_seasonal, 1)}`}
+            tone={skill ? "text-emerald-400" : "text-amber-400"} sub="MMbbl" />
+          <Row label="Lean called the surprise" value={live.lean_hit_rate == null ? "—" : `${(live.lean_hit_rate * 100).toFixed(0)}%`}
+            tone={hitTone(live.lean_hit_rate)} />
+          {live.recent?.length > 0 && (
+            <div className="pt-1 border-t border-[#1c1d22] space-y-1">
+              {live.recent.slice(-4).map((e) => (
+                <div key={e.period} className="flex items-center justify-between text-[10px] font-mono">
+                  <span className="text-zinc-600">{e.period}</span>
+                  <span className="text-zinc-500">exp {fmtSigned(e.expected_wow, 1)} · act {fmtSigned(e.actual_wow, 1)}</span>
+                  <span className={e.lean_hit === true ? "text-emerald-400" : e.lean_hit === false ? "text-red-400" : "text-zinc-600"}>
+                    {e.lean} {e.lean_hit === true ? "✓" : e.lean_hit === false ? "✗" : ""}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </Card>
+  );
+};
+
 // ---- Impact curve ----------------------------------------------------------
 const ImpactCurve = ({ curve, result }) => {
-  const data = (curve.points || []).map((p) => ({ surprise: p.surprise, regime: p.regime_pct, overall: p.overall_pct }));
+  const data = (curve?.points || []).map((p) => ({ surprise: p.surprise, regime: p.regime_pct, overall: p.overall_pct }));
   if (!data.length) return null;
   const rp = result?.realized_point;
   return (
@@ -268,7 +416,7 @@ const IntradayReaction = ({ intraday }) => {
           </>
         ) : (
           <div className="rounded-md border border-dashed border-[#2a2b31] p-5 text-center text-[11px] text-zinc-500">
-            Run to overlay the live reaction path.
+            The live reaction path appears once the release prints.
           </div>
         )}
       </div>
@@ -284,11 +432,11 @@ export const PageReleaseLab = () => {
   const [error, setError] = useState(null);
 
   const view = override || data;
-  const p = view.prediction || FALLBACK.prediction;
-  const r = view.result;
-  const t = view.target || FALLBACK.target;
-  const leanColor = DIR[p.lean] || DIR.Neutral;
-  const verdictColor = r ? (DIR[r.verdict?.direction] || DIR.Neutral) : null;
+  const up = view.upcoming || FALLBACK.upcoming;
+  const last = view.last || FALLBACK.last;
+  const ut = up.target || FALLBACK.upcoming.target;
+  const lt = last.target || FALLBACK.last.target;
+  const r = last.result;
 
   const runPipeline = async () => {
     setRunning(true); setError(null);
@@ -307,148 +455,108 @@ export const PageReleaseLab = () => {
       className={`flex items-center gap-2 px-3.5 h-9 rounded-md font-semibold text-[11px] tracking-wide transition-all ${
         running ? "bg-zinc-800 text-zinc-400 cursor-wait" : "bg-amber-500 text-zinc-950 hover:bg-amber-400 active:scale-[0.98]"}`}>
       {running ? <Loader2 size={14} className="animate-spin" /> : <Play size={13} fill="currentColor" />}
-      {running ? "Running…" : r ? "Re-run" : "Run release"}
+      {running ? "Refreshing…" : "Refresh now"}
     </button>
   );
 
   return (
     <div className="space-y-3">
-      {/* Header + run button */}
+      {/* Header */}
       <Card>
-        <SectionTitle sub={`expected vs real surprise · ${t.label}`} action={RunBtn}>
+        <SectionTitle sub="live forward engine · crude inventories → WTI" action={RunBtn}>
           EIA Release Lab <InfoDot text={EXPL.page} title="What this teaches" />
         </SectionTitle>
+        <div className="flex items-center gap-2 flex-wrap text-[11px] text-zinc-500">
+          <span className="inline-flex items-center gap-1 text-emerald-400">
+            <Radio size={12} className="animate-pulse" /> auto-updating
+          </span>
+          <span className="text-zinc-600">·</span>
+          <span>Forecasts the next release and grades itself when it prints — no button needed.</span>
+          {view.generatedAtET && <span className="text-zinc-600 font-mono ml-auto">refreshed {view.generatedAtET}</span>}
+        </div>
         {error && (
-          <div className="rounded-md border border-red-500/30 bg-red-500/10 p-2 text-[11px] text-red-300">
-            Run failed: <span className="font-mono">{error}</span>
+          <div className="mt-2 rounded-md border border-red-500/30 bg-red-500/10 p-2 text-[11px] text-red-300">
+            Refresh failed: <span className="font-mono">{error}</span>
           </div>
         )}
       </Card>
 
-      {/* Scorecard */}
-      <Scorecard scorecard={view.scorecard} />
-
-      {/* Expected vs Real */}
+      {/* ============ UPCOMING — the live forward forecast ============ */}
+      <Band icon={Target} title="Upcoming release · live forecast"
+        sub={ut.label} right={<Countdown days={ut.days_until} />} />
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-        {/* Expected */}
         <Card padding={false}>
           <div className="p-4 pb-2">
-            <SectionTitle sub={`pre-release · frozen ${p.asof || "—"}`}
+            <SectionTitle sub={`forecast · updates automatically · frozen ${up.prediction?.asof || "—"}`}
               action={<SourceTag live={live} source="eia"
-                note="Built only from data before the target week. Expected = walk-forward consensus proxy; lean from stocks vs seasonal norm, momentum, Cushing, alignment." />}>
-              <span className="text-sky-400">Expected</span>
+                note="One-step-ahead, leak-free forecast for the next release: the model's expected build/draw, structural lean, catalyst strength & impact curve. Refreshes on-visit and on a schedule; graded once the number prints." />}>
+              <span className="text-sky-400">Expected</span> <InfoDot text={EXPL.upcoming} />
             </SectionTitle>
           </div>
-          <div className={`mx-4 mb-3 rounded-md border ${leanColor.br} ${leanColor.bg} px-3 py-2 flex items-center gap-2`}>
-            <span className={`w-2.5 h-2.5 rounded-full ${leanColor.dot}`} />
-            <span className={`font-mono text-sm font-semibold ${leanColor.fg}`}>{p.lean}</span>
-            <span className="text-[10px] uppercase tracking-wider text-zinc-500">lean · conf {p.confidence}</span>
-          </div>
-          <div className="grid grid-cols-3 gap-px bg-[#1c1d22] border-y border-[#1c1d22]">
-            <Tile label="Expected" info={EXPL.expected} value={fmtSigned(p.expected_wow, 1)} tone={toneFor(p.expected_wow)} sub={`MMbbl ${drawWord(p.expected_wow)}`} />
-            <Tile label="Exp. surprise" info={EXPL.expSurprise} value={fmtSigned(p.expected_surprise, 1)} tone="text-zinc-300" sub="≈0 (consensus)" />
-            <Tile label="Catalyst" info={EXPL.catalyst} value={p.catalyst_r2 == null ? "—" : `R² ${fmt(p.catalyst_r2, 2)}`}
-              tone={(p.catalyst_r2 ?? 0) >= 0.05 ? "text-emerald-400" : "text-amber-400"}
-              sub={`${(p.catalyst_r2 ?? 0) >= 0.05 ? "drives" : "weak"} · n=${p.catalyst_n ?? "—"}`} />
-          </div>
-          {p.scenarios?.length > 0 && (
-            <div className="px-4 pt-3">
-              <div className="text-[9px] uppercase tracking-wider text-zinc-600 mb-1.5">Scenarios · predicted WTI move</div>
-              <div className="grid grid-cols-3 gap-2">
-                {p.scenarios.map((s, i) => (
-                  <div key={i} className="rounded-md border border-[#1c1d22] bg-[#0e0f12] p-2 text-center">
-                    <div className="text-[9px] text-zinc-500 leading-tight h-7">{s.label}</div>
-                    <div className={`font-mono text-sm ${toneFor(s.pred_move_pct, false)}`}>{pct(s.pred_move_pct)}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-          {p.factors?.length > 0 && (
-            <ol className="px-4 py-3 space-y-1">
-              {p.factors.slice(0, 3).map((f, i) => (
-                <li key={i} className="text-[11px] text-zinc-400 leading-snug flex gap-1.5">
-                  <span className="text-zinc-600 font-mono">{i + 1}.</span><span>{f}</span>
-                </li>
-              ))}
-            </ol>
-          )}
+          <ExpectedBody p={up.prediction || EMPTY_PRED} />
         </Card>
 
-        {/* Real */}
+        <Card padding={false}>
+          <div className="p-4 pb-1">
+            <SectionTitle sub="predicted WTI move = β × surprise">Impact curve <InfoDot text={EXPL.curve} /></SectionTitle>
+          </div>
+          <div className="px-3 pb-4"><ImpactCurve curve={up.impact_curve} result={null} /></div>
+        </Card>
+      </div>
+
+      {/* ============ LAST — the graded print ============ */}
+      <Band icon={History} title="Last release · graded"
+        sub={lt.label} right={r ? <AsOf date={lt.release_date} /> : <span className="text-[10px] text-zinc-600">awaiting print</span>} />
+      <Scorecard scorecard={last.scorecard} />
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         <Card padding={false}>
           <div className="p-4 pb-2">
-            <SectionTitle sub={r ? `post-release · ${t.release_date}` : "press run"}>
-              <span className="text-amber-400">Real</span>
-            </SectionTitle>
+            <SectionTitle sub={`frozen ${last.prediction?.asof || "—"}`}><span className="text-sky-400">Expected</span></SectionTitle>
+          </div>
+          <ExpectedBody p={last.prediction || EMPTY_PRED} />
+        </Card>
+
+        <Card padding={false}>
+          <div className="p-4 pb-2">
+            <SectionTitle sub={r ? `post-release · ${lt.release_date}` : "awaiting print"}><span className="text-amber-400">Real</span></SectionTitle>
           </div>
           {!r ? (
             <div className="m-4 mt-2 rounded-md border border-dashed border-[#2a2b31] p-8 text-center text-[11px] text-zinc-500">
-              Run the release to reveal the actual print, real surprise and the graded call.
+              The actual print, real surprise and graded call appear automatically once the EIA releases.
             </div>
-          ) : (
-            <>
-              <div className={`mx-4 mb-3 rounded-md border ${verdictColor.br} ${verdictColor.bg} px-3 py-2 flex items-center gap-2`}>
-                <span className={`w-2.5 h-2.5 rounded-full ${verdictColor.dot}`} />
-                <span className={`font-mono text-sm font-semibold ${verdictColor.fg}`}>{r.verdict?.direction}</span>
-                <span className="text-[10px] uppercase tracking-wider text-zinc-500">verdict · conf {r.verdict?.confidence}</span>
-              </div>
-              <div className="grid grid-cols-3 gap-px bg-[#1c1d22] border-y border-[#1c1d22]">
-                <Tile label="Actual" info={EXPL.actual} value={fmtSigned(r.actual_wow, 1)} tone={toneFor(r.actual_wow)} sub={`MMbbl ${drawWord(r.actual_wow)}`} />
-                <Tile label="Real surprise" info={EXPL.realSurprise} value={fmtSigned(r.real_surprise, 1)} tone={toneFor(r.real_surprise)} sub={`${fmtSigned(r.real_surprise_z, 1)}σ · ${r.real_surprise_dir}`} />
-                <Tile label="WTI on print" info={EXPL.wtiMove} value={pct(r.actual_move_pct, 1)} tone={toneFor(r.actual_move_pct, false)} sub={`pred ${pct(r.pred_move_pct)}`} />
-              </div>
-              {r.attribution && (
-                <div className="px-4 pt-3 pb-1">
-                  <div className="text-[9px] uppercase tracking-wider text-zinc-600 mb-1.5 flex items-center gap-1">
-                    Move attribution · what drove it <InfoDot text="The day's WTI move split into the part from the inventory surprise, the part from the broad market, and everything else." />
-                  </div>
-                  <div className="grid grid-cols-3 gap-2 text-center">
-                    <div className="rounded-md border border-[#1c1d22] bg-[#0e0f12] p-2">
-                      <div className="text-[9px] text-zinc-500 flex items-center justify-center gap-1">Inventory <InfoDot text={EXPL.attrInv} /></div>
-                      <div className="font-mono text-sm text-sky-400">{pct(r.attribution.inventory_pct)}</div>
-                    </div>
-                    <div className="rounded-md border border-[#1c1d22] bg-[#0e0f12] p-2">
-                      <div className="text-[9px] text-zinc-500 flex items-center justify-center gap-1">Macro <InfoDot text={EXPL.attrMacro} /></div>
-                      <div className="font-mono text-sm text-zinc-300">{r.attribution.macro_pct == null ? "—" : pct(r.attribution.macro_pct)}</div>
-                    </div>
-                    <div className="rounded-md border border-[#1c1d22] bg-[#0e0f12] p-2">
-                      <div className="text-[9px] text-zinc-500 flex items-center justify-center gap-1">Other <InfoDot text={EXPL.attrOther} /></div>
-                      <div className={`font-mono text-sm ${toneFor(r.attribution.residual_pct, false)}`}>{pct(r.attribution.residual_pct)}</div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </>
-          )}
+          ) : <RealBody r={r} />}
         </Card>
       </div>
 
-      {/* Impact curve */}
+      {/* Impact curve with realized dot + intraday reaction for the graded print */}
       <Card padding={false}>
         <div className="p-4 pb-1">
-          <SectionTitle sub="WTI move = β × surprise" action={<AsOf date={t.release_date} />}>Impact curve <InfoDot text={EXPL.curve} /></SectionTitle>
+          <SectionTitle sub="WTI move = β × surprise · with realized point" action={<AsOf date={lt.release_date} />}>
+            Impact curve · last print <InfoDot text={EXPL.curve} />
+          </SectionTitle>
         </div>
-        <div className="px-3 pb-4"><ImpactCurve curve={view.impact_curve || FALLBACK.impact_curve} result={r} /></div>
+        <div className="px-3 pb-4"><ImpactCurve curve={last.impact_curve} result={r} /></div>
       </Card>
 
-      {/* Intraday reaction */}
-      <IntradayReaction intraday={view.intraday} />
+      <IntradayReaction intraday={last.intraday} />
 
-      {/* Track record + affected products */}
+      {/* Records + affected products */}
+      <Band icon={Beaker} title="How the engine is doing" sub="live calls + backtest" />
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+        <LiveRecord live={view.live_record} />
         <div className="lg:col-span-2"><TrackRecord track={view.track_record} /></div>
-        <Card>
-          <SectionTitle sub="by sensitivity">Affected</SectionTitle>
-          <div className="flex flex-wrap gap-1.5">
-            {(p.products || []).map((s) => (
-              <span key={s} className="font-mono text-[11px] px-2 py-1 rounded bg-[#15161a] text-zinc-300 border border-[#1c1d22]">
-                {SPREAD[s] || s}
-              </span>
-            ))}
-          </div>
-        </Card>
       </div>
+      <Card>
+        <SectionTitle sub="by sensitivity">Affected products</SectionTitle>
+        <div className="flex flex-wrap gap-1.5">
+          {(up.prediction?.products || []).map((s) => (
+            <span key={s} className="font-mono text-[11px] px-2 py-1 rounded bg-[#15161a] text-zinc-300 border border-[#1c1d22]">
+              {SPREAD[s] || s}
+            </span>
+          ))}
+        </div>
+      </Card>
     </div>
   );
 };

@@ -1,0 +1,16 @@
+[
+  {
+    "period": "2026-06-26",
+    "release_date": "2026-07-01",
+    "frozen_at": "2026-07-01T01:45:46Z",
+    "expected_wow": -3.57,
+    "expected_seasonal": -1.7,
+    "lean": "Bullish",
+    "lean_score": 2.35,
+    "catalyst_r2": 0.0268,
+    "actual_wow": null,
+    "surprise": null,
+    "lean_hit": null,
+    "graded_at": null
+  }
+]
