@@ -1,7 +1,7 @@
 """
 03_build_deck.py
 ----------------
-Assemble a self-contained 5-slide HTML presentation (dark dashboard theme),
+Assemble a self-contained 8-slide HTML presentation (dark dashboard theme),
 embedding the charts as base64 and pulling headline numbers from
 data/stats_summary.json so text and figures never drift apart.
 
@@ -14,6 +14,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 CH = HERE / "charts"
 S = json.load(open(HERE / "data" / "stats_summary.json"))
+DS = json.load(open(HERE / "data" / "deep_stats.json"))
 
 
 def img(name):
@@ -36,7 +37,20 @@ rz4 = rz["extreme_short"]["fwd_4w"]
 CHARTS = {k: img(v) for k, v in {
     "ts": "01_timeseries.png", "scatter": "02_scatter_predictive.png",
     "decile": "03_decile_returns.png", "buckets": "04_extreme_buckets.png",
-    "event": "05_event_study.png", "hit": "06_hitrate.png"}.items()}
+    "event": "05_event_study.png", "hit": "06_hitrate.png",
+    "ccf": "07_ccf.png", "irf": "08_irf.png", "halflife": "09_halflife.png",
+    "quantile": "10_quantile.png", "equity": "11_oos_equity.png", "fdr": "12_fdr.png"}.items()}
+
+# ---- deep-dive headline numbers (from deep_stats.json) ----------------------
+gpr = DS["granger"]["dpos_to_ret"]["min_p"]; grp = DS["granger"]["ret_to_dpos"]["min_p"]
+ccf0 = DS["cross_correlation"]["corr"][DS["cross_correlation"]["lags"].index(0)]
+hl = DS["half_life"]["half_life_wks"]; rho = DS["half_life"]["rho"]
+irf_tot = DS["var_irf"]["cum_total"]
+lg = DS["logit_direction_4w"]; auc = lg.get("auc")
+blo = DS["backtest"]["long_only"]; bhp = DS["backtest"]["buy_hold_perf"]
+lo_sh = blo["perf_0bps"]["sharpe"]; lo_boot = blo["boot_sharpe"]["p_le_0"]
+lo_dd = blo["perf_0bps"]["max_dd"]; lo_exp = blo["exposure"]
+bh_sh = bhp["sharpe"]; fdr = DS["fdr"]
 
 HTML = f"""<!doctype html>
 <html lang="en"><head>
@@ -114,9 +128,9 @@ kbd{{background:var(--panel2);border:1px solid var(--border);border-radius:4px;p
     <div class="chips">
       <span class="chip"><span class="dot" style="background:var(--sky)"></span>WTI spot — EIA Cushing (RWTC)</span>
       <span class="chip"><span class="dot" style="background:var(--amber)"></span>Managed Money — official CFTC (WTI 067651)</span>
-      <span class="chip"><span class="dot" style="background:var(--emer)"></span>standalone analysis · not in dashboard</span>
+      <span class="chip"><span class="dot" style="background:var(--emer)"></span>8-slide deep-dive · now a dashboard section</span>
     </div>
-    <div class="foot"><span>CFTC Positioning vs WTI</span><div class="dots"></div><span>1 / 5</span></div>
+    <div class="foot"><span>CFTC Positioning vs WTI</span><div class="dots"></div><span>1 / 8</span></div>
   </section>
 
   <!-- 2 — RELATIONSHIP -->
@@ -137,7 +151,7 @@ kbd{{background:var(--panel2);border:1px solid var(--border);border-radius:4px;p
         </ul>
       </div>
     </div>
-    <div class="foot"><span>CFTC Positioning vs WTI</span><div class="dots"></div><span>2 / 5</span></div>
+    <div class="foot"><span>CFTC Positioning vs WTI</span><div class="dots"></div><span>2 / 8</span></div>
   </section>
 
   <!-- 3 — NO PREDICTIVE POWER -->
@@ -157,7 +171,7 @@ kbd{{background:var(--panel2);border:1px solid var(--border);border-radius:4px;p
     <ul style="margin-top:1vh">
       <li>Regressing 1/2/4-week WTI returns on the positioning z-score yields |r| ≤ 0.07 and <b>no significant slope</b> after correcting for overlapping windows.</li>
     </ul>
-    <div class="foot"><span>CFTC Positioning vs WTI</span><div class="dots"></div><span>3 / 5</span></div>
+    <div class="foot"><span>CFTC Positioning vs WTI</span><div class="dots"></div><span>3 / 8</span></div>
   </section>
 
   <!-- 4 — THE ONE EDGE -->
@@ -182,10 +196,74 @@ kbd{{background:var(--panel2);border:1px solid var(--border);border-radius:4px;p
       <div class="card"><div class="big amb">{rz4['median']*100:+.1f}% <span style="font-size:1rem;color:var(--muted)">med</span></div>
         <div class="lbl">same signal, <b>tradeable</b> rolling-z def · effect fades, CI spans 0 (p<sub>MW</sub>={rz4['p_vs_rest_med']:.2f})</div></div>
     </div>
-    <div class="foot"><span>CFTC Positioning vs WTI</span><div class="dots"></div><span>4 / 5</span></div>
+    <div class="foot"><span>CFTC Positioning vs WTI</span><div class="dots"></div><span>4 / 8</span></div>
   </section>
 
-  <!-- 5 — VERDICT -->
+  <!-- 5 — DEEP DIVE: DIRECTION -->
+  <section class="slide">
+    <div class="kicker">4 · Deep-dive — direction</div>
+    <h2>The link is <span class="neu">contemporaneous</span>, not causal in either direction</h2>
+    <div class="row">
+      <div class="col" style="flex:1.5">
+        <div class="fig"><img src="{CHARTS['ccf']}"></div>
+        <div class="cap">Cross-correlation of Δposition vs return. All the mass is at k=0; no lead bar (k&gt;0) clears the ±{DS['cross_correlation']['band']:.2f} band.</div>
+      </div>
+      <div class="col" style="flex:1.3">
+        <div class="fig"><img src="{CHARTS['irf']}"></div>
+        <div class="cap">VAR({DS['var_irf']['lag_order']}) impulse response — a position shock hits WTI the same week ({irf_tot*100:+.1f}% cumulative) then dies out.</div>
+      </div>
+    </div>
+    <div class="stat-grid" style="margin-top:1vh">
+      <div class="card"><div class="big neu">{ccf0:+.2f}</div><div class="lbl">cross-correlation at <b>lag 0</b> — the only bar outside the significance band</div></div>
+      <div class="card"><div class="big amb">p={gpr:.2f}</div><div class="lbl">Granger Δposition → return (lags 1–4): <b>does not</b> lead price</div></div>
+      <div class="card"><div class="big amb">p={grp:.2f}</div><div class="lbl">Granger return → Δposition: price doesn't lead positioning either → pure comovement</div></div>
+    </div>
+    <div class="foot"><span>CFTC Positioning vs WTI</span><div class="dots"></div><span>5 / 8</span></div>
+  </section>
+
+  <!-- 6 — DEEP DIVE: DYNAMICS & TRADEABILITY -->
+  <section class="slide">
+    <div class="kicker">5 · Deep-dive — dynamics & tradeability</div>
+    <h2>Persistent state, <span class="neg">no</span> out-of-sample edge</h2>
+    <div class="row">
+      <div class="col" style="flex:1.4">
+        <div class="fig"><img src="{CHARTS['equity']}"></div>
+        <div class="cap">Walk-forward OOS backtest (point-in-time z, fixed a-priori threshold). The contrarian rule trails buy &amp; hold.</div>
+      </div>
+      <div class="col" style="flex:1.2">
+        <div class="fig"><img src="{CHARTS['halflife']}"></div>
+        <div class="cap">Positioning is highly persistent — AR(1) ρ={rho:.2f}, mean-reversion half-life ≈ {hl:.0f} weeks.</div>
+      </div>
+    </div>
+    <div class="stat-grid" style="margin-top:1vh">
+      <div class="card"><div class="big neg">{lo_sh:.2f}</div><div class="lbl">contrarian long-only <b>Sharpe</b> vs <b>{bh_sh:.2f}</b> buy &amp; hold · boot p(Sharpe≤0)={lo_boot:.2f}</div></div>
+      <div class="card"><div class="big amb">AUC {auc:.2f}</div><div class="lbl">logistic direction model on the z-score — a <b>coin flip</b> (pseudo-R²≈0)</div></div>
+      <div class="card"><div class="big neu">≈{hl:.0f} wks</div><div class="lbl">crowding half-life — a slow-moving <b>context</b> gauge, not an entry trigger</div></div>
+    </div>
+    <div class="foot"><span>CFTC Positioning vs WTI</span><div class="dots"></div><span>6 / 8</span></div>
+  </section>
+
+  <!-- 7 — DEEP DIVE: MULTIPLE TESTING -->
+  <section class="slide">
+    <div class="kicker">6 · Deep-dive — the honest capstone</div>
+    <h2>The one "edge" <span class="neg">doesn't survive</span> multiple testing</h2>
+    <div class="row">
+      <div class="col" style="flex:1.5">
+        <div class="fig"><img src="{CHARTS['fdr']}"></div>
+        <div class="cap">Benjamini-Hochberg across all {fdr['m']} extreme-bucket tests. Every p-value sits above its BH threshold.</div>
+      </div>
+      <div class="col" style="flex:1.1">
+        <div class="fig"><img src="{CHARTS['quantile']}"></div>
+        <div class="cap">Quantile regression — positioning barely moves any part of the 4-week return distribution; CIs straddle zero.</div>
+      </div>
+    </div>
+    <ul style="margin-top:1vh">
+      <li>The lone p≈{es4['p_vs_rest_med']:.2f} short-extreme result was <b>one of {fdr['m']} tests</b> — under BH (q={fdr['q']}), <b class="neg">{fdr['n_survivors']} of {fdr['m']} survive</b>. Consistent with look-where-you-looked noise.</li>
+    </ul>
+    <div class="foot"><span>CFTC Positioning vs WTI</span><div class="dots"></div><span>7 / 8</span></div>
+  </section>
+
+  <!-- 8 — VERDICT -->
   <section class="slide">
     <div class="kicker">Verdict</div>
     <h2>A crowding gauge — <span class="amb">not</span> a timing signal</h2>
@@ -194,9 +272,9 @@ kbd{{background:var(--panel2);border:1px solid var(--border);border-radius:4px;p
         <div class="verdict">
           <div class="vbig">CFTC Managed-Money positioning has <b>limited, mostly contrarian</b> predictive value for WTI.</div>
           <ul>
-            <li><b>Coincident momentum gauge</b> — it confirms trend, it doesn't lead it.</li>
-            <li><b>One weak edge:</b> extreme net-short capitulation precedes a modest 2–4-week bounce ({es4['median']*100:+.1f}% median, {es4['hit']*100:.0f}% win-rate).</li>
-            <li><b>Fragile:</b> borderline significance, fades under point-in-time definition, and overlapping windows overstate it. Pair with inventories & term structure — don't trade it alone.</li>
+            <li><b>Coincident, not causal:</b> all cross-correlation mass at lag 0; neither Granger direction significant (p={gpr:.2f} / {grp:.2f}).</li>
+            <li><b>Persistent state:</b> ~{hl:.0f}-week half-life — a crowding <i>context</i>, never a crisp entry trigger.</li>
+            <li><b>No robust edge:</b> the lone net-short bounce ({es4['median']*100:+.1f}% median) fails OOS (Sharpe {lo_sh:.2f} &lt; {bh_sh:.2f} B&amp;H) and dies under BH-FDR ({fdr['n_survivors']}/{fdr['m']}). Pair with inventories &amp; term structure — don't trade it alone.</li>
           </ul>
         </div>
         <div class="note"><b>Data note:</b> the supplied <code>Data/CFTC…OR_NET</code> file is CFTC
@@ -208,7 +286,7 @@ kbd{{background:var(--panel2);border:1px solid var(--border);border-radius:4px;p
         <div class="cap">4-week win-rate by extreme. Edge is a tilt, not a coin-flip breaker.</div>
       </div>
     </div>
-    <div class="foot"><span>CFTC Positioning vs WTI</span><div class="dots"></div><span>5 / 5</span></div>
+    <div class="foot"><span>CFTC Positioning vs WTI</span><div class="dots"></div><span>8 / 8</span></div>
   </section>
 
 </div>

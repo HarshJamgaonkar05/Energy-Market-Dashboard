@@ -31,7 +31,8 @@ The two categories trade **oppositely** (§1), so the label matters.
 - **Inference (refined):**
   - **Newey-West (HAC)** p-values on the predictive slope — honest under the autocorrelation that overlapping forward windows create.
   - **Hit-rate** (% positive) per bucket; **circular block-bootstrap** 95% CIs on bucket mean returns; **Mann-Whitney** medians vs the rest; **event-study** cumulative path (weeks 0–6).
-- Reproduce: `python 01_prepare_data.py && python 02_analysis.py && python 03_build_deck.py`.
+  - **Deep-dive (§4):** cross-correlation lead/lag, **Granger causality** (both directions), **VAR + orthogonalized impulse response**, mean-reversion **half-life**, **quantile** & **logistic** regression, a **walk-forward out-of-sample backtest** with block-bootstrap Sharpe inference, and **Benjamini-Hochberg** multiple-testing correction.
+- Reproduce: `python 01_prepare_data.py && python 02_analysis.py && python 04_deep_analysis.py && python 05_export_dashboard.py && python 03_build_deck.py`.
 
 ---
 
@@ -85,14 +86,96 @@ Managed Money is **coincident and momentum-driven** — it *buys as price rises*
 
 ---
 
+## 4. Mathematical deep-dive (`04_deep_analysis.py`)
+
+The first pass measured *whether* a relationship exists. This pass interrogates its
+**direction, dynamics, and tradeability** with proper time-series econometrics. Every
+result below points the same way, and hardens the verdict.
+
+### 4A · Direction — cross-correlation & Granger causality
+
+**Cross-correlation** of Δposition against WTI return at leads/lags −8…+8 weeks
+(Bartlett band ±1.96/√N = **±0.08**):
+
+| Lag k | meaning | corr |
+|---|---|---|
+| k = 0 | same week | **+0.36** (only bar far outside the band) |
+| k > 0 | position change *leads* return | max \|r\| = **0.08** (none clears the band) |
+| k < 0 | return *leads* position change | max \|r\| = 0.09 |
+
+The entire cross-correlation mass sits at **k = 0**. Formalised by **Granger causality**
+(F-test, lags 1–4): Δposition → return **min p = 0.22**, return → Δposition **min p = 0.84**.
+**Neither direction Granger-causes the other** — the +0.36 is contemporaneous comovement,
+not lead/lag. → `charts/07_ccf.png`.
+
+**VAR(3) orthogonalized impulse response** (Cholesky order position→price): a +1σ
+Managed-Money position shock coincides with a **+2.7% same-week** WTI move that does *not*
+build further (weeks 1–8 ≈ 0; cumulative +3.9%, 95% band [+2.6, +5.2]). The response is
+entirely front-loaded — a picture of a **coincident**, not anticipatory, series. → `charts/08_irf.png`.
+
+### 4B · Dynamics — how long crowding lasts
+
+AR(1) on MM net: **ρ = 0.97**, Ornstein-Uhlenbeck **half-life ≈ 20 weeks** (ADF p = 0.016,
+stationary). Positioning extremes **decay slowly (~5 months)** — crowding is a persistent
+*state*, which is exactly why it works as a regime/context gauge but gives no crisp entry
+timing. → `charts/09_halflife.png`.
+
+### 4C · Tradeability — does any edge survive honest testing?
+
+- **Quantile regression** (4-week return on the rolling-z, τ = 0.1…0.9): slopes are tiny
+  and flip sign across the distribution (−1.0 to +0.7 %/σ), all CIs straddle 0 — positioning
+  doesn't reliably move even the **tails**. → `charts/10_quantile.png`.
+- **Logistic direction model** P(fwd_4w > 0) ~ z: β = −0.03 (p = 0.70), pseudo-R² ≈ 0,
+  **AUC = 0.51** — indistinguishable from a coin flip.
+- **Information horizon:** strongest \|corr\| of z with forward returns is at 3 weeks and only
+  **r = +0.08 (p = 0.09)** — no horizon carries real predictive content.
+- **Walk-forward out-of-sample backtest** of the one candidate edge (contrarian long when the
+  point-in-time rolling-z ≤ −1; fixed a-priori threshold; weekly non-overlapping returns):
+
+  | Strategy | Sharpe | Ann. return | Max DD | In-market | Boot p(Sharpe≤0) |
+  |---|---|---|---|---|---|
+  | Contrarian **long-only** | **0.18** | +1.5% | −52% | 28% | **0.29** |
+  | Long-short (z≤−1 / z≥+1) | −0.19 | −9.4% | −89% | 44% | — |
+  | **Buy & hold WTI** | **0.35** | +6.0% | −78% | 100% | — |
+
+  The contrarian rule **underperforms buy-and-hold** on a risk-adjusted basis and its Sharpe
+  is statistically indistinguishable from zero (circular block-bootstrap p = 0.29). Net of
+  5 bps costs it is essentially unchanged (0.17) — costs aren't the problem, *there is no
+  edge to erode.* → `charts/11_oos_equity.png`.
+
+### 4D · Multiple testing — the capstone
+
+The lone "significant" result in §3 (extreme-short decile, 4-week, p ≈ 0.05) was **one of 12**
+extreme-bucket tests (2 definitions × 2 tails × 3 horizons). Under **Benjamini-Hochberg FDR
+(q = 0.10)**, **0 of 12 survive** — the smallest p (0.050) needs to clear 0.008 at its rank
+and doesn't. The apparent edge is fully consistent with **look-where-you-looked** noise.
+→ `charts/12_fdr.png`.
+
+### Deep-dive verdict
+
+Every additional test agrees with the first pass and removes the last ambiguity:
+Managed-Money positioning is a **contemporaneous, slow-moving crowding/sentiment state** with
+**no lead/lag causal content, no distributional edge, no directional skill, and no
+out-of-sample or multiple-testing-robust trading edge.** Use it as *context* (a regime
+input alongside inventories & term structure) — **never as a standalone timing signal.**
+
+---
+
 ### Files
 ```
 CFTC_Analysis/
   01_prepare_data.py   official CFTC (MM+OR) + EIA price -> weekly table
   02_analysis.py       refined stats (HAC, bootstrap, hit-rate, event study) + dark charts
+  04_deep_analysis.py  econometric deep-dive (CCF, Granger, VAR/IRF, half-life,
+                       quantile & logit regression, OOS backtest, BH-FDR) + charts 07..12
+  05_export_dashboard.py  distil stats_summary.json + deep_stats.json -> src/data/cftcStudy.json
   03_build_deck.py     assemble presentation.html (base64-embedded charts)
   REPORT.md            this report
-  presentation.html    5-slide deck (open in any browser; ← → to navigate)
-  data/                weekly_merged.csv, cftc_wti_official.csv, wti_spot_daily.csv, stats_summary.json
-  charts/              01_timeseries .. 06_hitrate (dark dashboard theme)
+  presentation.html    8-slide deck (open in any browser; ← → to navigate)
+  data/                weekly_merged.csv, cftc_wti_official.csv, wti_spot_daily.csv,
+                       stats_summary.json, deep_stats.json
+  charts/              01_timeseries .. 12_fdr (dark dashboard theme)
 ```
+
+Reproduce end-to-end:
+`python 01_prepare_data.py && python 02_analysis.py && python 04_deep_analysis.py && python 05_export_dashboard.py && python 03_build_deck.py`

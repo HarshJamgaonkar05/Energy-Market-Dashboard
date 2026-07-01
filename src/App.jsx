@@ -40,6 +40,7 @@ const PageDrivers = lazyRetry(() => import("./pages/Drivers").then((m) => ({ def
 const PageInventories = lazyRetry(() => import("./pages/Inventories").then((m) => ({ default: m.PageInventories })));
 const PageReleaseLab = lazyRetry(() => import("./pages/ReleaseLab").then((m) => ({ default: m.PageReleaseLab })));
 const PageNews = lazyRetry(() => import("./pages/News").then((m) => ({ default: m.PageNews })));
+const PageCftcStudy = lazyRetry(() => import("./pages/CftcStudy").then((m) => ({ default: m.PageCftcStudy })));
 
 const PAGES = {
   dashboard: { title: "Dashboard", el: PageDashboard },
@@ -51,6 +52,7 @@ const PAGES = {
   inventories: { title: "Inventories & Storage", el: PageInventories },
   releaselab: { title: "EIA Release Lab", el: PageReleaseLab },
   news: { title: "News & Sentiment", el: PageNews },
+  cftcstudy: { title: "CFTC Positioning Study", el: PageCftcStudy },
 };
 
 // Lightweight loading skeleton shown while a page chunk loads.

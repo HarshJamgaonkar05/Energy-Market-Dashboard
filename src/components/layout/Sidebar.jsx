@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import {
   LayoutDashboard, LineChart as LineIcon, Gauge, FlaskConical, Globe2, Warehouse, Newspaper,
-  ChevronLeft, ChevronRight, Circle, Zap, History, Beaker,
+  ChevronLeft, ChevronRight, Circle, Zap, History, Beaker, Sigma,
 } from "lucide-react";
 
 export const NAV = [
@@ -14,6 +14,7 @@ export const NAV = [
   { id: "inventories", label: "Inventories", icon: Warehouse },
   { id: "releaselab", label: "EIA Release Lab", icon: Beaker },
   { id: "news", label: "News", icon: Newspaper },
+  { id: "cftcstudy", label: "CFTC Study", icon: Sigma },
 ];
 
 export const Sidebar = ({ active, setActive, collapsed, setCollapsed }) => (
