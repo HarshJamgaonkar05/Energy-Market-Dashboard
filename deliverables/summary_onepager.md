@@ -2,7 +2,7 @@
 
 **Harsh Jamgaonkar**
 
-Over the internship I built an **Energy Dashboard** — a live energy-markets terminal (React front end, Express/Node API, offline Python analytics, deployed on Hugging Face Spaces across 10 sections and ~30 endpoints) — plus four quantitative studies around it. The aim was financial rather than technical: turn free public data — prices, EIA fundamentals, CFTC positioning, weather, news — into a read on crude oil and refined products that a desk could take seriously. Two rules run through everything: no model peeks at the future when it is tested, and every number links back to its source. The terminal is also deliberately upfront about what it *cannot* predict.
+Over the internship I built an **Energy Dashboard** — a live energy-markets terminal (React front end, Express/Node API, offline Python analytics, deployed on Hugging Face Spaces across 10 sections and ~30 endpoints) — plus four quantitative studies around it. The aim was to turn free public data — prices, EIA fundamentals, CFTC positioning, weather, news — into a read on crude oil and refined products that a desk could take seriously. Two rules run through everything: no model peeks at the future when it is tested, and every number links back to its source. The terminal is also deliberately upfront about what it *cannot* predict.
 
 ## The work, and what the market taught me through it
 
